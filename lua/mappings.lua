@@ -9,9 +9,10 @@ return {
     ['&'] = { '3', desc = 'Ampersand' },
     ['/'] = { '4', desc = 'Slash' },
     ['='] = { '6', desc = 'Equal' },
-    ['['] = { '7', desc = 'Opening square bracket' },
-    [']'] = { '8', desc = 'Closing square bracket' },
     ['à'] = { '0', desc = 'Letter a with grave accent' },
+
+    -- ['['] = { 'g[f', desc = 'Opening square bracket' },
+    -- [']'] = { 'g]f', desc = 'Closing square bracket' },
 
     -- Leader Shortcuts
     ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
@@ -156,9 +157,9 @@ return {
     ['&'] = { '3' },
     ['/'] = { '4' },
     ['='] = { '6' },
-    ['['] = { '7' },
+    -- ['['] = { '7' },
 
-    [']'] = { '8' },
+    -- [']'] = { '8' },
     ['+'] = { '<cmd>e#<cr>' },
     ['N'] = { 'Nzzzv' },
 
