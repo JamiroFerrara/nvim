@@ -1,6 +1,10 @@
 return { -- Highlight, edit, and navigate code
   'nvim-treesitter/nvim-treesitter',
   build = ':TSUpdate',
+  dependencies = {
+    'nvim-treesitter/playground',
+    'nvim-treesitter/nvim-treesitter-textobjects',
+  },
   -- lazy = 'BufReadPre',
   opts = {
     ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'vim', 'vimdoc' },
