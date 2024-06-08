@@ -13,7 +13,4 @@ return {
   { 'haya14busa/is.vim', event = 'InsertEnter' },
   { 'tpope/vim-sleuth', event = 'BufReadPre' },
   { 'folke/zen-mode.nvim', event = 'VeryLazy' },
-
-  -- { 'aserowy/tmux.nvim', opts = {}, event = 'VeryLazy' },
-  -- { 'nacro90/numb.nvim', opts = {}, event = 'VeryLazy' },
 }
