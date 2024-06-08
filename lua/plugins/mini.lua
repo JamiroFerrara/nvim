@@ -1,6 +1,5 @@
 return { -- Collection of various small independent plugins/modules
   'echasnovski/mini.nvim',
-  event = 'VeryLazy',
   config = function()
     -- Better Around/Inside textobjects
     --
@@ -8,7 +7,25 @@ return { -- Collection of various small independent plugins/modules
     --  - va)  - [V]isually select [A]round [)]paren
     --  - yinq - [Y]ank [I]nside [N]ext [']quote
     --  - ci'  - [C]hange [I]nside [']quote
-    require('mini.ai').setup { n_lines = 500 }
+    local gen_spec = require('mini.ai').gen_spec
+    require('mini.ai').setup {
+      n_lines = 500,
+      custom_textobjects = {
+        f = gen_spec.treesitter { a = '@function.outer', i = '@function.inner' },
+      },
+    }
+
+    local map_ai_move = function(lhs, textobject_id, direction, desc)
+      local rhs = function()
+        MiniAi.move_cursor('left', 'a', textobject_id, { search_method = direction })
+      end
+      vim.keymap.set({ 'n', 'x', 'o' }, lhs, rhs, { desc = desc })
+    end
+
+    -- Instead of `'f'` use id of textobject you'd like to move.
+    -- For more info see `:h MiniAi.move_cursor()`.
+    map_ai_move('Â°', 'f', 'prev', 'Jump to prev function')
+    map_ai_move('Ã¹', 'f', 'next', 'Jump to next function')
 
     -- Add/delete/replace surroundings (brackets, quotes, etc.)
     --
