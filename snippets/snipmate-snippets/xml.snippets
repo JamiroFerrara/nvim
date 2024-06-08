@@ -1,0 +1,176 @@
+snippet button
+  <Button x:Name="$0" IsDefault="True" Style="{StaticResource MaterialDesignFloatingActionMiniDarkButton}" ToolTip="$2">
+      <materialDesign:PackIcon Kind="$1" Height="24" Width="24" />
+  </Button>
+
+snippet textblock
+	<TextBlock Text="$1"/>
+
+snippet textbox
+	<TextBox Text="$1"/>
+
+snippet grid2x2
+	<Grid Grid.Row="0" Grid.Column="0">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="*"/>
+		</Grid.ColumnDefinitions>
+
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		$1
+
+	</Grid>
+
+snippet transitioner
+	<materialDesign:Transitioner x:Name="_transitioner" SelectedIndex="0">
+      <materialDesign:TransitionerSlide>
+          <materialDesign:TransitionerSlide.OpeningEffects>
+              <materialDesign:TransitionEffect Kind="ExpandIn"/>
+          </materialDesign:TransitionerSlide.OpeningEffects>
+          <materialDesign:TransitionerSlide.BackwardWipe>
+              <materialDesign:FadeWipe/>
+          </materialDesign:TransitionerSlide.BackwardWipe>
+
+				$1
+
+      </materialDesign:TransitionerSlide>
+  </materialDesign:Transitioner>
+
+snippet usercontrol
+	<ucuilib:UCUIBaseClass x:Class="AFCS.TOM.ATM.UCUILib.Views.$1"
+                	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+                	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+                	xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+                	xmlns:local="clr-namespace:AFCS.TOM.ATM.UCUILib.Views"
+                	xmlns:ucuilib="clr-namespace:AFCS.TOM.ATM.UCUILib"
+                	xmlns:ucuilibControls="clr-namespace:AFCS.TOM.ATM.UCUILib.Controls"
+                	xmlns:conv="clr-namespace:AFCS.TOM.ATM.UCUILib.Converters"
+                	xmlns:viewM="clr-namespace:AFCS.TOM.ATM.UCUILib.ViewModels"
+                	xmlns:controls="clr-namespace:AFCS.TOM.ATM.UCUILib.Controls"
+                	xmlns:ptControls="clr-namespace:AFCS.TOM.ATM.UCUILib.Controls.PTControls"
+                	mc:Ignorable="d" 
+                	d:DesignHeight="450" d:DesignWidth="800">
+
+    	<UserControl.Resources>
+        	<ResourceDictionary>
+            	<ResourceDictionary.MergedDictionaries>
+                	<ResourceDictionary Source="../Resources/Styles/Styles.xaml" />
+                	<ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.GroupBox.xaml"/>
+                	<ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.ProgressBar.xaml"/>
+            	</ResourceDictionary.MergedDictionaries>
+
+            	<viewM:PTViewModel x:Key="ViewModel" />
+
+        	</ResourceDictionary>
+    	</UserControl.Resources>
+
+	</ucuilib:UCUIBaseClass>
+
+snippet groupbox
+  <GroupBox DataContext="{StaticResource ViewModel}" Header="PT Restitutions" Margin="16" BorderThickness="2" Style="{x:Null}" BorderBrush="#3f51b5" >
+		$2
+  </GroupBox>
+
+snippet border
+	<Border Grid.Row="0" Style="{StaticResource ContainerBorderNoHStretch}">
+		$1
+  </Border>
+
+snippet gridrow
+	Grid.Row="$1"
+
+snippet gridcolumn
+	Grid.Column="$1"
+
+snippet gridcolumnspan
+	Grid.ColumnSpan="$1"
+
+snippet gridrowspan
+	Grid.ColumnSpan="$1"
+
+snippet stackhorizontal
+	<StackPanel Orientation="Horizontal">
+		$1
+	</StackPanel>
+
+snippet stackvertical
+	<StackPanel Orientation="Vertical">
+		$1
+	</StackPanel>
+
+snippet background
+	Background="$1"
+
+snippet foreground
+	Foreground="$1"
+
+snippet cornerradius
+	CornerRadius="$1"
+
+snippet center
+	HorizontalAlignment="Center" VerticalAlignment="Center"
+
+snippet horizontalalignement
+	HorizontalAlignment="$1"
+
+snippet verticalalignement
+	VerticalAlignment="$1"
+
+snippet datagrid
+	<DataGrid x:Name="dataGridInventory" IsReadOnly="True" EnableColumnVirtualization="True" EnableRowVirtualization="True" ScrollViewer.CanContentScroll="False" AutoGenerateColumns="False"
+          Grid.Row="0" 
+          materialDesign:DataGridAssist.CellPadding ="0" 
+          materialDesign:DataGridAssist.ColumnHeaderPadding="0" 
+          HeadersVisibility="None"
+          Visibility="{Binding IsLoading, Mode=TwoWay, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+          ItemsSource="{Binding $1, Mode=OneWay, UpdateSourceTrigger=PropertyChanged , IsAsync=True}">
+      <DataGrid.CellStyle>
+          <Style TargetType="DataGridCell">
+              <Setter Property="Padding" Value="0"/>
+              <Setter Property="Margin" Value="0"/>
+              <Setter Property="Template">
+                  <Setter.Value>
+                      <ControlTemplate TargetType="{x:Type DataGridCell}">
+                          <Border Padding="{TemplateBinding Padding}" Margin="{TemplateBinding Margin}" SnapsToDevicePixels="True">
+                              <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Cursor="Hand"/>
+                          </Border>
+                      </ControlTemplate>
+                  </Setter.Value>
+              </Setter>
+          </Style>
+      </DataGrid.CellStyle>
+      <DataGrid.Columns>
+          <DataGridTemplateColumn>
+              <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+
+                  <TextBlock Text="$2"/>
+
+                  </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+      </DataGrid.Columns>
+  </DataGrid>
+
+snippet stylenull
+	Style="{x:Null}"
+
+snippet combobox
+  <ComboBox Margin="10" Height="48" Width="300" Text=".."
+      ItemsSource="{Binding $1, ElementName=this}"
+      DisplayMemberPath="$2"
+      VerticalAlignment="Center" IsEditable="True"
+      Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+      IsTextSearchEnabled="False"
+      IsEnabled="True"
+      Foreground="Black"
+      />
+
+snippet section
+  <TextBlock Text="Section" Foreground="Red" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="40"/>

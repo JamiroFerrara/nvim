@@ -1,0 +1,175 @@
+snippet entity_class "Creates doctrine class entity ORM comments"
+	<?php
+
+	namespace $3\Entity;
+
+	use Doctrine\ORM\Mapping as ORM;
+	use Gedmo\Mapping\Annotation as Gedmo;
+
+	/**
+ 	 *
+ 	 * @ORM\Entity()
+ 	 * @ORM\Table(name="$2")
+ 	 * @Gedmo\SoftDeleteable(fieldName="deletedAt", timeAware=false, hardDelete=false)
+ 	 * @ORM\HasLifecycleCallbacks
+ 	 */
+
+ 	 class $4
+ 	 {
+
+ 	 }
+
+snippet entity_param "Creates a doctrine entity parameter"
+  /**
+   * @var string
+   * @ORM\Column(name="$1", type="$2", nullable=false)
+   */
+  private string \$$1;
+
+  /**
+   * @return $2
+   */
+  public function get$3()
+  {
+      return \$this->$1;
+  }
+
+  /**
+   * @param $2 \$$1
+   */
+  public function set$3(string \$$1)
+  {
+      \$this->$1 = \$$1;
+  }
+
+snippet entity_config "Registers the entity to the ORM Doctrine"
+	<?php
+	/**
+ 	 * @license   http://opensource.org/licenses/BSD-3-Clause BSD-3-Clause
+ 	 * @copyright Copyright (c) 2014-2016 Zend Technologies USA Inc. (http://www.zend.com)
+ 	 */
+
+	return [
+		'doctrine' => [
+        		'driver' => [
+            		'$1' => [
+                		'class' => \Doctrine\ORM\Mapping\Driver\AnnotationDriver::class,
+                		'paths' => [
+                    		0 => __DIR__ . '/../src/Entity',
+                		],
+            		],
+            		'orm_default' => [
+                		'drivers' => [
+                    		'$2\\Entity' => '$1',
+                		],
+            		],
+        		],
+    		],
+  ];
+
+snippet entity_config_merge "This must be used in Module.php, when adding an application.config.php"
+  public function getConfig()
+  {
+      return array_merge_recursive(
+          include __DIR__ . '/config/module.config.php',
+          include __DIR__ . '/config/application.config.php'
+      );
+  }
+
+snippet var_dump_me_daddy "var dump"
+  var_dump($queryBuilder);
+  die;
+
+snippet log "var dump"
+  var_dump($queryBuilder);
+  die;
+
+snippet full_query_method "Generates method to get full query out of DQL"
+  /**
+   * Get SQL from query
+   * 
+   * @author Yosef Kaminskyi 
+   * @param QueryBilderDql $$query
+   * @return int
+   */
+  public function getFullSQL($$query)
+  {
+      $$sql = $$query->getSql();
+      $$paramsList = $$this->getListParamsByDql($$query->getDql());
+      $$paramsArr = $$this->getParamsArray($$query->getParameters());
+      $$fullSql = '';
+      for ($$i = 0; $$i < strlen($$sql); $$i++) {
+          if ($$sql[$$i] == '?') {
+              $$nameParam = array_shift($$paramsList);
+
+              if (is_string($$paramsArr[$$nameParam])) {
+                  $$fullSql .= '"' . addslashes($$paramsArr[$$nameParam]) . '"';
+              } elseif (is_array($$paramsArr[$$nameParam])) {
+                  $$sqlArr = '';
+                  foreach ($$paramsArr[$$nameParam] as $$var) {
+                      if (!empty($$sqlArr))
+                          $$sqlArr .= ',';
+
+                      if (is_string($$var)) {
+                          $$sqlArr .= '"' . addslashes($$var) . '"';
+                      } else
+                          $$sqlArr .= $$var;
+                  }
+                  $$fullSql .= $$sqlArr;
+              } elseif (is_object($$paramsArr[$$nameParam])) {
+                  switch (get_class($$paramsArr[$$nameParam])) {
+                      case 'DateTime':
+                          $$fullSql .= "'" . $$paramsArr[$$nameParam]->format('Y-m-d H:i:s') . "'";
+                          break;
+                      default:
+                          $$fullSql .= $$paramsArr[$$nameParam]->getId();
+                  }
+              } else
+                  $$fullSql .= $$paramsArr[$$nameParam];
+          } else {
+              $$fullSql .= $$sql[$$i];
+          }
+      }
+      return $$fullSql;
+  }
+
+  /**
+   * Get query params list
+   * 
+   * @author Yosef Kaminskyi <yosefk@spotoption.com>
+   * @param  Doctrine\ORM\Query\Parameter $$paramObj
+   * @return int
+   */
+  protected function getParamsArray($$paramObj)
+  {
+      $$parameters = array();
+      foreach ($$paramObj as $$val) {
+          /* @var $$val Doctrine\ORM\Query\Parameter */
+          $$parameters[$$val->getName()] = $$val->getValue();
+      }
+
+      return $$parameters;
+  }
+  public function getListParamsByDql($$dql)
+  {
+      $$parsedDql = preg_split("/:/", $$dql);
+      $$length = count($$parsedDql);
+      $$parmeters = array();
+      for ($$i = 1; $$i < $$length; $$i++) {
+          if (ctype_alpha($$parsedDql[$$i][0])) {
+              $$param = (preg_split("/[' ' )]/", $$parsedDql[$$i]));
+              $$parmeters[] = $$param[0];
+          }
+      }
+
+      return $$parmeters;
+  }
+
+snippet json_param "json parameters"
+  $$1 = $$request['$1'];
+
+snippet todo "todo comments"
+	//TODO: $1
+
+snippet qb "creates query builder"
+  $$qb = $$this->em->createQueryBuilder();

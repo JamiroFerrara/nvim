@@ -1,0 +1,102 @@
+snippet rfc "React Functional Component!"
+  import React from 'react';
+
+  function $1() {
+    return (
+      <div className="border">$1</div>
+    )};
+
+  export default $1;
+
+snippet rfcp "React Functional Component.. with props!"
+  import React from 'react';
+
+	interface Props {
+		$3
+	}
+
+  function $1(props: Props) {
+    return (
+      <div className="$2">$1</div>
+    )};
+
+  export default $1;
+
+snippet div "A div.."
+  <div className="$2"> $1 </div>
+
+snippet h1 "h1"
+  <h1 className="$2"> $1 </h1>
+
+snippet h2 "h2"
+  <h2 className="$2"> $1 </h2>
+
+autosnippet img "Creates an html img block"
+  <img src="$1" className="$2" alt="$3" />
+
+snippet interface "Creates Interface Block!"
+  interface $1 {
+    $2
+  }
+
+snippet cl "Console log"
+  console.log(${1});
+
+autosnippet log
+  console.log(${1});
+
+snippet rdis "React Dispatch, the UseState method type"
+  React.Dispatch<React.SetStateAction<any>>
+
+autosnippet jsi "Creates a json inline item"
+  ${1} : ${2},
+
+autosnippet if "If block"
+  if ($1) {
+    $0
+  }
+
+snippet formik "Formik initialization."
+  <Formik
+    initialValues={{ text: "", description: "", notes: "" }}
+    validate={values => { }}
+    onSubmit={(values, { setSubmitting }) => { }}
+  > {({ isSubmitting }) => (
+
+  )}
+  </Formik>
+
+snippet children "children props"
+  children?: React.ReactNode;
+
+snippet jsonstringify "THE JSON EVANGELIST"
+	{JSON.stringify(props)}
+
+autosnippet bool "boolean"
+  boolean
+
+snippet useContext "Initializes the useContext hook"
+  const ctx = useContext($1);
+
+snippet condition "Creates a react condition"
+  { $1 && ($2)}
+
+autosnippet todo "Todo!"
+  //TODO: $1
+
+autosnippet bug "Bug!"
+  //BUG: $1
+
+autosnippet fix "Fix!"
+  //FIX: $1
+
+autosnippet hack "Hack!"
+  //HACK: $1
+
+autosnippet perf "Perf!"
+  //PERF: $1
+
+snippet fc "Function component"
+  const $1 = ($2) => {
+    $3
+  }	

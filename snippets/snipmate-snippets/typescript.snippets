@@ -1,0 +1,33 @@
+snippet func "Function!"
+	export function $1() {
+
+	}
+
+snippet afunc "Function!"
+	export function $1() {
+
+	}
+
+autosnippet ret "return"
+	return
+
+snippet yupstring "yup string"
+  $1: Yup.string().required('Campo obbligatorio').typeError('Campo obbligatorio'),
+	
+autosnippet log "log"
+  console.log($1)
+
+snippet api "Api call"
+	export async function $1(req: $2) {
+  	const res: AxiosResponse<$3> = await client
+    	.request({
+      	url: API.$4,
+      	method: 'POST',
+      	data: req,
+    	})
+
+    if (res.data.Rc !== 0)
+    	toast.error("Qualcosa é andato storto!")
+
+    return res.data
+	}

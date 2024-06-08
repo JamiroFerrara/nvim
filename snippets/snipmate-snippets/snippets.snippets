@@ -1,0 +1,19 @@
+# snippets for making snippets :)
+autosnippet snip
+	snippet ${1:trigger} "${2:description}"
+		${0:${VISUAL}}
+
+autosnippet auto
+	autosnippet ${1:trigger} "${2:description}"
+		${0:${VISUAL}}
+
+snippet v
+	{VISUAL}
+snippet $
+	${${1:1}:${0:text}}
+snippet simp "Simple" !b
+ !p snip.rv = "Hello"
+snippet today
+  # ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE} $CURRENT_DAY_NAME_SHORT
+snippet filename
+        File: `expand('%:t:r')`

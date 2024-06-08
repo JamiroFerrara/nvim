@@ -1,0 +1,11 @@
+snippet selectall "Select all items from table"
+	select TOP 10 * from $1
+
+snippet select200 "select 200 items from table"
+  select top (200) * from $1
+
+snippet pkeys "gets all primary keys from table"
+	SELECT COLUMN_NAME
+	FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+	WHERE OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_SCHEMA + '.' + CONSTRAINT_NAME), 'IsPrimaryKey') = 1
+	AND TABLE_NAME = '$1' ;

@@ -1,0 +1,240 @@
+snippet where 
+  Where(x => x.$1 == $2);
+
+snippet select 
+  Select(x => x.$1 == $2);
+
+autosnippet gs "getset"
+  { get; set; }
+	
+snippet write "custom console.writeline"
+  Write("$1");
+
+snippet input "custom input"
+  Input("$1");
+
+snippet property
+  public $1 $2 { get; set; }
+
+snippet for
+  for (int i = 0; i < $1; i++)
+  {
+    $2
+  }
+
+snippet foreach
+  foreach (var $1 in $2)
+  {
+    $3
+  }
+
+snippet inlineforeach
+  Array.ForEach($1.ToArray(), x => { 
+    $2 
+  });
+
+snippet raisepropertychanged
+  RaisePropertyChanged();
+
+snippet observablecollection
+  ObservableCollection<$1> $2
+
+snippet if
+  if ($1)
+  {
+      $2
+  }
+
+snippet ifinline
+  $1 ? $2 : $3
+
+snippet add
+  Add($1);
+
+snippet remove
+  Remove($1);
+
+snippet clear
+  Clear();
+
+snippet class "Simple class snippet, no constructor"
+	public class ${1}
+  {
+      ${2}
+  }
+
+snippet cln "Cs Class"
+  namespace ${1}
+  {
+      public class `expand('%:t:r')`
+      {
+          ${2}
+      }
+  }
+
+snippet constructor 
+  public `expand('%:t:r')`()
+  {
+      ${2}
+  }
+
+snippet usi
+	using (${1:resource})
+	{
+		${0}
+	}
+
+snippet cw
+	Console.WriteLine(${1});
+
+snippet namespace
+	namespace ${1:MyNamespace}
+	{
+		${0}
+	}
+
+snippet switch
+	switch (${1:switch_on})
+	{
+		${0}
+		default:
+	}
+
+snippet wh
+	while (${1:true})
+	{
+		${0:${VISUAL}}
+	}
+
+snippet dispose 
+  public void Dispose() 
+  { 
+    $1
+  }
+
+snippet getmodel
+  private $1 model => GetModel<$1>();
+
+snippet maincontainerset
+  MainContainerSet += OnMainContainerSet;
+
+snippet load
+  Load(async () => {
+      $1
+  });
+
+snippet modelload
+  model.Load(async () => {
+      $1
+  });
+
+snippet else
+  else 
+  {
+    $1
+  }
+
+snippet elseif
+  else if ($1)
+  {
+      $2
+  }
+
+snippet ame "Public Async cs Method"
+	public async Task<${1}> ${2}()
+	{
+      ${2}
+	}
+
+snippet amev "Public Async cs Method"
+	public async void ${2}()
+	{
+      ${2}
+	}
+
+snippet region "Do you even region bro?"
+  #region $1
+  #endregion
+
+snippet cwl "Writes to the console out!"
+  Console.WriteLine(\$"$1");
+
+snippet log "Writes to the console out!"
+  Console.WriteLine(\$"$1");
+
+snippet new_controller "Creates the initial template for a controller"
+	using System;
+	using System.Collections.Generic;
+	using System.Linq;
+	using System.Threading.Tasks;
+	using Microsoft.AspNetCore.Mvc;
+	using Microsoft.EntityFrameworkCore;
+	using Microsoft.EntityFrameworkCore.Metadata;
+	using wtservice;
+
+	namespace WordTagsService.Controllers
+	{
+    	[ApiController]
+    	[Route("")]
+    	public class `expand('%:t:r')` : ControllerBase
+    	{
+        private readonly WTContext ctx;
+        public `expand('%:t:r')`(WTContext context) => this.ctx = context;
+
+    	  $0
+    	}
+	}
+
+snippet surreal_controller "Creates a surreal controller"
+	using Microsoft.AspNetCore.Mvc;
+
+	[Route("$1")]
+	public class $1Controller : SurrealController<$1> { }
+
+	public class $1 : SurrealTable
+	{
+	    $2
+	}
+
+snippet api "Creates an api route"
+  [HttpPost]
+  [Route("$1")]
+  [EnableCors("ApiCorsPolicy")]
+  public CSDResponse $1([FromBody] $1Request req) => CSDAuthRead(() =>
+      new $2DataProvider(req.ctx).$1(req), req);
+
+snippet req "Creates an Allitude request model"
+  public class $1 : CSDRequest
+  {
+
+  }
+	
+
+snippet sql "sql"
+  string sql = $@"
+    $1
+  ";
+
+autosnippet todo "Todo!"
+  //TODO: $1
+
+autosnippet bug "Bug!"
+  //BUG: $1
+
+autosnippet fix "Fix!"
+  //FIX: $1
+
+autosnippet hack "Hack!"
+  //HACK: $1
+
+autosnippet perf "Perf!"
+  //PERF: $1
+
+snippet csd_response "description"
+  var res = new CSDResponse();
+
+snippet query_entity "Creates a query entity function"
+  this.QueryEntity<TBBASE_H22Context>(db =>
+  {
+  });
+  

@@ -1,0 +1,7 @@
+snippet POST "Creates an xh post request"
+ echo '
+ 	 $2
+ ' | xh.exe $1 http://localhost:5000/api/$1
+
+ snippet localhost "Creates localhost link"
+ 	http://localhost:5000/api/
