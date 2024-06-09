@@ -1,6 +1,31 @@
 return {
   'jackMort/ChatGPT.nvim',
   event = 'VeryLazy',
+  mappings = {
+    n = {
+      ['<leader>ai'] = { '<cmd>ChatGPT<CR>', desc = 'Chat with GPT' },
+      ['<leader>aI'] = { '<cmd>ChatGPTActAs<CR>', desc = 'Chat with GPT acting as' },
+    },
+    v = {
+      -- NOTE: [ Ai ]
+      ['<leader>ai'] = { '<cmd>ChatGPTEditWithInstructions<CR>', desc = 'Edit with instructions' },
+      ['<leader>ao'] = { '<cmd>ChatGPTRun organize_code<CR>', desc = 'Organize code' },
+      ['<leader>aO'] = { '<cmd>ChatGPTRun optimize_code<CR>', desc = 'Optimize code' },
+      ['<leader>ac'] = { '<cmd>ChatGPTRun complete_code<CR>', desc = 'Complete code' },
+      ['<leader>at'] = { '<cmd>ChatGPTRun translate<CR>', desc = 'Translate code' },
+      ['<leader>as'] = { '<cmd>ChatGPTRun summerize<CR>', desc = 'Summerize code' },
+      ['<leader>af'] = { '<cmd>ChatGPTRun fix_bugs<CR>', desc = 'Fix bugs' },
+      ['<leader>ae'] = { '<cmd>ChatGPTRun explain_code<CR>', desc = 'Explain code' },
+      ['<leader>ar'] = { '<cmd>ChatGPTRun code_readability_analysis<CR>', desc = 'Analyze code readability' },
+
+      -- NOTE: [ Ai Conversions ]
+      ['<leader>aCt'] = { '<cmd>ChatGPTRun convert_typescript<CR>', desc = 'Convert to TypeScript' },
+      ['<leader>aCb'] = { '<cmd>ChatGPTRun convert_bash<CR>', desc = 'Convert to Bash' },
+      ['<leader>aCc'] = { '<cmd>ChatGPTRun convert_cs<CR>', desc = 'Convert to C#' },
+      ['<leader>aCp'] = { '<cmd>ChatGPTRun convert_php<CR>', desc = 'Convert to PHP' },
+      ['<leader>aCl'] = { '<cmd>ChatGPTRun convert_lua<CR>', desc = 'Convert to Lua' },
+    },
+  },
   dependencies = {
     'github/copilot.vim',
   },
