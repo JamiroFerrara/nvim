@@ -97,16 +97,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
             ['<C-j>'] = actions.move_selection_next,
             ['<C-k>'] = actions.move_selection_previous,
           },
-          n = {
-            ['q'] = actions.close,
-            ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>', desc = 'Find files' },
-            ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>', desc = 'Live grep' },
-            ['<C-p>'] = { '<cmd>Telescope find_files<cr>' },
-            ['<C-P>'] = { '<cmd>Telescope buffers<cr>' },
-            ['<leader>fb'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
-            ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
-            ['<C-f>'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
-          },
+          n = { ['q'] = actions.close },
         },
       },
     }
