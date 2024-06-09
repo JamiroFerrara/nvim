@@ -32,27 +32,9 @@ return {
     ['<leader>dd'] = { '<cmd>set ma<cr><cmd>lua require("user.helpers").delete_lines()<CR>', desc = 'Delete lines' },
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
 
-    ['<leader>1'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>', desc = 'Navigate to file 1' },
-    ['<leader>2'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>', desc = 'Navigate to file 2' },
-    ['<leader>3'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>', desc = 'Navigate to file 3' },
-    ['<leader>4'] = { '<cmd>lua require("harpoon.ui").nav_file(4)<cr>', desc = 'Navigate to file 4' },
     ['<leader>aa'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
 
-    ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>', desc = 'Visual mode AI' },
-    ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>', desc = 'API mock AI' },
-    ['<leader>at'] = { '<cmd>lua require("user.helpers").cs2ts()<CR>', desc = 'Convert C# to TypeScript' },
-    ['<leader>m'] = { '<cmd>lua require("harpoon.mark").add_file()<cr>', desc = 'Add file to harpoon marks' },
-    ['<leader>M'] = { '<cmd>lua require("harpoon.ui").toggle_quick_menu()<cr>', desc = 'Toggle harpoon quick menu' },
     ['<leader><leader>i'] = { '<cmd>IconPickerNormal<cr>', desc = 'Pick icon' },
-    ['<leader>ai'] = { '<cmd>ChatGPT<CR>', desc = 'Chat with GPT' },
-    ['<leader>aI'] = { '<cmd>ChatGPTActAs<CR>', desc = 'Chat with GPT acting as' },
-    ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>', desc = 'Visual mode AI' },
-    ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>', desc = 'API mock AI' },
-
-    ['<leader>at'] = { '<cmd>lua require("user.helpers").cs2ts()<CR>', desc = 'Convert C# to TypeScript' },
-    ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
-    ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>', desc = 'Find files' },
-    ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>', desc = 'Live grep' },
     ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>", desc = 'DAP no debug' },
     ['<leader>ip'] = { '<cmd>IconPickerNormal<cr>', desc = 'Pick icon' },
     ['<leader>q'] = { '<C-\\><C-n>:q<cr>', desc = 'Close all other windows' },
@@ -176,12 +158,7 @@ return {
     ['<A-t>'] = { '<cmd>vsplit<cr><cmd> e TODO.md<cr>' },
 
     ['<C-g>'] = { '<cmd>ToggleTerm size=10 direction=horizontal<cr>' },
-    ['<C-p>'] = { '<cmd>Telescope find_files<cr>' },
-    ['<C-P>'] = { '<cmd>Telescope buffers<cr>' },
     ['gr'] = { '<cmd>Glance references<cr>' },
-    ['<leader>fb'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
-    ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
-    ['<C-f>'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
     ['<leader>lc'] = {
       "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
     },
@@ -255,10 +232,9 @@ return {
     ['<leader>qt'] = { ':!quicktype --just-types -l typescript<CR>', desc = 'Run quicktype for TypeScript' },
     ['<leader>qc'] = { ':!quicktype --features just-types -l csharp<CR>', desc = 'Run quicktype for C#' },
     ['<leader>av'] = { 'y<cmd>lua require("user.helpers").visualModeAi()<CR>', desc = 'Visual mode AI' },
-
-    ['<leader>al'] = { '<cmd>lua require "align".align_to_char(1, true)<cr>', desc = 'Align to character' },
-    ['<leader>aw'] = { '<cmd>lua require "align".align_to_string(false, true, true)<cr>', desc = 'Align to string' },
-
     ['<leader>c'] = { "<esc><cmd>lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<cr>", desc = 'Toggle comment' },
+
+    -- ['<leader>al'] = { '<cmd>lua require "align".align_to_char(1, true)<cr>', desc = 'Align to character' },
+    -- ['<leader>aw'] = { '<cmd>lua require "align".align_to_string(false, true, true)<cr>', desc = 'Align to string' },
   },
 }
