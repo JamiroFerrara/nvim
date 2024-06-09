@@ -4,30 +4,13 @@ return {
     -- Basic Indentation
     ['>'] = { '>>', desc = 'Shift right' },
     ['<'] = { '<<', desc = 'Shift left' },
-    ['|'] = { '1', desc = 'Pipe' },
-    ['?'] = { '2', desc = 'Question mark' },
-    ['&'] = { '3', desc = 'Ampersand' },
-    ['/'] = { '4', desc = 'Slash' },
-    ['='] = { '6', desc = 'Equal' },
     ['à'] = { '0', desc = 'Letter a with grave accent' },
-
-    -- ['['] = { 'g[f', desc = 'Opening square bracket' },
-    -- [']'] = { 'g]f', desc = 'Closing square bracket' },
 
     -- Leader Shortcuts
     ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
     ['<leader>e'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
     ['<leader>gg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
     ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
-    ['<leader>gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>', desc = 'Go to next git hunk' },
-    ['<leader>gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>', desc = 'Go to previous git hunk' },
-    ['<leader>gl'] = { '<cmd>lua require("gitsigns").blame_line()<cr>', desc = 'Blame current line' },
-    ['<leader>gp'] = { '<cmd>lua require("gitsigns").preview_hunk()<cr>', desc = 'Preview git hunk' },
-    ['<leader>gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>', desc = 'Reset git hunk' },
-    ['<leader>gr'] = { '<cmd>lua require("gitsigns").reset_buffer()<cr>', desc = 'Reset git buffer' },
-    ['<leader>gs'] = { '<cmd>lua require("gitsigns").stage_hunk()<cr>', desc = 'Stage git hunk' },
-    ['<leader>gu'] = { '<cmd>lua require("gitsigns").undo_stage_hunk()<cr>', desc = 'Undo stage git hunk' },
-    ['<leader>gd'] = { '<cmd>lua require("gitsigns").diffthis()<cr>', desc = 'Diff current file' },
     ['<leader>dB'] = { '<cmd>DBUI<cr>', desc = 'Open DAP UI' },
     ['<leader>c'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },
     ['<leader>mp'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make publish; tmux select-pane -U")<CR>', desc = 'Make publish' },
@@ -45,37 +28,15 @@ return {
     ['<leader>dd'] = { '<cmd>set ma<cr><cmd>lua require("user.helpers").delete_lines()<CR>', desc = 'Delete lines' },
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
 
-    ['<leader>1'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>', desc = 'Navigate to file 1' },
-    ['<leader>2'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>', desc = 'Navigate to file 2' },
-    ['<leader>3'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>', desc = 'Navigate to file 3' },
-    ['<leader>4'] = { '<cmd>lua require("harpoon.ui").nav_file(4)<cr>', desc = 'Navigate to file 4' },
     ['<leader>aa'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
-    ['<leader>ai'] = { '<cmd>ChatGPT<CR>', desc = 'Chat with GPT' },
-
-    ['<leader>aI'] = { '<cmd>ChatGPTActAs<CR>', desc = 'Chat with GPT acting as' },
-    ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>', desc = 'Visual mode AI' },
-    ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>', desc = 'API mock AI' },
-    ['<leader>at'] = { '<cmd>lua require("user.helpers").cs2ts()<CR>', desc = 'Convert C# to TypeScript' },
-    ['<leader>m'] = { '<cmd>lua require("harpoon.mark").add_file()<cr>', desc = 'Add file to harpoon marks' },
-    ['<leader>M'] = { '<cmd>lua require("harpoon.ui").toggle_quick_menu()<cr>', desc = 'Toggle harpoon quick menu' },
     ['<leader><leader>i'] = { '<cmd>IconPickerNormal<cr>', desc = 'Pick icon' },
-    ['<leader>ai'] = { '<cmd>ChatGPT<CR>', desc = 'Chat with GPT' },
-    ['<leader>aI'] = { '<cmd>ChatGPTActAs<CR>', desc = 'Chat with GPT acting as' },
-    ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>', desc = 'Visual mode AI' },
-    ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>', desc = 'API mock AI' },
 
-    ['<leader>at'] = { '<cmd>lua require("user.helpers").cs2ts()<CR>', desc = 'Convert C# to TypeScript' },
     ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
     ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>', desc = 'Find files' },
     ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>', desc = 'Live grep' },
     ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>", desc = 'DAP no debug' },
-    ['<leader>ip'] = { '<cmd>IconPickerNormal<cr>', desc = 'Pick icon' },
-    ['<leader>q'] = { '<C-\\><C-n>:q<cr>', desc = 'Close all other windows' },
-    ['<leader>w'] = { '<cmd>only<cr><cmd>lua os.execute("tmux resize-pane -Z")<cr>', desc = 'Close other windows and maximize current' },
-    -- ['<leader>se'] = { '<cmd>lua require("luasnip.loaders").edit_snippet_files()<cr><cr>", desc = 'Edit snippet files' },
 
     -- TMUX Commands
-
     ['<leader>th'] = {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z\\"")<CR>',
       desc = 'toggle term bottom',
@@ -86,7 +47,6 @@ return {
     ['L'] = { '<cmd>lua vim.lsp.buf.hover()<cr>' },
 
     -- Git Commands
-
     ['<leader>gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>' },
     ['<leader>gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>' },
     ['<leader>gl'] = { '<cmd>lua require("gitsigns").blame_line()<cr>' },
@@ -95,17 +55,14 @@ return {
     ['<leader>gr'] = { '<cmd>lua require("gitsigns").reset_buffer()<cr>' },
     ['<leader>gs'] = { '<cmd>lua require("gitsigns").stage_hunk()<cr>' },
     ['<leader>gu'] = { '<cmd>lua require("gitsigns").undo_stage_hunk()<cr>' },
-
     ['<leader>gd'] = { '<cmd>lua require("gitsigns").diffthis()<cr>' },
 
     -- Quick Actions
     ['<A-o>'] = { '<C-o>', desc = '' },
-
     ['<A-i>'] = { '<C-i>', desc = '' },
 
     -- Text Objects
     ['ciu'] = { 'ci{' },
-
     ['diu'] = { 'di{' },
     ['viu'] = { 'vi{' },
     ['cau'] = { 'ca{' },
@@ -114,7 +71,6 @@ return {
     ['ci2'] = { 'ci"' },
     ['di2'] = { 'ci"' },
     ['vi2'] = { 'vi"' },
-
     ['ca2'] = { 'ca"' },
     ['da2'] = { 'ca"' },
     ['va2'] = { 'va"' },
@@ -123,7 +79,6 @@ return {
     ['vij'] = { 'vi[' },
     ['caj'] = { 'ca[' },
     ['daj'] = { 'da[' },
-
     ['vaj'] = { 'va[' },
     ['ci8'] = { 'ci(' },
     ['di8'] = { 'di(' },
@@ -151,14 +106,12 @@ return {
     ['<leader>4'] = { '<cmd>lua require("harpoon.ui").nav_file(4)<cr>' },
 
     -- Other
-    ['<leader>yy'] = { 'GVggy<cmd>q!<CR>' },
     ['|'] = { '1' },
     ['?'] = { '2' },
     ['&'] = { '3' },
     ['/'] = { '4' },
     ['='] = { '6' },
     -- ['['] = { '7' },
-
     -- [']'] = { '8' },
     ['+'] = { '<cmd>e#<cr>' },
     ['N'] = { 'Nzzzv' },
@@ -229,10 +182,6 @@ return {
 
     ['vaè'] = { 'va{' },
     ['viè'] = { 'vi{' },
-    ['ci8'] = { 'ci(' },
-    ['va8'] = { 'va(' },
-    ['vi8'] = { 'vi(' },
-    ['ca8'] = { 'ca(' },
     ['tè'] = { 'f{' },
     ['Tè'] = { '{' },
     ['vw'] = { 've' },
