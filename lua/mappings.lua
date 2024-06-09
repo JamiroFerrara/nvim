@@ -49,21 +49,7 @@ return {
     },
     ['<leader>ap'] = { '<cmd>lua os.execute("/home/jferrara/.scripts/v-script.sh")<CR>', desc = 'toggle term bottom' },
 
-    -- LSP Commands
-    ['L'] = { '<cmd>lua vim.lsp.buf.hover()<cr>' },
-
     -- Git Commands
-
-    ['<leader>gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>' },
-    ['<leader>gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>' },
-    ['<leader>gl'] = { '<cmd>lua require("gitsigns").blame_line()<cr>' },
-    ['<leader>gp'] = { '<cmd>lua require("gitsigns").preview_hunk()<cr>' },
-    ['<leader>gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>' },
-    ['<leader>gr'] = { '<cmd>lua require("gitsigns").reset_buffer()<cr>' },
-    ['<leader>gs'] = { '<cmd>lua require("gitsigns").stage_hunk()<cr>' },
-    ['<leader>gu'] = { '<cmd>lua require("gitsigns").undo_stage_hunk()<cr>' },
-
-    ['<leader>gd'] = { '<cmd>lua require("gitsigns").diffthis()<cr>' },
 
     -- Quick Actions
     ['<A-o>'] = { '<C-o>', desc = '' },
@@ -150,17 +136,8 @@ return {
     ['<C-t>'] = { '<cmd>vsplit<cr><cmd> e TODO.md<cr>', nowait = true },
     ['<A-t>'] = { '<cmd>vsplit<cr><cmd> e TODO.md<cr>' },
 
-    ['<C-g>'] = { '<cmd>ToggleTerm size=10 direction=horizontal<cr>' },
     ['gr'] = { '<cmd>Glance references<cr>' },
-    ['<leader>lc'] = {
-      "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
-    },
-    ['<leader>le'] = { '<cmd>lua vim.diagnostic.goto_next()<cr>' },
-    ['<leader>lr'] = { '<cmd>vim.lsp.buf.rename()<cr>' },
     ['<A-e>'] = { '<cmd>w<cr>' },
-    ['<leader>hr'] = { "<cmd>lua require('user/react-helpers').commands()<cr>" },
-    ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },
-    ['<leader>hj'] = { "<cmd>lua require('user/jira-helpers').commands()<cr>" },
     ['<C-j>'] = { '<C-w>j' },
     ['<C-h>'] = { '<C-w>h' },
     ['<C-k>'] = { '<C-w>k' },

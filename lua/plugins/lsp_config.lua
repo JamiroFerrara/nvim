@@ -14,6 +14,16 @@ return { -- LSP Configuration & Plugins
     -- used for completion, annotations and signatures of Neovim apis
     { 'folke/neodev.nvim', opts = {} },
   },
+  mappings = {
+    n = {
+      ['<leader>lc'] = {
+        "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
+      },
+      ['<leader>le'] = { '<cmd>lua vim.diagnostic.goto_next()<cr>' },
+      ['<leader>lr'] = { '<cmd>vim.lsp.buf.rename()<cr>' },
+      ['L'] = { '<cmd>lua vim.lsp.buf.hover()<cr>' },
+    },
+  },
   config = function()
     -- Brief aside: **What is LSP?**
     --
