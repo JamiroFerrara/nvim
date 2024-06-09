@@ -1,19 +1,6 @@
 return { -- Adds git related signs to the gutter, as well as utilities for managing changes
   'lewis6991/gitsigns.nvim',
   -- lazy = 'BufReadPre',
-  mappings = {
-    n = {
-      ['<leader>gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>' },
-      ['<leader>gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>' },
-      ['<leader>gl'] = { '<cmd>lua require("gitsigns").blame_line()<cr>' },
-      ['<leader>gp'] = { '<cmd>lua require("gitsigns").preview_hunk()<cr>' },
-      ['<leader>gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>' },
-      ['<leader>gr'] = { '<cmd>lua require("gitsigns").reset_buffer()<cr>' },
-      ['<leader>gs'] = { '<cmd>lua require("gitsigns").stage_hunk()<cr>' },
-      ['<leader>gu'] = { '<cmd>lua require("gitsigns").undo_stage_hunk()<cr>' },
-      ['<leader>gd'] = { '<cmd>lua require("gitsigns").diffthis()<cr>' },
-    },
-  },
   opts = {
     -- signs                        = {
     --   add          = { text = '│' },
