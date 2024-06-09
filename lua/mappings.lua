@@ -1,7 +1,9 @@
 return {
   -- Normal Mode
   n = {
-    -- NOTE: Moonlander Specific
+    -- Basic Indentation
+    ['>'] = { '>>', desc = 'Shift right' },
+    ['<'] = { '<<', desc = 'Shift left' },
     ['|'] = { '1', desc = 'Pipe' },
     ['?'] = { '2', desc = 'Question mark' },
     ['&'] = { '3', desc = 'Ampersand' },
@@ -9,12 +11,12 @@ return {
     ['='] = { '6', desc = 'Equal' },
     ['à'] = { '0', desc = 'Letter a with grave accent' },
 
-    -- Basic Indentation
-    ['>'] = { '>>', desc = 'Shift right' },
-    ['<'] = { '<<', desc = 'Shift left' },
+    -- ['['] = { 'g[f', desc = 'Opening square bracket' },
+    -- [']'] = { 'g]f', desc = 'Closing square bracket' },
 
     -- Leader Shortcuts
     ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
+    ['<leader>e'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
     ['<leader>dB'] = { '<cmd>DBUI<cr>', desc = 'Open DAP UI' },
     ['<leader>c'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },
     ['<leader>mp'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make publish; tmux select-pane -U")<CR>', desc = 'Make publish' },
@@ -153,7 +155,6 @@ return {
 
   -- Visual Mode
   v = {
-    -- NOTE: Moonlander specifc
     ['|'] = { '1', desc = 'Pipe' },
     ['?'] = { '2', desc = 'Question mark' },
     ['&'] = { '3', desc = 'Ampersand' },
@@ -163,8 +164,8 @@ return {
     [']'] = { '8', desc = 'Closing square bracket' },
     ['@'] = { '9', desc = 'At symbol' },
     ['à'] = { '0', desc = 'Number zero with accent' },
-
     ['<leader>qt'] = { ':!quicktype --just-types -l typescript<CR>', desc = 'Run quicktype for TypeScript' },
+
     ['<leader>qc'] = { ':!quicktype --features just-types -l csharp<CR>', desc = 'Run quicktype for C#' },
     ['<leader>av'] = { 'y<cmd>lua require("user.helpers").visualModeAi()<CR>', desc = 'Visual mode AI' },
 

@@ -3,9 +3,6 @@
 
 return {
   'nvim-neo-tree/neo-tree.nvim',
-  mappings = {
-    ['<leader>e'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
-  },
   version = '*',
   dependencies = {
     'nvim-lua/plenary.nvim',
