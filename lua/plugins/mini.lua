@@ -1,5 +1,43 @@
 return { -- Collection of various small independent plugins/modules
   'echasnovski/mini.nvim',
+  mappings = {
+    n = {
+      -- Text Objects
+      ['ciu'] = { 'ci{' },
+      ['diu'] = { 'di{' },
+      ['viu'] = { 'vi{' },
+      ['cau'] = { 'ca{' },
+      ['dau'] = { 'da{' },
+      ['vau'] = { 'va{' },
+      ['ci2'] = { 'ci"' },
+      ['di2'] = { 'ci"' },
+      ['vi2'] = { 'vi"' },
+      ['ca2'] = { 'ca"' },
+      ['da2'] = { 'ca"' },
+      ['va2'] = { 'va"' },
+      ['cij'] = { 'ci[' },
+      ['dij'] = { 'di[' },
+      ['vij'] = { 'vi[' },
+      ['caj'] = { 'ca[' },
+      ['daj'] = { 'da[' },
+      ['vaj'] = { 'va[' },
+      ['di8'] = { 'di(' },
+      ['da8'] = { 'da(' },
+      ['caè'] = { 'ca{' },
+      ['ciè'] = { 'ci{' },
+      ['vaè'] = { 'va{' },
+      ['viè'] = { 'vi{' },
+      ['ci8'] = { 'ci(' },
+      ['va8'] = { 'va(' },
+      ['vi8'] = { 'vi(' },
+      ['ca8'] = { 'ca(' },
+      ['tè'] = { 'f{' },
+      ['Tè'] = { '{' },
+      ['vw'] = { 've' },
+      ['vtè'] = { 'vt{' },
+      ['vt8'] = { 'vt(' },
+    },
+  },
   config = function()
     -- Better Around/Inside textobjects
     --
