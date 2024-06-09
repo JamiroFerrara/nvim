@@ -153,6 +153,31 @@ return {
     ['H'] = { '<cmd>lua require("user.helpers").jprev()<cr>' },
   },
 
+  -- Terminal Mode
+  t = {
+    ['è'] = { 'p', desc = 'Print' },
+    ['<esc>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    ['<A-s>'] = { '<cmd>2ToggleTerm<cr>', desc = 'Toggle Terminal' },
+    ['<C-s>'] = { '<cmd>2ToggleTerm<cr>', desc = 'Toggle Terminal' },
+    ['q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    -- ['j'] = false,
+    ['<C-^M>'] = { '<NL>', desc = 'New Line' },
+    ['<leader>q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    ['<A-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    ['<C-t>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    ['<C-g>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    ['<C-j>'] = { '<NL>', desc = 'New Line' },
+    ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
+
+    ['<C-k>'] = { '<Cmd>wincmd k<cr>', desc = 'Move to Upper Window' },
+    ['<C-l>'] = { '<Cmd>wincmd l<cr><C-\\><C-n>i', desc = 'Move to Right Window' },
+    ['<A-j>'] = { '<NL>', desc = 'New Line' },
+    ['<A-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
+    ['<A-k>'] = { '<Cmd>wincmd k<cr>', desc = 'Move to Upper Window' },
+
+    ['<A-l>'] = { '<Cmd>wincmd l<cr><C-\\><C-n>i', desc = 'Move to Right Window' },
+  },
+
   -- Visual Mode
   v = {
     ['|'] = { '1', desc = 'Pipe' },
