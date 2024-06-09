@@ -4,7 +4,6 @@ return {
   { 'catppuccin/nvim', event = 'VeryLazy' },
 
   -- Improvements
-  { 'ThePrimeagen/harpoon', event = 'VeryLazy' },
   { 'lewis6991/impatient.nvim' },
   { 'ggandor/lightspeed.nvim', event = 'InsertEnter' },
   { 'max397574/better-escape.nvim', event = 'InsertEnter' },
