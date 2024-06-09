@@ -106,7 +106,6 @@ return { -- Fuzzy Finder (files, lsp, etc)
             ['<leader>fb'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
             ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
             ['<C-f>'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
-            ['<A-w>'] = { '<cmd>q<cr><cmd>Telescope quickfix<cr>' },
           },
         },
       },

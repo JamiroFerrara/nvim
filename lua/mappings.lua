@@ -146,6 +146,13 @@ return {
     ['<leader>oo'] = { 'za' },
     ['<leader>oc'] = { '<cmd>AerialTreeSyncFolds<cr>zRzm' },
     ['<leader>oa'] = { '<cmd>AerialTreeSyncFolds<cr>zRjk' },
+    ['<leader>P'] = { ':Prettier<cr>' },
+    ['<leader>bd'] = { "<cmd>lua require('user.helpers').dotnet_run()<cr>" },
+    ['<leader>bt'] = { '<cmd>lua require("user.helpers").dotnet_test()<CR>' },
+    ['<leader>bn'] = { "<cmd>lua require('user.helpers').npm_start()<cr>" },
+    ['<leader>bp'] = { "<cmd>lua require('user.helpers').publish()<cr>" },
+    ['<leader>bl'] = { "<cmd>lua require('user.helpers').npm_start_local()<cr>" },
+    ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" },
 
     ['<C-t>'] = { '<cmd>vsplit<cr><cmd> e TODO.md<cr>', nowait = true },
     ['<A-t>'] = { '<cmd>vsplit<cr><cmd> e TODO.md<cr>' },
@@ -204,6 +211,7 @@ return {
     ['<leader>ip'] = { '<cmd>IconPickerNormal<cr>' },
     ['<leader>q'] = { '<C-\\><C-n>:q<cr>' },
     ['<leader>w'] = { '<cmd>only<cr><cmd>lua os.execute("tmux resize-pane -Z")<cr>' },
+    ['<A-w>'] = { '<cmd>q<cr><cmd>Telescope quickfix<cr>' },
 
     ['H'] = { '<cmd>lua require("user.helpers").jprev()<cr>' },
   },
