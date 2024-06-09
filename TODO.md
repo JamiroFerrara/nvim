@@ -1,7 +1,5 @@
 # TODO: 
-- [o] Dap
-		- [ ] Fix port proxy for chrome debugging
+- [-] Dap
+		- [-] Fix port proxy for chrome debugging 
 
-- [o]	LSP
-		- [X] Rename mapping
-		- [ ] Remove <leader>c mappings
+- [ ] Sidebar follow current file 
