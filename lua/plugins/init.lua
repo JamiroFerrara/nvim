@@ -11,5 +11,4 @@ return {
   { 'gbprod/substitute.nvim', event = 'VeryLazy' },
   { 'haya14busa/is.vim', event = 'InsertEnter' },
   { 'tpope/vim-sleuth', event = 'BufReadPre' },
-  { 'folke/zen-mode.nvim', event = 'VeryLazy' },
 }
