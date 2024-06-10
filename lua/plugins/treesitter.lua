@@ -1,5 +1,6 @@
 return { -- Highlight, edit, and navigate code
   'nvim-treesitter/nvim-treesitter',
+  event = 'BufRead',
   build = ':TSUpdate',
   dependencies = {
     'nvim-treesitter/playground',
