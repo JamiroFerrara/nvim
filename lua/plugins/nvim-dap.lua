@@ -4,7 +4,7 @@ local dap_ui = require('../ui').dap_ui
 return {
   -- NOTE: Yes, you can install new plugins here!
   'mfussenegger/nvim-dap',
-  event = 'VeryLazy',
+  lazy = true,
   -- NOTE: And you can specify dependencies as well
   dependencies = {
     'rcarriga/nvim-dap-ui',
