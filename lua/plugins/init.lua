@@ -4,8 +4,8 @@ return {
   { 'catppuccin/nvim', event = 'VeryLazy' },
 
   -- Improvements
-  { 'ThePrimeagen/harpoon', event = 'VeryLazy' },
   { 'lewis6991/impatient.nvim' },
+  { 'ThePrimeagen/harpoon', event = 'VeryLazy' },
   { 'ggandor/lightspeed.nvim', event = 'InsertEnter' },
   { 'max397574/better-escape.nvim', event = 'InsertEnter' },
   { 'nvim-pack/nvim-spectre', opts = {}, event = 'CmdlineEnter' },

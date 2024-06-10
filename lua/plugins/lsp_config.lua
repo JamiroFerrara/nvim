@@ -50,7 +50,6 @@ return { -- LSP Configuration & Plugins
     --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
     --    function will be executed to configure the current buffer
     vim.api.nvim_create_autocmd('LspAttach', {
-      pattern = { '*.lua', '*.sh', '*.json', '*.php', '*.ts', '*.tsx', '*.js', '*.jsx', '*.lua', '*.rs', '*.go', '*.c', '*.cpp', '*.h', '*.hpp' },
       group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
       callback = function(event)
         -- NOTE: Remember that Lua is a real programming language, and as such it is possible
@@ -110,15 +109,6 @@ return { -- LSP Configuration & Plugins
         --     vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
         --   end, '[T]oggle Inlay [H]ints')
         -- end
-      end,
-    })
-
-    vim.api.nvim_create_autocmd('BufEnter', {
-      pattern = '*.cs',
-      nested = true,
-      callback = function()
-        vim.api.nvim_set_keymap('n', 'gr', '<cmd>lua require("omnisharp_extended").telescope_lsp_references()<cr>', { noremap = true, silent = true })
-        vim.api.nvim_set_keymap('n', 'gd', '<cmd>lua require("omnisharp_extended").telescope_lsp_definition()<cr>', { noremap = true, silent = true })
       end,
     })
 

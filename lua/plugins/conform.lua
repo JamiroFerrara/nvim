@@ -32,6 +32,7 @@ return { -- Autoformat
       -- You can use a sub-list to tell conform to run *until* a formatter
       -- is found.
       -- javascript = { { "prettierd", "prettier" } },
+      sql = {}, --FIX: Disable formatting for SQL files
     },
   },
 }
