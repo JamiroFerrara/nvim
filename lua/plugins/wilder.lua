@@ -1,6 +1,6 @@
 return {
   'gelguy/wilder.nvim',
-  event = 'VeryLazy',
+  event = 'CmdlineEnter',
   opts = { modes = { ':' }, next_key = '<C-j>', previous_key = '<C-k>' },
   config = function()
     local wilder = require 'wilder'

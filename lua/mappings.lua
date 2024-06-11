@@ -130,6 +130,8 @@ return {
     ['F'] = { "<cmd>lua require('flash').jump()<cr>" },
     ['cp'] = { "<cmd>let @+ = expand('%:p')<cr>" },
 
+    ['<leader>ac'] = { '<cmd>Copilot<CR>', desc = 'Complete code' },
+
     ['<leader>oo'] = { 'za' },
     ['<leader>oc'] = { '<cmd>AerialTreeSyncFolds<cr>zRzm' },
     ['<leader>oa'] = { '<cmd>AerialTreeSyncFolds<cr>zRjk' },

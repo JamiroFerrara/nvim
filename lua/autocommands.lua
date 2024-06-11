@@ -6,3 +6,12 @@ vim.api.nvim_create_autocmd('TextYankPost', {
     vim.highlight.on_yank()
   end,
 })
+
+-- On buffer enter require("harpoon.ui").nav_file(1);
+-- vim.api.nvim_create_autocmd('BufEnter', {
+--   desc = 'On buffer enter require("harpoon.ui").nav_file(1);',
+--   group = vim.api.nvim_create_augroup('kickstart-harpoon-nav', { clear = true }),
+--   callback = function()
+--     require('harpoon.ui').nav_file(1)
+--   end,
+-- })

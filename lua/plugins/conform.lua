@@ -1,6 +1,6 @@
 return { -- Autoformat
   'stevearc/conform.nvim',
-  event = 'VeryLazy',
+  -- event = 'VeryLazy', -- TODO:
   keys = {
     {
       '<leader>f',
