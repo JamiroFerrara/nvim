@@ -3,7 +3,7 @@ return { -- Autoformat
   -- event = 'VeryLazy', -- TODO:
   keys = {
     {
-      '<leader>f',
+      '<leader>fb',
       function()
         require('conform').format { async = true, lsp_fallback = true }
       end,

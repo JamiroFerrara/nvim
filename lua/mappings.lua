@@ -6,7 +6,7 @@ return {
     ['<'] = { '<<', desc = 'Shift left' },
     ['à'] = { '0', desc = 'Letter a with grave accent' },
     ['<A-n>'] = { '*', desc = 'Follow' },
-
+    ['<leader>ld'] = { '<cmd>lua vim.diagnostic.open_float()<cr>', desc = 'Hover diagnostics' },
     -- Leader Shortcuts
     ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
     ['<leader>e'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
@@ -159,7 +159,7 @@ return {
     },
     ['<leader>le'] = { '<cmd>lua vim.diagnostic.goto_next()<cr>' },
     ['<leader>lr'] = { '<cmd>vim.lsp.buf.rename()<cr>' },
-    ['<A-e>'] = { '<cmd>w<cr>' },
+    ['<A-e>'] = { '<cmd>w<cr><cmd>lua require("conform").format { async = true, lsp_fallback = true }<cr>' },
     ['<leader>hr'] = { "<cmd>lua require('user/react-helpers').commands()<cr>" },
     ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },
     ['<leader>hj'] = { "<cmd>lua require('user/jira-helpers').commands()<cr>" },
