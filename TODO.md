@@ -7,5 +7,5 @@
 - [ ] Remove windows return chars
 - [ ] If tmux pane is under run m and r commands in window, unless there is
 			something running then split window
-- [ ] Number highlighting 
 - [ ] Implement per project pipeline viewer
+- [ ] Number highlighting 
