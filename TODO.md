@@ -5,8 +5,8 @@
 - [ ] Alt 3 is spotify
 
 # Keybindings
-- [ ] Go to beginning of line
-- [ ] Go to end of line
+- [ ] Go to beginning of line H 
+- [ ] Go to end of line L
 - [ ] Fix up and down functions
 - [ ] Lucky search whatever is in yank register
 - [ ] Normal search whatver is in yank register
@@ -19,7 +19,9 @@
 - [X] Implement per project pipeline viewer
 - [X] Set no wrap
 - [ ] Better pasting
+- [ ] Flash highlight fixes
 
 # Highlights
-- [ ] Current line highlights
-- [ ] Rest of line highlights
+- [X] Current line highlights
+- [X] Rest of line highlights
+- [ ] Lsp loading highlight transparent

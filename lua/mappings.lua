@@ -45,9 +45,6 @@ return {
     },
     ['<leader>ap'] = { '<cmd>lua os.execute("/home/jferrara/.scripts/v-script.sh")<CR>', desc = 'toggle term bottom' },
 
-    -- LSP Commands
-    ['L'] = { '<cmd>lua vim.lsp.buf.hover()<cr>' },
-
     -- Git Commands
     ['<leader>gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>' },
     ['<leader>gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>' },
@@ -157,8 +154,11 @@ return {
     ['<leader>lc'] = {
       "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
     },
+
     ['<leader>le'] = { '<cmd>lua vim.diagnostic.goto_next()<cr>' },
     ['<leader>lr'] = { '<cmd>vim.lsp.buf.rename()<cr>' },
+    ['<leader>ll'] = { '<cmd>lua vim.lsp.buf.hover()<cr>' },
+
     ['<A-e>'] = { '<cmd>w<cr><cmd>lua require("conform").format { async = true, lsp_fallback = true }<cr>' },
     ['<leader>hr'] = { "<cmd>lua require('user/react-helpers').commands()<cr>" },
     ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },
@@ -204,7 +204,8 @@ return {
     ['<leader>w'] = { '<cmd>only<cr><cmd>lua os.execute("tmux resize-pane -Z")<cr>' },
     ['<A-w>'] = { '<cmd>q<cr><cmd>Telescope quickfix<cr>' },
 
-    ['H'] = { '<cmd>lua require("user.helpers").jprev()<cr>' },
+    ['H'] = { '^' },
+    ['L'] = { '$' },
   },
 
   -- Terminal Mode
