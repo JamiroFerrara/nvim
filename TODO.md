@@ -16,13 +16,9 @@
 - [ ] Lazy plugin disable for debugging
 - [ ] If tmux pane is under run m and r commands in window, unless there is
 			something running then split window
-- [ ] Implement per project pipeline viewer
-- [ ] Set no wrap
-
-# Plugins
-- [-] Markdown headlines 
-- [ ] Autosave plugin
-- [ ] Orgmode
+- [X] Implement per project pipeline viewer
+- [X] Set no wrap
+- [ ] Better pasting
 
 # Highlights
 - [ ] Current line highlights
