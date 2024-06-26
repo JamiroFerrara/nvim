@@ -12,6 +12,7 @@ vim.api.nvim_create_autocmd('BufEnter', {
   desc = 'On buffer enter set highlights',
   group = vim.api.nvim_create_augroup('kickstart-harpoon-nav', { clear = true }),
   callback = function()
-    vim.cmd 'highlight LineNr guifg=#b4befe'
+    -- vim.cmd 'highlight LineNr guifg=#b4befe'
+    vim.cmd 'highlight LineNr guifg=#FFFFFF'
   end,
 })
