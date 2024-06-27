@@ -7,6 +7,16 @@ vim.g.have_nerd_font = true
 vim.g.copilot_proxy_strict_ssl = false
 vim.g.bufferline_auto_hide = 1
 
+-- FIX: Folding ?
+-- vim.opt.foldmethod = 'expr'
+-- vim.opt.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+-- vim.opt.foldcolumn = '0'
+-- vim.opt.foldtext = ''
+-- vim.opt.foldlevel = 99
+-- vim.opt.foldlevelstart = 1
+-- vim.opt.foldnestmax = 2
+-- vim.o.foldenable = true
+
 -- Options for 'opt'
 vim.opt.lazyredraw = true
 vim.opt.wrap = false

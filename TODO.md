@@ -20,8 +20,19 @@
 - [X] Set no wrap
 - [ ] Better pasting
 - [ ] Flash highlight fixes
+- [ ] Markdown documentation plugin ? Neorg :(
+- [ ] Autosnippets
+- [ ] Publish notifications DTM 
+- [ ] Publish notifications Allitude
 
 # Highlights
 - [X] Current line highlights
 - [X] Rest of line highlights
 - [ ] Lsp loading highlight transparent
+- [ ] Black quickfix preview highlight
+
+# CLI
+- [ ] Fzf history search
+
+# Thougts
+- Better rendicontazione task -> Neovim work analisys plugin?
