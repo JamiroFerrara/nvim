@@ -5,11 +5,13 @@
 - [ ] Alt 3 is spotify
 
 # Keybindings
-- [ ] Go to beginning of line H 
-- [ ] Go to end of line L
+- [ ] Go to beginning of line H  Visual mode
+- [ ] Go to end of line L Visual mode
 - [ ] Fix up and down functions
 - [ ] Lucky search whatever is in yank register
 - [ ] Normal search whatver is in yank register
+- [ ] Capital KJ to exit insert mode	
+- [ ] Alt+\ also maximes window
 
 # Features
 - [X] Remove windows return chars by default
@@ -21,9 +23,17 @@
 - [ ] Better pasting
 - [ ] Flash highlight fixes
 - [ ] Markdown documentation plugin ? Neorg :(
-- [ ] Autosnippets
+- [X] Autosnippets
 - [ ] Publish notifications DTM 
 - [ ] Publish notifications Allitude
+- [ ] Autosolve all autosolavble errors
+- [ ] t has to go on top of letter
+- [ ] repeat last terminal command
+- [ ] Editable quickfix lists
+- [ ] Full word wrap
+- [ ] Word wrap border
+
+- [ ] Obsidiam.Nvim
 
 # Highlights
 - [X] Current line highlights

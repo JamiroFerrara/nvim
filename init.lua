@@ -18,6 +18,7 @@ vim.g.bufferline_auto_hide = 1
 -- vim.o.foldenable = true
 
 -- Options for 'opt'
+--
 vim.opt.lazyredraw = true
 vim.opt.wrap = false
 vim.opt.breakindent = true
