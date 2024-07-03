@@ -6,18 +6,15 @@ tags: []
 
 # TODO
 ## AHK
-- [ ] Alt + \ is terminal
-- [ ] Alt 1 is google
-- [ ] Alt 2 is teams
-- [ ] Alt 3 is spotify
+- [x] Alt + \ is terminal
+- [x] Alt 1 is google
+- [x] Alt 2 is teams
+- [x] Alt 3 is spotify
 
-- [ ] Go to beginning of line H  Visual mode
-- [ ] Go to end of line L Visual mode
-- [ ] Fix up and down functions
-- [ ] Lucky search whatever is in yank register
-- [ ] Normal search whatver is in yank register
-- [ ] Capital KJ to exit insert mode	
-- [ ] Alt+\ also maximes window
+## Commands
+- [x] Go to beginning of line H  Visual mode
+- [x] Go to end of line L Visual mode
+- [x] Capital KJ to exit insert mode	
 
 ## Features
 - [x] Markdown documentation plugin ? Neorg :(
@@ -25,18 +22,30 @@ tags: []
 - [ ] If tmux pane is under run m and r commands in window, unless there is something running then split window
 - [ ] Better pasting
 - [ ] Flash highlight fixes
-- [ ] Publish notifications DTM 
-- [ ] Publish notifications Allitude
 - [ ] repeat last terminal command
 - [ ] Editable quickfix lists
 - [ ] Full word wrap
 - [ ] Word wrap border
 - [ ] Tilde
+- [ ] Lucky search whatever is in yank register
+- [ ] Normal search whatver is in yank register
+- [~] Publish notifications DTM 
+- [~] Publish notifications Allitude
 
 - [>] Obsidian.Nvim
     - [x] Global directory vault allways accessible from project
     - [ ] Alt + Invio toggle a prescindere
     - [ ] Shareable Todo file
+    - [ ] Question mark checkbox
+    - [ ] Mappings
+	- [ ] <leader>ob -> backlinks
+	- [ ] visual new link
+
+## Fixes
+- [ ] Fix Sql formatting in dadbod
+    <!--NOTE: I think it has something to do with the fact that the formatters are different -->
+    <!-- depending on if i'm using sqlserver or mysql or whatever, so i should probably -->
+    <!-- figure out a way to handle this.. -->
 
 ## Highlights
 - [x] Current line highlights

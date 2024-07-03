@@ -235,6 +235,9 @@ return {
 
   -- Visual Mode
   v = {
+    ['H'] = { '^' },
+    ['L'] = { '$' },
+
     ['|'] = { '1', desc = 'Pipe' },
     ['?'] = { '2', desc = 'Question mark' },
     ['&'] = { '3', desc = 'Ampersand' },
@@ -298,6 +301,7 @@ return {
     ['jj'] = { '<esc>', desc = 'Exit insert mode' },
     ['JJ'] = { '<esc>', desc = 'Exit insert mode' },
     ['kj'] = { '<esc>', desc = 'Exit insert mode' },
+    ['KJ'] = { '<esc>', desc = 'Exit insert mode' },
     ['jJ'] = { '<esc><cmd>w!<cr>', desc = 'Save and exit insert mode' },
     ['jp'] = { '<esc>:q!<cr>', desc = 'Quit without saving' },
     ['jk'] = { '<esc>A', desc = 'Append at end of line' },
