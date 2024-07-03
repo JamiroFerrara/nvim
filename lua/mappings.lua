@@ -159,7 +159,8 @@ return {
     ['<leader>lr'] = { '<cmd>vim.lsp.buf.rename()<cr>' },
     ['<leader>ll'] = { '<cmd>lua vim.lsp.buf.hover()<cr>' },
 
-    ['<A-e>'] = { '<cmd>w<cr><cmd>lua require("conform").format { async = true, lsp_fallback = true }<cr>' },
+    -- ['<A-e>'] = { '<cmd>w<cr><cmd>lua require("conform").format { async = true, lsp_fallback = true }<cr>' },
+    ['<A-e>'] = { '<cmd>w<cr>' },
     ['<leader>hr'] = { "<cmd>lua require('user/react-helpers').commands()<cr>" },
     ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },
     ['<leader>hj'] = { "<cmd>lua require('user/jira-helpers').commands()<cr>" },
