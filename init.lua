@@ -19,6 +19,7 @@ vim.g.bufferline_auto_hide = 1
 
 -- Options for 'opt'
 --
+vim.opt.conceallevel = 2
 vim.opt.lazyredraw = true
 vim.opt.wrap = false
 vim.opt.breakindent = true
