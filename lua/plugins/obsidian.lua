@@ -31,10 +31,11 @@ return {
         end,
         overrides = {
           notes_subdir = vim.NIL, -- have to use 'vim.NIL' instead of 'nil'
-          new_notes_location = 'notes_subdir',
+          new_notes_location = 'current_dir',
           templates = {
             folder = vim.NIL,
           },
+          wiki_link_func = 'prepend_note_path',
           disable_frontmatter = true,
           note_path_func = function(spec)
             -- This is equivalent to the default behavior.
@@ -69,7 +70,11 @@ return {
     ---@param title string|?
     ---@return string
     note_id_func = function(title)
-      return title
+      if title then
+        return title
+      else
+        return 'asdflsldfjasldfsldkfjalsdkfjalsdkfjald'
+      end
     end,
 
     -- Optional, customize how note file names are generated given the ID, target directory, and title.
@@ -87,7 +92,7 @@ return {
     --  * "prepend_note_path", e.g. '[[foo-bar.md|Foo Bar]]'
     --  * "use_path_only", e.g. '[[foo-bar.md]]'
     -- Or you can set it to a function that takes a table of options and returns a string, like this:
-    wiki_link_func = 'prepend_note_path',
+    wiki_link_func = 'use_alias_only',
 
     -- Optional, customize how markdown links are formatted.
     markdown_link_func = function(opts)
@@ -218,7 +223,7 @@ return {
       -- Define how various check-boxes are displayed
       checkboxes = {
         -- NOTE: the 'char' value has to be a single character, and the highlight groups are defined below.
-        [' '] = { char = '󰄱', hl_group = 'ObsidianTodo' },
+        [' '] = { char = '', hl_group = 'ObsidianTodo' },
         ['x'] = { char = '', hl_group = 'ObsidianDone' },
         ['>'] = { char = '', hl_group = 'ObsidianRightArrow' },
         ['~'] = { char = '󰰱', hl_group = 'ObsidianTilde' },
@@ -230,7 +235,7 @@ return {
         -- You can also add more custom ones...
       },
       -- Use bullet marks for non-checkbox lists.
-      bullets = { char = '•', hl_group = 'ObsidianBullet' },
+      bullets = { char = '󰧞', hl_group = 'ObsidianBullet' },
       external_link_icon = { char = '', hl_group = 'ObsidianExtLinkIcon' },
       -- Replace the above with this if you don't have a patched font:
       -- external_link_icon = { char = "", hl_group = "ObsidianExtLinkIcon" },

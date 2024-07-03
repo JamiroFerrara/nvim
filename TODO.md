@@ -1,11 +1,11 @@
 ---
 id: TODO
-aliases:
-  - AHK
+aliases: []
 tags: []
 ---
 
-# AHK
+# TODO
+## AHK
 - [ ] Alt + \ is terminal
 - [ ] Alt 1 is google
 - [ ] Alt 2 is teams
@@ -19,12 +19,12 @@ tags: []
 - [ ] Capital KJ to exit insert mode	
 - [ ] Alt+\ also maximes window
 
-# Features
+## Features
+- [x] Markdown documentation plugin ? Neorg :(
 - [ ] Lazy plugin disable for debugging
 - [ ] If tmux pane is under run m and r commands in window, unless there is something running then split window
 - [ ] Better pasting
 - [ ] Flash highlight fixes
-- [ ] Markdown documentation plugin ? Neorg :(
 - [ ] Publish notifications DTM 
 - [ ] Publish notifications Allitude
 - [ ] repeat last terminal command
@@ -33,17 +33,19 @@ tags: []
 - [ ] Word wrap border
 - [ ] Tilde
 
-- [>] Obsidiam.Nvim
-    - [ ] Global directory vault allways accessible from project
+- [>] Obsidian.Nvim
+    - [x] Global directory vault allways accessible from project
+    - [ ] Alt + Invio toggle a prescindere
+    - [ ] Shareable Todo file
 
-# Highlights
-- [X] Current line highlights
-- [X] Rest of line highlights
+## Highlights
+- [x] Current line highlights
+- [x] Rest of line highlights
 - [ ] Lsp loading highlight transparent
 - [ ] Black quickfix preview highlight
 
-# CLI
+## CLI
 - [ ] Fzf history search
 
-# Thougts
+## Thougts
 - Better rendicontazione task -> Neovim work analisys plugin?
