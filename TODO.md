@@ -5,16 +5,12 @@ tags: []
 ---
 
 # TODO
-## AHK
-- [x] Alt + \ is terminal
-- [x] Alt 1 is google
-- [x] Alt 2 is teams
-- [x] Alt 3 is spotify
-
-## Commands
+## Mappings
 - [x] Go to beginning of line H  Visual mode
 - [x] Go to end of line L Visual mode
 - [x] Capital KJ to exit insert mode	
+- [ ] Window resizing 
+
 
 ## Features
 - [x] Markdown documentation plugin ? Neorg :(
@@ -37,9 +33,16 @@ tags: []
     - [ ] Alt + Invio toggle a prescindere
     - [ ] Shareable Todo file
     - [ ] Question mark checkbox
+    - [ ] Dailies
+    - [ ] Templates 
+    - [ ] bold fonts for markdown
+    - [ ] italic fonts for markdown
     - [ ] Mappings
 	- [ ] <leader>ob -> backlinks
 	- [ ] visual new link
+
+## Debugging
+- [ ] Fix chsarp slow debugging 
 
 ## Fixes
 - [ ] Fix Sql formatting in dadbod

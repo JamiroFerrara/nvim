@@ -259,6 +259,13 @@ return {
       },
     },
 
+    daily_notes = {
+      folder = 'dailies',
+      date_format = '%Y-%m-%d',
+      alias_format = '%B %-d, %Y',
+      default_tags = { 'daily-notes' },
+    },
+
     -- Specify how to handle attachments.
     attachments = {
       -- The default folder to place images in via `:ObsidianPasteImg`.
