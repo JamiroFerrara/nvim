@@ -2,6 +2,7 @@ return {
   -- Normal Mode
   n = {
     -- Basic Indentation
+    ['#'] = { '<cmd>Telescope commands<cr>', desc = 'Shift right' },
     ['>'] = { '>>', desc = 'Shift right' },
     ['<'] = { '<<', desc = 'Shift left' },
     ['à'] = { '0', desc = 'Letter a with grave accent' },
