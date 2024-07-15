@@ -6,15 +6,3 @@ vim.api.nvim_create_autocmd('TextYankPost', {
     vim.highlight.on_yank()
   end,
 })
-
--- On buffer enter require("harpoon.ui").nav_file(1);
--- TODO: Move this to proper file
-vim.api.nvim_create_autocmd('BufEnter', {
-  desc = 'On buffer enter set highlights',
-  group = vim.api.nvim_create_augroup('kickstart-harpoon-nav', { clear = true }),
-  callback = function()
-    vim.cmd 'highlight LineNrAbove guifg=#3b3e54'
-    vim.cmd 'highlight LineNrBelow guifg=#3b3e54'
-    vim.cmd 'highlight LineNr guifg=#b4befe'
-  end,
-})
