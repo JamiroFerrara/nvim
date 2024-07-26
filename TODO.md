@@ -4,7 +4,7 @@ aliases: []
 tags: []
 ---
 
-# Todo
+## TODO
 - [x] Go to beginning of line H  Visual mode
 - [x] Go to end of line L Visual mode
 - [x] Capital KJ to exit insert mode	
@@ -57,7 +57,7 @@ tags: []
 - [ ] Black quickfix preview highlight
 
 ## CLI
-- [ ] Fzf history search
+- [>] Fzf history search
 
 ## Thougts
 - Better rendicontazione task -> Neovim work analisys plugin?

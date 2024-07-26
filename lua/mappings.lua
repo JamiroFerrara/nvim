@@ -104,6 +104,9 @@ return {
     ['<leader>3'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
     ['<C-r>'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
     ['<leader>4'] = { '<cmd>lua require("harpoon.ui").nav_file(4)<cr>' },
+    ['<leader>5'] = { '<cmd>lua require("harpoon.ui").nav_file(5)<cr>' },
+    ['<leader>6'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
+    ['<leader>7'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
 
     -- Other
     ['|'] = { '1' },
@@ -131,7 +134,8 @@ return {
 
     ['<leader>ac'] = { '<cmd>Copilot<CR>', desc = 'Complete code' },
 
-    ['<leader>oo'] = { 'za' },
+    ['<leader>oo'] = { 'zi' },
+    ['<cr>'] = { 'za' },
     ['<leader>oc'] = { '<cmd>AerialTreeSyncFolds<cr>zRzm' },
     ['<leader>oa'] = { '<cmd>AerialTreeSyncFolds<cr>zRjk' },
     ['<leader>P'] = { ':Prettier<cr>' },

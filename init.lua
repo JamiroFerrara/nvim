@@ -6,6 +6,8 @@ vim.g.maplocalleader = ' '
 vim.g.have_nerd_font = true
 vim.g.copilot_proxy_strict_ssl = false
 vim.g.bufferline_auto_hide = 1
+vim.g.markdown_folding = 1
+
 
 -- FIX: Folding ?
 -- vim.opt.foldmethod = 'expr'
@@ -18,7 +20,7 @@ vim.g.bufferline_auto_hide = 1
 -- vim.o.foldenable = true
 
 -- Options for 'opt'
---
+vim.opt.foldopen:remove("search")
 vim.opt.conceallevel = 2
 vim.opt.lazyredraw = true
 vim.opt.wrap = false

@@ -169,6 +169,12 @@ return {
         new = '<C-x>',
         -- Insert a link to the selected note.
         insert_link = '<C-l>',
+        ['<cr>'] = {
+          action = function()
+            return require('obsidian').util.smart_action()
+          end,
+          opts = { buffer = true, expr = true },
+        },
       },
     },
 

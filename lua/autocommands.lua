@@ -6,3 +6,12 @@ vim.api.nvim_create_autocmd('TextYankPost', {
     vim.highlight.on_yank()
   end,
 })
+
+-- TODO: Close folds on markdown
+-- vim.api.nvim_create_autocmd('BufRead', {
+--   pattern = '*.md',
+--   nested = true,
+--   callback = function()
+--     vim.api.nvim_command 'normal! za'
+--   end,
+-- })
