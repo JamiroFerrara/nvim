@@ -19,14 +19,57 @@ autosnippet ita "Creates italic text"
 snippet itb "Creates italic bold text"
 	***$0***
 
-snippet todo "todo"
-	<!-- TODO: $1-->
+# snippet todo "todo"
+# 	<!-- TODO: $1-->
+# snippet note "note"
+# 	<!-- NOTE: $1-->
+#
+# snippet fix "fix"
+# 	<!-- FIX: $1-->
+#
+# snippet bug "bug"
+# 	<!-- BUG: $1-->
+
+snippet warning "warning"
+	> [!WARNING]
+	> $1
+
+snippet tip "tip"
+	> [!TIP]
+	> $1
 
 snippet note "note"
-	<!-- NOTE: $1-->
+	> [!NOTE]
+	> $1
 
-snippet fix "fix"
-	<!-- FIX: $1-->
+snippet important "important"
+	> [!IMPORTANT]
+	> $1
 
-snippet bug "bug"
-	<!-- BUG: $1-->
+snippet caution "caution"
+	> [!CAUTION]
+	> $1
+
+snippet example "example"
+	> [!EXAMPLE]
+	> $1
+
+snippet quote "quote"
+	> [!QUOTE]
+	> $1
+
+snippet todo "todo"
+	> [!TODO]
+	> $1
+
+snippet question "question"
+	> [!QUESTION]
+	> $1
+
+snippet success "success"
+	> [!SUCCESS]
+	> $1
+
+snippet failure "failure"
+	> [!FAILURE]
+	> $1
