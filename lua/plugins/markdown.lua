@@ -103,18 +103,18 @@ return {
       -- Turn on / off checkbox state rendering
       enabled = true,
       unchecked = {
-        icon = '',
+        icon = '- ',
         highlight = 'ObsidianTodo',
       },
       checked = {
-        icon = '',
+        icon = '- ',
         highlight = 'ObsidianDone',
       },
       custom = {
-        pending = { raw = '[>]', rendered = '', highlight = '@constant' },
-        error = { raw = '[~]', rendered = '', highlight = '@error' },
-        warning = { raw = '[!]', rendered = '', highlight = '@comment.warning.gitcommit' },
-        question = { raw = '[?]', rendered = '', highlight = '@comment.warning.gitcommit' },
+        pending = { raw = '[>]', rendered = '- ', highlight = '@constant' },
+        error = { raw = '[~]', rendered = '- ', highlight = '@error' },
+        warning = { raw = '[!]', rendered = '- ', highlight = '@comment.warning.gitcommit' },
+        question = { raw = '[?]', rendered = '- ', highlight = '@comment.warning.gitcommit' },
       },
     },
     quote = {
