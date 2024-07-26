@@ -4,8 +4,7 @@ aliases: []
 tags: []
 ---
 
-# TODO
-## Mappings
+# Todo
 - [x] Go to beginning of line H  Visual mode
 - [x] Go to end of line L Visual mode
 - [x] Capital KJ to exit insert mode	
@@ -14,7 +13,7 @@ tags: []
 
 ## Features
 - [x] Markdown documentation plugin ? Neorg :(
-- [ ] Lazy plugin disable for debugging
+- [x] Lazy plugin disable for debugging
 - [ ] If tmux pane is under run m and r commands in window, unless there is something running then split window
 - [ ] Better pasting
 - [ ] Flash highlight fixes
@@ -32,9 +31,10 @@ tags: []
     - [x] Global directory vault allways accessible from project
     - [ ] Alt + Invio toggle a prescindere
     - [ ] Shareable Todo file
-    - [ ] Question mark checkbox
-    - [ ] Dailies
-    - [ ] Templates 
+    - [x] Question mark checkbox
+    - [x] Dailies
+    - [?] Templates 
+    - [ ] Quote snippets 
     - [ ] bold fonts for markdown
     - [ ] italic fonts for markdown
     - [ ] Mappings

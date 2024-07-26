@@ -19,5 +19,13 @@ vim.api.nvim_create_autocmd('BufEnter', {
     vim.cmd 'highlight LineNrAbove guifg=#6e7396'
     vim.cmd 'highlight LineNrBelow guifg=#6e7396'
     vim.cmd 'highlight LineNr guifg=#b4befe'
+
+    vim.cmd 'highlight @markup.quote guifg=@text'
+    vim.cmd 'highlight @markup.heading.1.markdown guifg=#ed8796 guibg=#382a37' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.2.markdown guifg=#f5a97f guibg=#392f33' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.3.markdown guifg=#eed49f guibg=#383538' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.4.markdown guifg=#a6da95 guibg=#2d3637' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.5.markdown guifg=#8aadf4 guibg=#292f45' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.6.markdown guifg=#b7bdf8 guibg=#303245 ' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
   end,
 })
