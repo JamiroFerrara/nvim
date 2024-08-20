@@ -5,8 +5,6 @@ tags: []
 ---
 
 #### Features
-- [x] Markdown documentation plugin ? Neorg :(
-- [x] Lazy plugin disable for debugging
 - [ ] If alt + \ terminal focus chrome otherwise terminal 
 - [ ] Better pasting
 - [ ] Editable quickfix lists
@@ -35,6 +33,9 @@ tags: []
 - [ ] Mappings
     - [ ] <leader>ob -> backlinks
     - [ ] visual new link
+
+#### Fixes
+- [?] Quick fix tree-sitter
 
 #### Debugging
 - [ ] Fix chsarp slow debugging 

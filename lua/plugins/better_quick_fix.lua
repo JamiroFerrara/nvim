@@ -1,6 +1,7 @@
 return {
   'kevinhwang91/nvim-bqf',
   event = 'VeryLazy',
+  dependencies = { 'nvim-treesitter/nvim-treesitter'},
   opts = {
     auto_enable = true,
     auto_resize_height = true, -- highly recommended enable
