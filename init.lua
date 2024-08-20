@@ -8,6 +8,7 @@ vim.g.copilot_proxy_strict_ssl = false
 vim.g.bufferline_auto_hide = 1
 vim.g.markdown_folding = 1
 
+vim.g.copilot_workspace_folders = { "~/repos" }
 
 -- FIX: Folding ?
 -- vim.opt.foldmethod = 'expr'
