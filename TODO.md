@@ -17,7 +17,12 @@ tags: []
 - [ ] Copilot in project mode 
 
 #### Plugins
-- [ ] Lua line 
+- [ ] Lua line:
+	- [ ] Install
+	- [ ] Customize
+
+#### Mappings
+- [ ] Alt + n -> ChatGpt new session
 
 #### Markdown
 - [ ] Shareable Todo file
@@ -28,17 +33,14 @@ tags: []
 - [ ] markdown outline preview -> linkarzu
 - [ ] jump between markdown headings -> linkarzu
 
-- [ ] Daily note obsidian jump 
 - [ ] Open links in browser 
-- [ ] Mappings
-    - [ ] <leader>ob -> backlinks
-    - [ ] visual new link
 
 #### Fixes
 - [?] Quick fix tree-sitter
 
 #### Debugging
-- [ ] Fix chsarp slow debugging 
+- [ ] Fix chsarp slow debugging
+- [ ] On breakpoint hit focus window
 
 #### Highlights
 - [ ] Lsp loading highlight transparent

@@ -23,6 +23,7 @@ vim.g.copilot_workspace_folders = { "~/repos" } -- NOTE: Should work?
 -- Options for 'opt'
 vim.opt.foldopen:remove("search")
 vim.opt.conceallevel = 2
+vim.opt.cmdheight = 0
 vim.opt.lazyredraw = true
 vim.opt.wrap = false
 vim.opt.breakindent = true

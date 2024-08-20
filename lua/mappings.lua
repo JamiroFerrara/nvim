@@ -39,6 +39,12 @@ return {
     ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>', desc = 'Live grep' },
     ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>", desc = 'DAP no debug' },
 
+    -- Obsidian Commands
+    ['<leader>ob'] = { "<cmd>ObsidianBacklinks<cr>", desc = 'DAP no debug' },
+    ['<leader>ot'] = { "<cmd>ObsidianToday<cr>", desc = 'DAP no debug' },
+    ['<leader>oT'] = { "<cmd>ObsidianTomorrow<cr>", desc = 'DAP no debug' },
+    ['<leader>oy'] = { "<cmd>ObsidianYesterday<cr>", desc = 'DAP no debug' },
+
     -- TMUX Commands
     ['<leader>th'] = {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z\\"")<CR>',
