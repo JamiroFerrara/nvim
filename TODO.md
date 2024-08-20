@@ -4,29 +4,26 @@ aliases: []
 tags: []
 ---
 
-#### TODO
-- [x] Go to beginning of line H  Visual mode
-- [x] Go to end of line L Visual mode
-- [x] Capital KJ to exit insert mode	
-- [ ] Window resizing 
-
-
 #### Features
 - [x] Markdown documentation plugin ? Neorg :(
 - [x] Lazy plugin disable for debugging
-- [ ] If tmux pane is under run m and r commands in window, unless there is something running then split window
+- [ ] If alt + \ terminal focus chrome otherwise terminal 
 - [ ] Better pasting
-- [ ] Flash highlight fixes
-- [ ] repeat last terminal command
 - [ ] Editable quickfix lists
 - [ ] Full word wrap
 - [ ] Word wrap border
 - [ ] Tilde
+
 - [ ] Lucky search whatever is in yank register
 - [ ] Normal search whatver is in yank register
+
 - [ ] Faster large file open -> garoto de programa
-- [~] Publish notifications DTM 
-- [~] Publish notifications Allitude
+- [ ] Treesitter injections 
+- [ ] Copilot in project mode 
+
+#### Plugins
+- [ ] Better bullet points 
+- [ ] Lua line 
 
 #### Markdown
 - [x] Global directory vault allways accessible from project
@@ -41,6 +38,8 @@ tags: []
 - [ ] italic fonts for markdown 
 - [ ] markdown outline preview -> linkarzu
 - [ ] jump between markdown headings -> linkarzu
+- [ ] Daily note obsidian jump 
+- [ ] Open links in browser 
 - [ ] Mappings
     - [ ] <leader>ob -> backlinks
     - [ ] visual new link
@@ -58,13 +57,6 @@ tags: []
     <!-- figure out a way to handle this.. -->
 
 #### Highlights
-- [x] Current line highlights
-- [x] Rest of line highlights
 - [ ] Lsp loading highlight transparent
 - [ ] Black quickfix preview highlight
-
-#### CLI
-- [>] Fzf history search
-
-#### Thougts
-- Better rendicontazione task -> Neovim work analisys plugin?
+- [ ] Flash highlight fixes
