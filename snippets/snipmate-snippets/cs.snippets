@@ -238,3 +238,15 @@ snippet query_entity "Creates a query entity function"
   {
   });
   
+snippet entity_controller "Creates a CSDCrudEntity Controller"
+  using System;
+  using Microsoft.AspNetCore.Mvc;
+  using Microsoft.Extensions.Configuration;
+
+  public class $1 : EntityController<$2> { public $1(DbContext context, IConfiguration configuration) : base(context, configuration) { } }
+
+  [CSDPermissions(["$3-ML", "$3-ME"])]
+  public class $2 : Entity
+  {
+    $4
+  }

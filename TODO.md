@@ -37,6 +37,9 @@ tags: []
 
 #### Fixes
 - [?] Quick fix tree-sitter
+- [ ] Neotree icons
+- [ ] Neotree buffer follow
+- [ ] Better bullets return on special checkboxes
 
 #### Debugging
 - [ ] Fix chsarp slow debugging
