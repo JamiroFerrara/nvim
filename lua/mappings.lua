@@ -67,6 +67,8 @@ return {
     -- Quick Actions
     ['<A-o>'] = { '<C-o>', desc = '' },
     ['<A-i>'] = { '<C-i>', desc = '' },
+    ['<C-o>'] = { '<C-o>', desc = '' },
+    ['<C-i>'] = { '<C-i>', desc = '' },
 
     -- Text Objects
     ['ciu'] = { 'ci{' },
@@ -118,8 +120,8 @@ return {
     ['<C-r>'] = { '<cmd>lua require("harpoon.ui").nav_file(4)<cr>' },
     ['<C-y>'] = { '<cmd>lua require("harpoon.ui").nav_file(5)<cr>' },
     ['<C-u>'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
-    ['<C-i>'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
-    ['<C-o>'] = { '<cmd>lua require("harpoon.ui").nav_file(8)<cr>' },
+    -- ['<C-i>'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
+    -- ['<C-o>'] = { '<cmd>lua require("harpoon.ui").nav_file(8)<cr>' },
 
     -- Other
     ['|'] = { '1' },
@@ -257,6 +259,9 @@ return {
 
   -- Visual Mode
   v = {
+    ['<leader>re'] = {'<cmd>lua require("react-extract").extract_to_current_file()<cr>'},
+    ['<leader>rE'] = {'<cmd>lua require("react-extract").extract_to_new_file()<cr>'},
+
     ['H'] = { '^' },
     ['L'] = { '$' },
 
