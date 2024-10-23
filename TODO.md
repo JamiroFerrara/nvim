@@ -49,3 +49,6 @@ tags: []
 - [ ] Lsp loading highlight transparent
 - [ ] Black quickfix preview highlight
 - [ ] Flash highlight fixes
+
+#### LSPSaga
+- [ ] LspSaga logs

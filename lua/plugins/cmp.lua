@@ -53,6 +53,7 @@ return { -- Autocompletion
 
     'hrsh7th/cmp-nvim-lsp',
     'hrsh7th/cmp-path',
+    'hrsh7th/cmp-buffer',
   },
 
   config = function()
@@ -111,6 +112,7 @@ return { -- Autocompletion
 
       sources = {
         { name = 'luasnip' },
+        { name = 'buffer' },
         { name = 'nvim_lsp' },
         { name = 'path' },
         { name = 'vim-dadbod-completion' },
