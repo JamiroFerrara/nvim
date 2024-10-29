@@ -7,7 +7,6 @@ return {
     ['<'] = { '<<', desc = 'Shift left' },
     ['à'] = { '0', desc = 'Letter a with grave accent' },
     ['<A-n>'] = { '*', desc = 'Follow' },
-    ['<C-n>'] = { '*', desc = 'Follow' },
     -- Leader Shortcuts
     ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
     ['<leader>e'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
@@ -113,7 +112,6 @@ return {
     ['<leader>5'] = { '<cmd>lua require("harpoon.ui").nav_file(5)<cr>' },
     ['<leader>6'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
     ['<leader>7'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
-    ['<leader>p'] = { '<cmd>e publish.sh<cr>' },
 
     ['<C-q>'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
     --NOTE:  2 done in init.lua (nowait argument)
@@ -175,8 +173,8 @@ return {
       "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
     },
 
-    -- ['gd'] = { '<cmd>Lspsaga goto_definition<cr>' },
-    -- ['gr'] = { '<cmd>lua require("telescope.builtin").lsp_implementations<cr>' },
+    ['gd'] = { '<cmd>Lspsaga goto_definition<cr>' },
+    ['gr'] = { '<cmd>lua require("telescope.builtin").lsp_implementations<cr>' },
     ['gR'] = { '<cmd>Lspsaga finder<cr>' },
     ['<leader>lE'] = { '<cmd>Lspsaga diagnostic_jump_prev<cr>' },
     ['<leader>le'] = { '<cmd>Lspsaga diagnostic_jump_next<cr>' },
