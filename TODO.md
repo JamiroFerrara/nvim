@@ -52,3 +52,7 @@ tags: []
 
 #### LSPSaga
 - [ ] LspSaga logs
+
+#### Zebar + WM
+- [ ] Nerdfonts for header
+- [ ] win + movment

@@ -35,15 +35,15 @@ return {
     ['<leader><leader>i'] = { '<cmd>IconPickerNormal<cr>', desc = 'Pick icon' },
 
     ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
-    ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>', desc = 'Find files' },
-    ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>', desc = 'Live grep' },
-    ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>", desc = 'DAP no debug' },
+    ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
+    ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
+    ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>" },
 
     -- Obsidian Commands
-    ['<leader>ob'] = { "<cmd>ObsidianBacklinks<cr>", desc = 'DAP no debug' },
-    ['<leader>ot'] = { "<cmd>ObsidianToday<cr>", desc = 'DAP no debug' },
-    ['<leader>oT'] = { "<cmd>ObsidianTomorrow<cr>", desc = 'DAP no debug' },
-    ['<leader>oy'] = { "<cmd>ObsidianYesterday<cr>", desc = 'DAP no debug' },
+    ['<leader>ob'] = { '<cmd>ObsidianBacklinks<cr>' },
+    ['<leader>ot'] = { '<cmd>ObsidianToday<cr>' },
+    ['<leader>oT'] = { '<cmd>ObsidianTomorrow<cr>' },
+    ['<leader>oy'] = { '<cmd>ObsidianYesterday<cr>' },
 
     -- TMUX Commands
     ['<leader>th'] = {
@@ -61,7 +61,7 @@ return {
     ['<leader>gr'] = { '<cmd>lua require("gitsigns").reset_buffer()<cr>' },
     ['<leader>gs'] = { '<cmd>lua require("gitsigns").stage_hunk()<cr>' },
     ['<leader>gu'] = { '<cmd>lua require("gitsigns").undo_stage_hunk()<cr>' },
-    ['<leader>gd'] = { '<cmd>lua require("gitsigns").diffthis()<cr>' },
+    -- ['<leader>gd'] = { '<cmd>lua require("gitsigns").diffthis()<cr>' },
 
     -- Quick Actions
     ['<A-o>'] = { '<C-o>', desc = '' },
@@ -166,7 +166,7 @@ return {
     ['<C-g>'] = { '<cmd>ToggleTerm size=10 direction=horizontal<cr>' },
     ['<C-p>'] = { '<cmd>Telescope find_files<cr>' },
     -- ['<C-P>'] = { '<cmd>Telescope buffers<cr>' },
-    ['<leader>fb'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
+    -- ['<leader>fb'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
     ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
     ['<C-f>'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
     ['<leader>lc'] = {
@@ -174,7 +174,7 @@ return {
     },
 
     ['gd'] = { '<cmd>Lspsaga goto_definition<cr>' },
-    ['gr'] = { '<cmd>lua require("telescope.builtin").lsp_implementations<cr>' },
+    -- ['gr'] = { '<cmd>lua require("telescope.builtin").lsp_implementations<cr>' },
     ['gR'] = { '<cmd>Lspsaga finder<cr>' },
     ['<leader>lE'] = { '<cmd>Lspsaga diagnostic_jump_prev<cr>' },
     ['<leader>le'] = { '<cmd>Lspsaga diagnostic_jump_next<cr>' },
@@ -182,12 +182,12 @@ return {
     ['<leader>ll'] = { '<cmd>Lspsaga hover_doc<cr>' },
     ['<leader>lo'] = { '<cmd>Lspsaga outline<cr>' },
     ['<leader>ls'] = { '<cmd>Lspsaga outline<cr>' },
-    ['<leader>ld'] = { '<cmd>Lspsaga show_line_diagnostics<cr>'},
-    ['<leader>la'] = { '<cmd>Lspsaga code_action<cr>'},
-    ['<leader>lD'] = { '<cmd>Lspsaga show_buf_diagnostics<cr>'},
+    ['<leader>ld'] = { '<cmd>Lspsaga show_line_diagnostics<cr>' },
+    ['<leader>la'] = { '<cmd>Lspsaga code_action<cr>' },
+    ['<leader>lD'] = { '<cmd>Lspsaga show_buf_diagnostics<cr>' },
 
-    -- ['<A-e>'] = { '<cmd>w<cr><cmd>lua require("conform").format { async = true, lsp_fallback = true }<cr>' },
-    ['<A-e>'] = { '<cmd>w<cr>' },
+    -- ['<A-e>'] = { "<cmd>w<cr><cmd>lua require('conform').format { async = true, lsp_fallback = true }<CR>" },
+    ['<A-e>'] = { "<cmd>w<cr>" },
     ['<leader>hr'] = { "<cmd>lua require('user/react-helpers').commands()<cr>" },
     ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },
     ['<leader>hj'] = { "<cmd>lua require('user/jira-helpers').commands()<cr>" },
@@ -266,8 +266,8 @@ return {
 
   -- Visual Mode
   v = {
-    ['<leader>re'] = {'<cmd>lua require("react-extract").extract_to_current_file()<cr>'},
-    ['<leader>rE'] = {'<cmd>lua require("react-extract").extract_to_new_file()<cr>'},
+    ['<leader>re'] = { '<cmd>lua require("react-extract").extract_to_current_file()<cr>' },
+    ['<leader>rE'] = { '<cmd>lua require("react-extract").extract_to_new_file()<cr>' },
 
     ['H'] = { '^' },
     ['L'] = { '$' },

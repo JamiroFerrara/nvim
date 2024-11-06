@@ -48,5 +48,11 @@ snippet im
 snippet ti "table insert"
 	table.insert($1, $2)
 
-snippet plugin "creates new plugin definition for astronvim"
-  ["$1"] = { require('$2') },
+snippet plugin "new plugin for lazy"
+	return {
+		'${1:plugin_name}',
+		lazy = true,
+		opts = {
+			${2:-- options}
+		},
+	}

@@ -112,8 +112,8 @@ return { -- Autocompletion
 
       sources = {
         { name = 'luasnip' },
-        { name = 'buffer' },
         { name = 'nvim_lsp' },
+        { name = 'buffer' },
         { name = 'path' },
         { name = 'vim-dadbod-completion' },
       },

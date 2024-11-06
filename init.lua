@@ -90,6 +90,7 @@ require 'loaders.lazy'
 require 'loaders.mappings'
 require 'autocommands'
 require 'highlights'
+
 require('lazy').setup({ {
   import = 'plugins',
 } }, require('ui').lazy_ui)
