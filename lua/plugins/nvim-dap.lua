@@ -62,7 +62,10 @@ return {
       dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
     end, { desc = 'Debug: Set Breakpoint' })
 
-    dap.listeners.after.event_initialized['dapui_config'] = dapui.open
+    dap.listeners.after.event_stopped['dapui_config'] = function(session, body)
+      os.execute '/usr/local/bin/node.exe "C:\\Users\\JFerrara\\Programs\\focus\\focus.js"'
+    end
+    -- dap.listeners.after.event_initialized['dapui_config'] = dapui.open
     dap.listeners.before.event_terminated['dapui_config'] = dapui.close
     dap.listeners.before.event_exited['dapui_config'] = dapui.close
   end,

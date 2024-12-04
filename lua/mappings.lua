@@ -38,6 +38,7 @@ return {
     ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
     ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
     ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>" },
+    ['vap'] = { "vip" },
 
     -- Obsidian Commands
     ['<leader>ob'] = { '<cmd>ObsidianBacklinks<cr>' },
@@ -112,6 +113,13 @@ return {
     ['<leader>5'] = { '<cmd>lua require("harpoon.ui").nav_file(5)<cr>' },
     ['<leader>6'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
     ['<leader>7'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
+
+    ['<F13>'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
+    ['<F14>'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
+    ['<F15>'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
+
+    ['}'] = { '{' },
+    ['{'] = { '}' },
 
     ['<C-q>'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
     --NOTE:  2 done in init.lua (nowait argument)
