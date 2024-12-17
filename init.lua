@@ -13,7 +13,7 @@ vim.g.copilot_proxy_strict_ssl = false
 vim.g.bufferline_auto_hide = 1
 vim.g.markdown_folding = 1
 
-vim.g.copilot_workspace_folders = { "~/repos" } -- NOTE: Should work? 
+vim.g.copilot_workspace_folders = { '~/repos' } -- NOTE: Should work?
 
 -- FIX: Folding ?
 -- vim.opt.foldmethod = 'expr'
@@ -26,7 +26,7 @@ vim.g.copilot_workspace_folders = { "~/repos" } -- NOTE: Should work?
 -- vim.o.foldenable = true
 
 -- Options for 'opt'
-vim.opt.foldopen:remove("search")
+vim.opt.foldopen:remove 'search'
 vim.opt.conceallevel = 2
 vim.opt.cmdheight = 0
 vim.opt.lazyredraw = true

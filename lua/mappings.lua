@@ -203,10 +203,13 @@ return {
     ['<C-h>'] = { '<C-w>h' },
     ['<C-k>'] = { '<C-w>k' },
     ['<C-l>'] = { '<C-w>l' },
-    ['<A-j>'] = { '<cmd>wincmd j<cr>' },
-    ['<A-h>'] = { '<cmd>wincmd h<cr>' },
-    ['<A-k>'] = { '<C-w>k' },
-    ['<A-l>'] = { '<C-w>l' },
+
+    ['<A-j>'] = { '<cmd>lua require("tmux").move_bottom()<cr>' },
+    ['<A-h>'] = { '<cmd>lua require("tmux").move_left()<cr>' },
+    ['<A-k>'] = { '<cmd>lua require("tmux").move_top()<cr>' },
+    ['<A-l>'] = { '<cmd>lua require("tmux").move_right()<cr>' },
+    ['<C-x>'] = { '<cmd>lua require("custom/utils").print_is_vim()<cr>' },
+
     ['<A-s>'] = { ':vsp<cr>:sleep 50m<cr><C-o>' },
     ['<A-S>'] = { ':sp<cr>:sleep 50m<cr><C-o>' },
     ["'"] = { '$' },

@@ -64,6 +64,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
           preview_cutoff = 120,
         },
         extensions = {
+          fzf = {},
           advanced_git_search = {
             -- fugitive or diffview
             diff_plugin = 'fugitive',
