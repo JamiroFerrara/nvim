@@ -5,8 +5,6 @@ tags: []
 ---
 
 #### Features
-- [ ] If alt + \ terminal focus chrome otherwise terminal 
-- [ ] Better pasting
 - [ ] Editable quickfix lists
 - [ ] Full word wrap
 - [ ] Word wrap border
@@ -23,6 +21,7 @@ tags: []
 
 #### Mappings
 - [ ] Alt + n -> ChatGpt new session
+- [ ] If telescope is open go up and down in telescope
 
 #### Markdown
 - [ ] Shareable Todo file
@@ -43,16 +42,9 @@ tags: []
 
 #### Debugging
 - [ ] Fix chsarp slow debugging
-- [ ] On breakpoint hit focus window
+- [x] On breakpoint hit focus window
+	- [ ] Remove error messages once focus has changed
 
 #### Highlights
 - [ ] Lsp loading highlight transparent
-- [ ] Black quickfix preview highlight
 - [ ] Flash highlight fixes
-
-#### LSPSaga
-- [ ] LspSaga logs
-
-#### Zebar + WM
-- [ ] Nerdfonts for header
-- [ ] win + movment

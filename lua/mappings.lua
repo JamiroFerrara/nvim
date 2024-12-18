@@ -199,16 +199,14 @@ return {
     ['<leader>hr'] = { "<cmd>lua require('user/react-helpers').commands()<cr>" },
     ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },
     ['<leader>hj'] = { "<cmd>lua require('user/jira-helpers').commands()<cr>" },
-    ['<C-j>'] = { '<C-w>j' },
-    ['<C-h>'] = { '<C-w>h' },
-    ['<C-k>'] = { '<C-w>k' },
-    ['<C-l>'] = { '<C-w>l' },
 
-    ['<A-j>'] = { '<cmd>lua require("tmux").move_bottom()<cr>' },
+    ['<C-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
+    ['<C-h>'] = { '<cmd>lua require("helpers.tmux").move_top()<cr>' },
+
+    ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
     ['<A-h>'] = { '<cmd>lua require("tmux").move_left()<cr>' },
     ['<A-k>'] = { '<cmd>lua require("tmux").move_top()<cr>' },
     ['<A-l>'] = { '<cmd>lua require("tmux").move_right()<cr>' },
-    ['<C-x>'] = { '<cmd>lua require("custom/utils").print_is_vim()<cr>' },
 
     ['<A-s>'] = { ':vsp<cr>:sleep 50m<cr><C-o>' },
     ['<A-S>'] = { ':sp<cr>:sleep 50m<cr><C-o>' },
