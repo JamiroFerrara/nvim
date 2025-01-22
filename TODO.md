@@ -13,6 +13,7 @@ tags: []
 - [ ] Faster large file open -> garoto de programa
 - [ ] Treesitter injections 
 - [ ] Copilot in project mode 
+- [ ] Dinamic fullscreen A-f
 
 #### Plugins
 - [ ] Lua line:
@@ -22,6 +23,9 @@ tags: []
 #### Mappings
 - [ ] Alt + n -> ChatGpt new session
 - [ ] If telescope is open go up and down in telescope
+- [ ] move all mappings to plugins if specific to those
+- [ ] Move q to close window
+- [ ] use r for macros
 
 #### Markdown
 - [ ] Shareable Todo file
