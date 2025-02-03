@@ -114,10 +114,6 @@ return {
     ['<leader>6'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
     ['<leader>7'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
 
-    -- ['C-r'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
-    -- ['C-e'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
-    -- ['C-w'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
-
     ['}'] = { '{' },
     ['{'] = { '}' },
 

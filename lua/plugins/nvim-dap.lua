@@ -40,6 +40,31 @@ return {
       },
     }
 
+    dap.configurations.php = vim.tbl_deep_extend('force', dap.configurations.php or {}, {
+      {
+        type = 'php',
+        request = 'launch',
+        name = 'Listen for XDebug',
+        log = true, -- Append or override existing values
+        port = 9003,
+        xdebugSettings = {
+          max_children = 512,
+          max_data = -1,
+          max_depth = 4,
+          extended_properties = 1,
+        },
+        breakpoints = vim.tbl_deep_extend('force', {
+          exception = {
+            ['*'] = false,
+          },
+        }, {
+          exception = {
+            CustomException = true,
+          },
+        }),
+      },
+    })
+
     dapui.setup {
       icons = { expanded = '▾', collapsed = '▸', current_frame = '*' },
       controls = dap_ui.controls,
