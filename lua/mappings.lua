@@ -32,11 +32,11 @@ return {
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
 
     ['<leader>aa'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
-    ['<leader><leader>i'] = { '<cmd>IconPickerNormal<cr>', desc = 'Pick icon' },
+    -- ['<leader><leader>i'] = { '<cmd>IconPickerNormal<cr>', desc = 'Pick icon' },
 
     ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
-    ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
-    ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
+    -- ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
+    -- ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
     ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>" },
     ['vap'] = { "vip" },
 
@@ -165,14 +165,15 @@ return {
     ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" },
 
     ['<C-t>'] = { '<cmd>vsplit<cr><cmd> e TODO.md<cr>', nowait = true },
-    ['<A-t>'] = { '<cmd>vsplit<cr><cmd> e TODO.md<cr>' },
+    -- ['<A-t>'] = { '<cmd>vsplit<cr><cmd> e TODO.md<cr>' },
+    -- ['<A-t>'] = { '<cmd>lua require("helpers.windows").open_todo()<cr>' },
 
     ['<C-g>'] = { '<cmd>ToggleTerm size=10 direction=horizontal<cr>' },
     ['<C-p>'] = { '<cmd>Telescope find_files<cr>' },
     -- ['<C-P>'] = { '<cmd>Telescope buffers<cr>' },
     -- ['<leader>fb'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
     ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
-    ['<C-f>'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
+    -- ['<C-f>'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
     ['<leader>lc'] = {
       "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
     },
@@ -229,7 +230,7 @@ return {
     ['s'] = { '/' },
     ['Q'] = { '@' },
 
-    ['<leader><leader>'] = { '@' },
+    -- ['<leader><leader>'] = { '@' },
     ['X'] = { 's' },
     ['<leader>se'] = { '<cmd>lua require("luasnip.loaders").edit_snippet_files()<cr><cr>")' },
     ['<leader>ip'] = { '<cmd>IconPickerNormal<cr>' },
