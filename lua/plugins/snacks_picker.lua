@@ -23,7 +23,7 @@ return {
         -- the bonusses below, possibly require string concatenation and path normalization,
         -- so this can have a performance impact for large lists and increase memory usage
         cwd_bonus = false, -- give bonus for matching files in the cwd
-        frecency = false, -- frecency bonus
+        frecency = true, -- frecency bonus
         history_bonus = false, -- give more weight to chronological order
       },
       sort = {
@@ -75,7 +75,7 @@ return {
       },
       toggles = {
         follow = "f",
-        hidden = "h",
+        hidden = "<A-h>",
         ignored = "i",
         modified = "m",
         regex = { icon = "R", value = false },
@@ -89,8 +89,8 @@ return {
             ["<Esc>"] = { "close", mode = { "n", "i" } },
             ["kj"] = { "close", mode = { "n", "i" } },
             ["/"] = "toggle_focus",
-            ["<C-Down>"] = { "history_forward", mode = { "i", "n" } },
-            ["<C-Up>"] = { "history_back", mode = { "i", "n" } },
+            ["<c-n>"] = { "history_forward", mode = { "i", "n" } },
+            ["<c-p>"] = { "history_back", mode = { "i", "n" } },
             ["<C-c>"] = { "close", mode = "i" },
             ["<C-w>"] = { "<c-s-w>", mode = { "i" }, expr = true, desc = "delete word" },
             ["<CR>"] = { "confirm", mode = { "n", "i" } },
@@ -115,12 +115,10 @@ return {
             ["<a-j>"] = { "list_down", mode = { "i", "n" } },
             ["<c-k>"] = { "list_up", mode = { "i", "n" } },
             ["<a-k>"] = { "list_up", mode = { "i", "n" } },
-            ["<c-n>"] = { "list_down", mode = { "i", "n" } },
-            ["<c-p>"] = { "list_up", mode = { "i", "n" } },
             ["<c-q>"] = { "qflist", mode = { "i", "n" } },
-            ["<c-s>"] = { "edit_split", mode = { "i", "n" } },
+            ["<c-v>"] = { "edit_split", mode = { "i", "n" } },
             ["<c-u>"] = { "list_scroll_up", mode = { "i", "n" } },
-            ["<c-v>"] = { "edit_vsplit", mode = { "i", "n" } },
+            ["<c-s>"] = { "edit_vsplit", mode = { "i", "n" } },
             ["<c-z>h"] = { "layout_left", mode = { "i", "n" } },
             ["<c-z><c-h>"] = { "layout_left", mode = { "i", "n" } },
             ["<c-z>j"] = { "layout_bottom", mode = { "i", "n" } },
@@ -256,16 +254,16 @@ return {
     { "<leader>sm", function() Snacks.picker.marks() end, desc = "Marks" },
     { "<leader>sM", function() Snacks.picker.man() end, desc = "Man Pages" },
     { "<leader>sp", function() Snacks.picker.lazy() end, desc = "Search for Plugin Spec" },
-    { "<leader>sq", function() Snacks.picker.qflist({ layout= "bottom" }) end, desc = "Quickfix List" },
+    { "<leader>fq", function() Snacks.picker.qflist({ layout= "bottom" }) end, desc = "Quickfix List" },
     { "<leader>sR", function() Snacks.picker.resume() end, desc = "Resume" },
     { "<leader>su", function() Snacks.picker.undo() end, desc = "Undo History" },
     { "<leader>uC", function() Snacks.picker.colorschemes() end, desc = "Colorschemes" },
     -- LSP
-    { "gd", function() Snacks.picker.lsp_definitions() end, desc = "Goto Definition" },
-    { "gD", function() Snacks.picker.lsp_declarations() end, desc = "Goto Declaration" },
-    { "gr", function() Snacks.picker.lsp_references() end, nowait = true, desc = "References" },
-    { "gI", function() Snacks.picker.lsp_implementations() end, desc = "Goto Implementation" },
-    { "gy", function() Snacks.picker.lsp_type_definitions() end, desc = "Goto T[y]pe Definition" },
+    { "gd", function() Snacks.picker.lsp_definitions({ layout = "ivy" }) end, desc = "Goto Definition" },
+    { "gD", function() Snacks.picker.lsp_declarations({ layout = "ivy" }) end, desc = "Goto Declaration" },
+    { "gr", function() Snacks.picker.lsp_references({ layout = "ivy" }) end, nowait = true, desc = "References" },
+    { "gI", function() Snacks.picker.lsp_implementations({ layout = "ivy" }) end, desc = "Goto Implementation" },
+    { "gy", function() Snacks.picker.lsp_type_definitions({ layout = "ivy" }) end, desc = "Goto T[y]pe Definition" },
     { "<leader>ss", function() Snacks.picker.lsp_symbols() end, desc = "LSP Symbols" },
     { "<leader>sS", function() Snacks.picker.lsp_workspace_symbols() end, desc = "LSP Workspace Symbols" },
   },
