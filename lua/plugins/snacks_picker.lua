@@ -219,7 +219,7 @@ return {
     { "<leader><space>", function() Snacks.picker.files({layout = "ivy", matcher = {frecency = true}}) end, desc = "Find Files" },
     -- { "<leader>ff", function() Snacks.picker.files({layout = "ivy", matcher = {frecency = true}}) end, desc = "Find Files" },
     { "<C-p>", function() Snacks.picker.files({ layout = "ivy", matcher = {frecency = true}}) end, desc = "Find Files" },
-    { "<leader>fw", function() Snacks.picker.grep({ layout = "ivy", need_search = false }) end, desc = "Grep" },
+    { "<leader>fw", function() Snacks.picker.grep({ layout = "ivy", need_search = false, limit = 15, matcher = { fuzzy = false } }) end, desc = "Grep" },
     { "<leader>fg", function() Snacks.picker.git_files() end, desc = "Find Git Files" },
     { "<leader>fp", function() Snacks.picker.projects() end, desc = "Projects" },
     { "<leader>fr", function() Snacks.picker.recent() end, desc = "Recent" },
@@ -232,7 +232,7 @@ return {
     { "<leader>gd", function() Snacks.picker.git_diff({ layout = "ivy" }) end, desc = "Git Diff (Hunks)" },
     { "<leader>gf", function() Snacks.picker.git_log_file({ layout = "ivy" }) end, desc = "Git Log File" },
     -- Grep
-    { "<C-f>", function() Snacks.picker.lines() end, desc = "Buffer Lines" },
+    { "<C-f>", function() Snacks.picker.lines({ matcher = { fuzzy = false, smartcase = true, ignorecase = true }, sort = { fields = { "lnum" } } }) end, desc = "Buffer Lines" },
     { "<leader>ff", function() Snacks.picker.lines() end, desc = "Buffer Lines" },
     { "<leader>sB", function() Snacks.picker.grep_buffers() end, desc = "Grep Open Buffers" },
     { "<leader>sg", function() Snacks.picker.grep() end, desc = "Grep" },

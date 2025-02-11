@@ -1,10 +1,10 @@
-local function getTodoWindow()
+local function getTodoWindow(w, h)
   local cwd = vim.fn.getcwd()
   local path = cwd .. '/TODO.md'
   Snacks.win {
     file = path,
-    width = 0.5,
-    height = 0.5,
+    width = w,
+    height = h,
     title = 'TODO',
     position = 'float',
     -- fixed = false,
@@ -47,13 +47,13 @@ return {
     {
       -- TODO togglable window
       '<A-t>',
-      getTodoWindow,
+      function() getTodoWindow(0.5, 0.5)end,
       desc = 'Buffers',
     },
     {
       -- TODO togglable window
       '<C-t>',
-      getTodoWindow,
+      function() getTodoWindow(0.5, 0.5)end,
       desc = 'Buffers',
     },
   },
