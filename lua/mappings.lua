@@ -2,6 +2,7 @@ return {
   -- Normal Mode
   n = {
     -- Basic Indentation
+    ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Shift right' },
     ['#'] = { '<cmd>Telescope commands<cr>', desc = 'Shift right' },
     ['>'] = { '>>', desc = 'Shift right' },
     ['<'] = { '<<', desc = 'Shift left' },
@@ -36,7 +37,7 @@ return {
 
     ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
     -- ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
-    -- ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
+    ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
     ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>" },
     ['vap'] = { "vip" },
 

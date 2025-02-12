@@ -34,7 +34,7 @@ return { -- Collection of various small independent plugins/modules
     -- - sd'   - [S]urround [D]elete [']quotes
     -- - sr)'  - [S]urround [R]eplace [)] [']
     -- FIX: Currently overritten by lightspeed
-    require('mini.surround').setup()
+    -- require('mini.surround').setup()
 
     local statusline = require 'mini.statusline'
     statusline.setup { use_icons = vim.g.have_nerd_font }
