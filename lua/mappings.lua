@@ -7,6 +7,7 @@ return {
     ['>'] = { '>>', desc = 'Shift right' },
     ['<'] = { '<<', desc = 'Shift left' },
     ['à'] = { '0', desc = 'Letter a with grave accent' },
+    ['e'] = { 'E'},
     ['<A-n>'] = { '*', desc = 'Follow' },
     -- Leader Shortcuts
     ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
@@ -31,7 +32,6 @@ return {
     ['<leader>yy'] = { 'GVggy<cmd>q!<CR>', desc = 'Yank all and quit' },
     ['<leader>dd'] = { '<cmd>set ma<cr><cmd>lua require("user.helpers").delete_lines()<CR>', desc = 'Delete lines' },
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
-
     ['<leader>aa'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
     -- ['<leader><leader>i'] = { '<cmd>IconPickerNormal<cr>', desc = 'Pick icon' },
 
@@ -39,7 +39,7 @@ return {
     -- ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
     ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
     ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>" },
-    ['vap'] = { "vip" },
+    ['vap'] = { 'vip' },
 
     -- Obsidian Commands
     ['<leader>ob'] = { '<cmd>ObsidianBacklinks<cr>' },
@@ -51,6 +51,14 @@ return {
     ['<leader>th'] = {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z\\"")<CR>',
       desc = 'toggle term bottom',
+    },
+    ['<C-t>'] = {
+      '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\"")<CR>',
+      desc = 'toggle term bottom',
+    },
+    ['<A-m>'] = {
+      '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\" && tmux send-keys \'m\' Enter")<CR>',
+      desc = 'toggle term bottom and run m',
     },
     ['<leader>ap'] = { '<cmd>lua os.execute("/home/jferrara/.scripts/v-script.sh")<CR>', desc = 'toggle term bottom' },
 
@@ -165,16 +173,9 @@ return {
     ['<leader>bl'] = { "<cmd>lua require('user.helpers').npm_start_local()<cr>" },
     ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" },
 
-    ['<C-t>'] = { '<cmd>vsplit<cr><cmd> e TODO.md<cr>', nowait = true },
-    -- ['<A-t>'] = { '<cmd>vsplit<cr><cmd> e TODO.md<cr>' },
-    -- ['<A-t>'] = { '<cmd>lua require("helpers.windows").open_todo()<cr>' },
-
     ['<C-g>'] = { '<cmd>ToggleTerm size=10 direction=horizontal<cr>' },
     ['<C-p>'] = { '<cmd>Telescope find_files<cr>' },
-    -- ['<C-P>'] = { '<cmd>Telescope buffers<cr>' },
-    -- ['<leader>fb'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
     ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
-    -- ['<C-f>'] = { '<cmd>Telescope current_buffer_fuzzy_find<cr>' },
     ['<leader>lc'] = {
       "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
     },
@@ -193,7 +194,7 @@ return {
     ['<leader>lD'] = { '<cmd>Lspsaga show_buf_diagnostics<cr>' },
 
     -- ['<A-e>'] = { "<cmd>w<cr><cmd>lua require('conform').format { async = true, lsp_fallback = true }<CR>" },
-    ['<A-e>'] = { "<cmd>w<cr>" },
+    ['<A-e>'] = { '<cmd>w<cr>' },
     ['<leader>hr'] = { "<cmd>lua require('user/react-helpers').commands()<cr>" },
     ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },
     ['<leader>hj'] = { "<cmd>lua require('user/jira-helpers').commands()<cr>" },
@@ -257,6 +258,7 @@ return {
     ['<C-^M>'] = { '<NL>', desc = 'New Line' },
     ['<leader>q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<A-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    ['<C-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-t>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-g>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-j>'] = { '<NL>', desc = 'New Line' },
@@ -273,6 +275,7 @@ return {
 
   -- Visual Mode
   v = {
+    ['e'] = { 'E'},
     ['<leader>re'] = { '<cmd>lua require("react-extract").extract_to_current_file()<cr>' },
     ['<leader>rE'] = { '<cmd>lua require("react-extract").extract_to_new_file()<cr>' },
 

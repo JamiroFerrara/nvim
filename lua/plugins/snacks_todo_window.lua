@@ -21,14 +21,14 @@ local function getTodoWindow(w, h)
         mode = 'n',
         desc = 'Close TODO',
       },
-      {
-        '<C-t>',
-        function()
-          vim.api.nvim_command ':q'
-        end,
-        mode = 'n',
-        desc = 'Close TODO',
-      },
+      -- {
+      --   '<C-t>',
+      --   function()
+      --     vim.api.nvim_command ':q'
+      --   end,
+      --   mode = 'n',
+      --   desc = 'Close TODO',
+      -- },
     },
     border = 'single',
     wo = {
@@ -47,12 +47,6 @@ return {
     {
       -- TODO togglable window
       '<A-t>',
-      function() getTodoWindow(0.5, 0.5)end,
-      desc = 'Buffers',
-    },
-    {
-      -- TODO togglable window
-      '<C-t>',
       function() getTodoWindow(0.5, 0.5)end,
       desc = 'Buffers',
     },

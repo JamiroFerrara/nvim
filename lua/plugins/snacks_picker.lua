@@ -208,63 +208,55 @@ return {
     explorer = {},
   },
   keys = {
-    -- {
-    --   'f',
-    --   function()
-    --     Snacks.picker.lines {
-    --       layout = {
-    --         preview = 'main',
-    --         layout = {
-    --           box = 'vertical',
-    --           backdrop = false,
-    --           width = 0,
-    --           height = 0.3,
-    --           position = 'bottom',
-    --           border = 'top',
-    --           title = ' {title} {live} {flags}',
-    --           title_pos = 'left',
-    --           { win = 'input', height = 1, border = 'bottom' },
-    --           {
-    --             box = 'horizontal',
-    --             { win = 'list', border = 'none' },
-    --             { win = 'preview', title = '{preview}', width = 0.6, border = 'left' },
-    --           },
-    --         },
-    --       },
-    --       on_close = function(item)
-    --         local pattern = item.input.filter.pattern
-    --         vim.fn.setreg('/', pattern)
-    --       end,
-    --       matcher = {
-    --         fuzzy = false,
-    --         smartcase = true,
-    --         ignorecase = true,
-    --         sort_empty = false,
-    --       },
-    --       -- FIX:
-    --       -- on_change = function(picker, item)
-    --       --   local filtered_items = picker.items(picker) -- Get the filtered list of items
-    --       --   if #filtered_items > 0 then
-    --       --     local first_item = filtered_items[1]
-    --       --     print(first_item.text, first_item.pos[1])
-    --       --     picker.list.set_selected(picker.list, first_item)
-    --       --   end
-    --       -- end,
-    --       transform = function(item, ctx) -- NOTE: This searches only from current line down
-    --         local line_nr = vim.api.nvim_win_get_cursor(0)[1]
-    --         if item.pos[1] < line_nr then
-    --           return false
-    --         end
-    --       end,
-    --       sort = {
-    --         fields = {
-    --           'lnum',
-    --         },
-    --       },
-    --     }
-    --   end,
-    --   desc = 'Buffer Lines',
-    -- },
+    {
+      's',
+      function()
+        Snacks.picker.lines {
+          layout = {
+            preview = 'main',
+            layout = {
+              box = 'vertical',
+              backdrop = false,
+              width = 0,
+              height = 0.3,
+              position = 'bottom',
+              border = 'top',
+              title = ' {title} {live} {flags}',
+              title_pos = 'left',
+              { win = 'input', height = 1, border = 'bottom' },
+              {
+                box = 'horizontal',
+                { win = 'list', border = 'none' },
+                { win = 'preview', title = '{preview}', width = 0.6, border = 'left' },
+              },
+            },
+          },
+          on_close = function(item)
+            local pattern = item.input.filter.pattern
+            vim.fn.setreg('/', pattern)
+          end,
+          matcher = {
+            fuzzy = false,
+            smartcase = true,
+            ignorecase = true,
+            sort_empty = false,
+          },
+          on_show = function() end,
+          transform = function(item, ctx) -- NOTE: This searches only from current line down
+            local line_nr = vim.api.nvim_win_get_cursor(0)[1]
+            if item.pos[1] < line_nr then
+              return false
+            end
+          end,
+          sort = {
+            fields = {
+              'lnum', --FIX: This does not work, would like to force sorting by line number
+            },
+          },
+        }
+      end,
+      desc = 'Buffer Lines',
+    },
     {
       '<C-f>',
       function()
@@ -293,7 +285,7 @@ return {
             vim.fn.setreg('/', pattern)
           end,
           matcher = {
-            fuzzy = false,
+            fuzzy = true,
             smartcase = true,
             ignorecase = true,
             sort_empty = false,

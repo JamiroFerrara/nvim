@@ -15,6 +15,7 @@ return { -- LSP Configuration & Plugins
     -- `neodev` configures Lua LSP for your Neovim config, runtime and plugins
     -- used for completion, annotations and signatures of Neovim apis
     { 'folke/neodev.nvim', opts = {} },
+    { 'mfussenegger/nvim-jdtls', config = function() require('java').setup() end }, -- Setup nvim-java
   },
   config = function()
     -- Brief aside: **What is LSP?**
@@ -35,7 +36,9 @@ return { -- LSP Configuration & Plugins
     --  - Autocompletion
     --  - Symbol Search
     --  - and more!
-    --
+    
+    require('lspconfig').jdtls.setup({})
+
     vim.fn.sign_define('DiagnosticSignError', { text = '', texthl = 'DiagnosticSignError' })
     vim.fn.sign_define('DiagnosticSignWarn', { text = '', texthl = 'DiagnosticSignWarn' })
     vim.fn.sign_define('DiagnosticSignInfo', { text = '', texthl = 'DiagnosticSignInfo' })
