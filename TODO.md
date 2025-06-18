@@ -5,24 +5,16 @@ tags: []
 ---
 
 #### Features
+- [ ] Harpoon 2 
+- [ ] DAP UI better mappings 
+- [ ] Bullets 
+- [ ] Fix folds 
 - [ ] Editable quickfix lists
-- [ ] Full word wrap
-- [ ] Word wrap border
-- [ ] Tilde
-
-- [ ] Faster large file open -> garoto de programa
 - [ ] Treesitter injections 
-- [ ] Copilot in project mode 
-- [ ] Dinamic fullscreen A-f
-
-#### Plugins
-- [ ] Lua line:
-	- [ ] Install
-	- [ ] Customize
+- [ ] Project mode AI
 
 #### Mappings
 - [ ] Alt + n -> ChatGpt new session
-- [ ] If telescope is open go up and down in telescope
 - [ ] move all mappings to plugins if specific to those
 - [ ] Move q to close window
 - [ ] use r for macros
@@ -50,5 +42,4 @@ tags: []
 	- [ ] Remove error messages once focus has changed
 
 #### Highlights
-- [ ] Lsp loading highlight transparent
 - [ ] Flash highlight fixes

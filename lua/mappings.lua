@@ -9,9 +9,13 @@ return {
     ['à'] = { '0', desc = 'Letter a with grave accent' },
     ['e'] = { 'E'},
     ['<A-n>'] = { '*', desc = 'Follow' },
+
+    ['<leader>fml'] = { '<cmd>CellularAutomaton make_it_rain<CR>', desc = 'Follow' },
+
     -- Leader Shortcuts
     ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
     ['<leader>e'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
+    ['<C-e>'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
     ['<leader>gg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
     ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
     ['<leader>dB'] = { '<cmd>DBUI<cr>', desc = 'Open DAP UI' },
@@ -28,7 +32,11 @@ return {
       desc = 'Make watch and continue',
     },
     ['<leader>mM'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make; tmux select-pane -U")<CR>', desc = 'Make' },
+
     ['<leader>mm'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 ~/.scripts/m.sh")<CR>', desc = 'Make' },
+    --FIX: ['C-m'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 ~/.scripts/m.sh")<CR>', desc = 'Make' },
+    --FIX: ['A-m'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 ~/.scripts/m.sh")<CR>', desc = 'Make' },
+
     ['<leader>yy'] = { 'GVggy<cmd>q!<CR>', desc = 'Yank all and quit' },
     ['<leader>dd'] = { '<cmd>set ma<cr><cmd>lua require("user.helpers").delete_lines()<CR>', desc = 'Delete lines' },
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
@@ -38,7 +46,7 @@ return {
     ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
     -- ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
     ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
-    ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>" },
+    -- ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>" },
     ['vap'] = { 'vip' },
 
     -- Obsidian Commands
@@ -52,14 +60,18 @@ return {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z\\"")<CR>',
       desc = 'toggle term bottom',
     },
+    ['<A-t>'] = {
+      '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\"")<CR>',
+      desc = 'toggle term bottom',
+    },
     ['<C-t>'] = {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\"")<CR>',
       desc = 'toggle term bottom',
     },
-    ['<A-m>'] = {
-      '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\" && tmux send-keys \'m\' Enter")<CR>',
-      desc = 'toggle term bottom and run m',
-    },
+    -- ['<A-m>'] = {
+    --   '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\" && tmux send-keys \'m\' Enter")<CR>',
+    --   desc = 'toggle term bottom and run m',
+    -- },
     ['<leader>ap'] = { '<cmd>lua os.execute("/home/jferrara/.scripts/v-script.sh")<CR>', desc = 'toggle term bottom' },
 
     -- Git Commands
@@ -123,15 +135,19 @@ return {
     ['<leader>6'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
     ['<leader>7'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
 
-    ['}'] = { '{' },
-    ['{'] = { '}' },
+    ['{'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
+    ['}'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
+    ['+'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
 
-    ['<C-q>'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
+    -- ['}'] = { '{' },
+    -- ['{'] = { '}' },
+
+    -- ['<C-q>'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
     --NOTE:  2 done in init.lua (nowait argument)
-    ['<C-e>'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
-    ['<C-r>'] = { '<cmd>lua require("harpoon.ui").nav_file(4)<cr>' },
-    ['<C-y>'] = { '<cmd>lua require("harpoon.ui").nav_file(5)<cr>' },
-    ['<C-u>'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
+    -- ['<C-e>'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
+    -- ['<C-r>'] = { '<cmd>lua require("harpoon.ui").nav_file(4)<cr>' },
+    -- ['<C-y>'] = { '<cmd>lua require("harpoon.ui").nav_file(5)<cr>' },
+    -- ['<C-u>'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
     -- ['<C-i>'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
     -- ['<C-o>'] = { '<cmd>lua require("harpoon.ui").nav_file(8)<cr>' },
 
@@ -143,7 +159,7 @@ return {
     ['='] = { '6' },
     -- ['['] = { '7' },
     -- [']'] = { '8' },
-    ['+'] = { '<cmd>e#<cr>' },
+    -- ['+'] = { '<cmd>e#<cr>' },
     ['N'] = { 'Nzzzv' },
 
     ['U'] = { ':redo<cr>' },
@@ -151,6 +167,10 @@ return {
     ['n'] = { 'nzzzv' },
     ['J'] = { '<C-d>' },
     ['K'] = { '<C-u>' },
+    -- TODO: scroll left right
+    -- ['<C-L>'] = { 'zL' },
+    -- ['<C-H>'] = { 'zH' },
+
     ['<leader>j'] = { '}' },
     ['<leader>k'] = { '{' },
 
@@ -212,7 +232,7 @@ return {
     ["'"] = { '$' },
     ['0'] = { '^' },
     ['t'] = { 'f' },
-    ['T'] = { 't' },
+    -- ['T'] = { 't' },
 
     ['<leader>0'] = { 'f=w' },
 

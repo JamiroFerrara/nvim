@@ -1,5 +1,6 @@
 return {
   'MeanderingProgrammer/markdown.nvim',
+  event = 'VeryLazy',
   main = 'render-markdown',
   opts = {
     heading = {

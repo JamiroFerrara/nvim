@@ -1,17 +1,19 @@
 return {
   'folke/trouble.nvim',
-  opts = {}, -- for default options, refer to the configuration section for custom setup.
+  opts = {
+    auto_close = true,
+  }, -- for default options, refer to the configuration section for custom setup.
   cmd = 'Trouble',
   event = 'VeryLazy',
   keys = {
     {
       '<leader>lx',
-      '<cmd>Trouble diagnostics toggle<cr>',
+      '<cmd>Trouble diagnostics filter.severity=vim.diagnostic.severity.ERROR <cr>',
       desc = 'Diagnostics (Trouble)',
     },
     {
-      '<leader>xX',
-      '<cmd>Trouble diagnostics toggle filter.buf=0<cr>',
+      '<leader>lX',
+      '<cmd>Trouble diagnostics filter.severity=vim.diagnostic.severity.WARNING <cr>',
       desc = 'Buffer Diagnostics (Trouble)',
     },
     -- {

@@ -3,10 +3,22 @@ snippet rfc "React Functional Component!"
 
   function $1() {
     return (
-      <div className="border">$1</div>
+      <div>$1</div>
     )};
 
   export default $1;
+
+snippet className "classname for divs"
+  className="$1"
+
+snippet useState "Creates a useState hook"
+  const [$1, set$1] = useState($2);
+
+snippet useEffect "Creates a useEffect hook"
+  useEffect(() => {
+      $1
+  }, [$2]);
+	
 
 snippet rfcp "React Functional Component.. with props!"
   import React from 'react';
@@ -23,7 +35,7 @@ snippet rfcp "React Functional Component.. with props!"
   export default $1;
 
 snippet div "A div.."
-  <div className="$2"> $1 </div>
+  <div> $1 </div>
 
 snippet h1 "h1"
   <h1 className="$2"> $1 </h1>
@@ -70,7 +82,7 @@ snippet children "children props"
   children?: React.ReactNode;
 
 snippet jsonstringify "THE JSON EVANGELIST"
-	{JSON.stringify(props)}
+	{JSON.stringify($1)}
 
 autosnippet bool "boolean"
   boolean
@@ -117,3 +129,10 @@ snippet summary "summary"
   * @component $2
   */
 
+
+snippet useCallback "useCallback function for references"
+  const ref = useCallback((ref: HTMLDivElement | null) => {
+    if (ref) {
+
+    } else return;
+  }, []);

@@ -14,7 +14,7 @@ local function getTodoWindow(w, h)
     },
     keys = {
       {
-        '<A-t>',
+        '<leader-tt>',
         function()
           vim.api.nvim_command ':q'
         end,
@@ -46,8 +46,10 @@ return {
   keys = {
     {
       -- TODO togglable window
-      '<A-t>',
-      function() getTodoWindow(0.5, 0.5)end,
+      '<leader-tt>',
+      function()
+        getTodoWindow(0.5, 0.5)
+      end,
       desc = 'Buffers',
     },
   },

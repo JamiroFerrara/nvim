@@ -47,6 +47,10 @@ return {
         name = 'Listen for XDebug',
         log = true, -- Append or override existing values
         port = 9003,
+        localSourceRoot = '${workspaceFolder}',
+        pathMappings = {
+        ['/var/www/app'] = '${workspaceFolder}',
+        },
         xdebugSettings = {
           max_children = 512,
           max_data = -1,
@@ -92,8 +96,13 @@ return {
     }
 
     vim.keymap.set('n', '<F5>', dap.continue, { desc = 'Debug: Start/Continue' })
+    vim.keymap.set('n', '<leader>dd', dap.continue, { desc = 'Debug: Start/Continue' })
+    vim.keymap.set('n', '<C-d>', dap.continue, { desc = 'Debug: Start/Continue' })
+    vim.keymap.set('n', '@', dap.continue, { desc = 'Debug: Start/Continue' })
     vim.keymap.set('n', '<F10>', dap.step_over, { desc = 'Debug: Step Over' })
+    vim.keymap.set('n', ']', dap.step_over, { desc = 'Debug: Step Over' })
     vim.keymap.set('n', '<F11>', dap.step_into, { desc = 'Debug: Step Into' })
+    vim.keymap.set('n', '[', dap.step_into, { desc = 'Debug: Step Into' })
     vim.keymap.set('n', '<F3>', dap.step_out, { desc = 'Debug: Step Out' })
     vim.keymap.set('n', '<leader>db', dap.toggle_breakpoint, { desc = 'Debug: Toggle Breakpoint' })
     vim.keymap.set('n', '<leader>du', "<cmd>lua require('dapui').toggle()<cr>", { desc = 'Debug: Toggle Breakpoint' })
@@ -104,7 +113,7 @@ return {
     vim.fn.sign_define('DapBreakpointRejected', { text = dap_ui.DapBreakpointRejected, texthl = 'DapBreakpointRejected', linehl = '', numhl = '' })
     vim.fn.sign_define('DapLogPoint', { text = dap_ui.DapLogPoint, texthl = 'DapLogPoint', linehl = '', numhl = '' })
     vim.fn.sign_define('DapStopped', { text = dap_ui.DapStopped, texthl = 'DapBreakpointCondition', linehl = '', numhl = '' })
-    vim.keymap.set('n', '<leader>B', function()
+    vim.keymap.set('n', '<leader>dc', function()
       dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
     end, { desc = 'Debug: Set Breakpoint' })
 

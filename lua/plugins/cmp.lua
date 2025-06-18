@@ -5,6 +5,7 @@ return { -- Autocompletion
     -- Snippet Engine & its associated nvim-cmp source
     {
       'L3MON4D3/LuaSnip',
+      event = 'VeryLazy',
       build = (function()
         -- Build Step is needed for regex support in snippets.
         -- This step is not supported in many windows environments.
@@ -25,13 +26,13 @@ return { -- Autocompletion
       },
       config = function()
         local user_settings = {
-          -- Extend filetypes
+          
           filetype_extend = {
             javascript = { 'javascriptreact' },
           },
           -- Configure luasnip loaders (vscode, lua, and/or snipmate)
           lua = {
-            paths = { '~/home/jferrara/.config/nvim/lua/user/snippets/lua-snippets/' },
+            paths = { '~/dotfiles/nvim/snippets/lua-snippets/' },
           },
           snipmate = {
             paths = { '~/dotfiles/nvim/snippets/snipmate-snippets/' },
@@ -45,15 +46,15 @@ return { -- Autocompletion
         end
       end,
     },
-    'saadparwaiz1/cmp_luasnip',
+    {'saadparwaiz1/cmp_luasnip', event = 'VeryLazy', after = 'nvim-cmp'},
 
     -- Adds other completion capabilities.
     --  nvim-cmp does not ship with all sources by default. They are split
     --  into multiple repos for maintenance purposes.
 
-    'hrsh7th/cmp-nvim-lsp',
-    'hrsh7th/cmp-path',
-    'hrsh7th/cmp-buffer',
+    {'hrsh7th/cmp-nvim-lsp', event = 'VeryLazy', after = 'nvim-cmp'},
+    {'hrsh7th/cmp-path', event = 'VeryLazy', after = 'nvim-cmp'},
+    {'hrsh7th/cmp-buffer', event = 'VeryLazy', after = 'nvim-cmp'},
   },
 
   config = function()
@@ -82,35 +83,26 @@ return { -- Autocompletion
         ['<C-d>'] = cmp.mapping(cmp.mapping.scroll_docs(-1), { 'i', 'c' }),
         ['<C-f>'] = cmp.mapping(cmp.mapping.scroll_docs(1), { 'i', 'c' }),
         ['<C-Space>'] = cmp.mapping(cmp.mapping.complete(), { 'i', 'c' }),
-        ['<C-l>'] = cmp.mapping {
+        ['<A-l>'] = cmp.mapping {
           i = cmp.mapping.abort(),
           c = cmp.mapping.close(),
         },
+        -- ['<C-l>'] = cmp.mapping(function()
+        --   if luasnip.expand_or_locally_jumpable() then
+        --     luasnip.expand_or_jump()
+        --   end
+        -- end, { 'i', 's' }),
+        -- ['<C-h>'] = cmp.mapping(function()
+        --   if luasnip.locally_jumpable(-1) then
+        --     luasnip.jump(-1)
+        --   end
+        -- end, { 'i', 's' }),
         ['<CR>'] = cmp.mapping.confirm { select = true },
       },
       window = {
         completion = cmp.config.window.bordered(border_opts),
         documentation = cmp.config.window.bordered(border_opts),
       },
-
-      -- mapping = cmp.mapping.preset.insert {
-      --   ['<C-n>'] = cmp.mapping.select_next_item(),
-      --   ['<C-p>'] = cmp.mapping.select_prev_item(),
-      --   ['<C-b>'] = cmp.mapping.scroll_docs(-4),
-      --   ['<C-f>'] = cmp.mapping.scroll_docs(4),
-      --   ['<C-y>'] = cmp.mapping.confirm { select = true },
-      --   ['<C-Space>'] = cmp.mapping.complete {},
-      --   ['<C-l>'] = cmp.mapping(function()
-      --     if luasnip.expand_or_locally_jumpable() then
-      --       luasnip.expand_or_jump()
-      --     end
-      --   end, { 'i', 's' }),
-      --   ['<C-h>'] = cmp.mapping(function()
-      --     if luasnip.locally_jumpable(-1) then
-      --       luasnip.jump(-1)
-      --     end
-      --   end, { 'i', 's' }),
-      -- },
 
       sources = {
         { name = 'luasnip' },

@@ -148,7 +148,7 @@ return {
       -- options used when flash is activated through
       -- `f`, `f`, `t`, `t`, `;` and `,` motions
       char = {
-        enabled = true,
+        enabled = false,
         -- by default all keymaps are enabled, but you can disable some of them,
         -- by removing them from the list.
         keys = { 't', 't', ';', ',' },
