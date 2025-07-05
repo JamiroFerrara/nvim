@@ -405,7 +405,7 @@ return {
     {
       '<leader>gL',
       function()
-        Snacks.picker.git_log_line { layout = 'ivy' }
+        Snacks.picker.git_log_line { layout = 'ivy_split' }
       end,
       desc = 'Git Log Line',
     },

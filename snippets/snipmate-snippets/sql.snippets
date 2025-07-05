@@ -9,3 +9,6 @@ snippet pkeys "gets all primary keys from table"
 	FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
 	WHERE OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_SCHEMA + '.' + CONSTRAINT_NAME), 'IsPrimaryKey') = 1
 	AND TABLE_NAME = '$1' ;
+
+snippet ij "inner join"
+  inner join $1 on $2

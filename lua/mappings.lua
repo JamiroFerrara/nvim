@@ -10,6 +10,16 @@ return {
     ['e'] = { 'E'},
     ['<A-n>'] = { '*', desc = 'Follow' },
 
+    -- Marks
+    ["m"] = { "'", desc = 'Follow' },
+    -- ["="] = { "'h", desc = 'Go to mark h' },
+    -- ["["] = { "'j", desc = 'Go to mark k' },
+    -- ["]"] = { "'k", desc = 'Go to mark l' },
+    -- ["@"] = { "'l", desc = 'Go to mark l' },
+
+    -- Jira
+    ['<leader>jic'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 jira issue comment add; tmux select-pane -U")<CR>', desc = 'Follow' },
+
     ['<leader>fml'] = { '<cmd>CellularAutomaton make_it_rain<CR>', desc = 'Follow' },
 
     -- Leader Shortcuts
@@ -77,13 +87,15 @@ return {
     -- Git Commands
     ['<leader>gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>' },
     ['<leader>gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>' },
-    ['<leader>gl'] = { '<cmd>lua require("gitsigns").blame_line()<cr>' },
+    ['gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>' },
+    ['gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>' },
     ['<leader>gp'] = { '<cmd>lua require("gitsigns").preview_hunk()<cr>' },
     ['<leader>gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>' },
+    ['gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>' },
     ['<leader>gr'] = { '<cmd>lua require("gitsigns").reset_buffer()<cr>' },
     ['<leader>gs'] = { '<cmd>lua require("gitsigns").stage_hunk()<cr>' },
     ['<leader>gu'] = { '<cmd>lua require("gitsigns").undo_stage_hunk()<cr>' },
-    -- ['<leader>gd'] = { '<cmd>lua require("gitsigns").diffthis()<cr>' },
+    ['<leader>gd'] = { '<cmd>lua require("gitsigns").diffthis()<cr>' },
 
     -- Quick Actions
     ['<A-o>'] = { '<C-o>', desc = '' },
@@ -156,7 +168,7 @@ return {
     ['?'] = { '2' },
     ['&'] = { '3' },
     ['/'] = { '4' },
-    ['='] = { '6' },
+    -- ['='] = { '6' },
     -- ['['] = { '7' },
     -- [']'] = { '8' },
     -- ['+'] = { '<cmd>e#<cr>' },
@@ -206,6 +218,7 @@ return {
     ['<leader>lE'] = { '<cmd>Lspsaga diagnostic_jump_prev<cr>' },
     ['<leader>le'] = { '<cmd>Lspsaga diagnostic_jump_next<cr>' },
     ['<leader>lr'] = { '<cmd>Lspsaga rename<cr>' },
+    ['<leader>lR'] = { '<cmd>LspRestart<cr>' },
     ['<leader>ll'] = { '<cmd>Lspsaga hover_doc<cr>' },
     ['<leader>lo'] = { '<cmd>Lspsaga outline<cr>' },
     ['<leader>ls'] = { '<cmd>Lspsaga outline<cr>' },
@@ -294,7 +307,9 @@ return {
   },
 
   -- Visual Mode
-  v = {
+ v = {
+    -- ['<leader>jv'] = { '<cmd>JiraView<cr>', desc = 'View jira issue' },
+
     ['e'] = { 'E'},
     ['<leader>re'] = { '<cmd>lua require("react-extract").extract_to_current_file()<cr>' },
     ['<leader>rE'] = { '<cmd>lua require("react-extract").extract_to_new_file()<cr>' },
@@ -371,7 +386,7 @@ return {
     ['jk'] = { '<esc>A', desc = 'Append at end of line' },
     ['jK'] = { '<esc>A<space>', desc = 'Append at end of line with space' },
     ['jè'] = { '<esc>A{<enter><esc>ddO', desc = 'Append curly braces on new line' },
-    ['ji'] = { '<esc>I<space>', desc = 'Insert at beginning of line with space' },
+    -- ['ji'] = { '<esc>I<space>', desc = 'Insert at beginning of line with space' },
     ['jI'] = { '<esc>I', desc = 'Insert at beginning of line' },
     ['<C-s>'] = { '<cmd>w<cr><esc>', desc = 'Save file' },
     ['<C-S>'] = { '<cmd>noa w<cr><esc>', desc = 'Save file without autocommands' },
