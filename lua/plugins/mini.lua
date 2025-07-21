@@ -1,6 +1,7 @@
 return { -- Collection of various small independent plugins/modules
   'echasnovski/mini.nvim',
   event = 'VeryLazy',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   config = function()
     -- Better Around/Inside textobjects
     --

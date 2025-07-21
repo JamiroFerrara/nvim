@@ -1,6 +1,7 @@
 return {
   'folke/flash.nvim',
   event = 'VeryLazy',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   ---@type Flash.Config
   opts = {
     -- labels = "abcdefghijklmnopqrstuvwxyz",

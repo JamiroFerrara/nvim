@@ -1,5 +1,6 @@
 return {
   'gen740/SmoothCursor.nvim',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   event = 'VeryLazy',
   opts = {
     autostart = true,

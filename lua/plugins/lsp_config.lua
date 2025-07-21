@@ -1,5 +1,6 @@
 return { -- LSP Configuration & Plugins
   'neovim/nvim-lspconfig',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   event = { 'BufReadPost', 'BufNewFile' },
   cmd = { 'LspInfo', 'LspInstall', 'LspUninstall' },
   dependencies = {

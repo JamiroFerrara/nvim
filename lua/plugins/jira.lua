@@ -1,5 +1,6 @@
 return {
   'Funk66/jira.nvim',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   dependencies = { 'nvim-lua/plenary.nvim' },
   config = function()
     require('jira').setup {

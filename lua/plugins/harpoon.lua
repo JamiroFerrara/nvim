@@ -1,6 +1,7 @@
 return {
   'ThePrimeagen/harpoon',
   event = 'VeryLazy',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   mappings = {
     n = {
       -- Harpoon

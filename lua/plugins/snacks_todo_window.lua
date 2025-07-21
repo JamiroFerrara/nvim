@@ -43,6 +43,7 @@ end
 
 return {
   'folke/snacks.nvim',
+  -- enabled = not _G.NVIM_TERMINAL_ONLY,
   keys = {
     {
       -- TODO togglable window

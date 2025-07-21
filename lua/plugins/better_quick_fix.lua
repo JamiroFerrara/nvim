@@ -1,5 +1,6 @@
 return {
   'kevinhwang91/nvim-bqf',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   event = 'VeryLazy',
   dependencies = { 'nvim-treesitter/nvim-treesitter'},
   opts = {

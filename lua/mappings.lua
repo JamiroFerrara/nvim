@@ -290,21 +290,25 @@ return {
     -- ['q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     -- ['j'] = false,
     ['<C-^M>'] = { '<NL>', desc = 'New Line' },
-    ['<leader>q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    -- ['<leader>q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<A-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-t>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-g>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+
+    ['<Tab>'] = { '<C-\\><C-n><cmd>Oil<cr>', desc = 'Open Oil' },
+
     ['<C-j>'] = { '<NL>', desc = 'New Line' },
     ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
     ['<Esc>'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     ['kj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     ['jj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
+    [':'] = { '<C-\\><C-N>:', desc = 'Go to normal mode' },
 
     -- [Splits]
     ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h; tmux select-pane -L")<CR>' },
     ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v; tmux select-pane -U")<CR>' },
-    ['<C-f>'] = { '<C-\\><C-N>' },
+    ['<C-f>'] = { '<C-\\><C-N><cmd>lua GlobalSnacksPicker()<cr>' },
 
     ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
     ['<A-h>'] = { '<cmd>lua require("tmux").move_left()<cr>' },

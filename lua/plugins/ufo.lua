@@ -1,6 +1,7 @@
 -- FIX: Not working
 return {
   'kevinhwang91/nvim-ufo',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   dependencies = {
     'kevinhwang91/promise-async',
   },

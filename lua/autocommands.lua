@@ -5,7 +5,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   callback = function()
     vim.highlight.on_yank()
   end,
-})
+  })
 
 vim.api.nvim_create_autocmd("BufWinEnter", {
   pattern = { "*.md" },
@@ -32,9 +32,3 @@ vim.api.nvim_create_autocmd("TermClose", {
     vim.cmd("qa!")  -- quit all without saving
   end,
 })
-
--- vim.api.nvim_create_autocmd("QuickFixCmdPost", {
---   callback = function()
---     vim.cmd([[Trouble qflist open]])
---   end,
--- })

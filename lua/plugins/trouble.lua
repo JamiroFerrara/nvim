@@ -1,5 +1,6 @@
 return {
   'folke/trouble.nvim',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   opts = {
     auto_close = true,
   }, -- for default options, refer to the configuration section for custom setup.

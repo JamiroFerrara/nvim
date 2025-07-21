@@ -4,6 +4,7 @@
 return {
   'nvim-neo-tree/neo-tree.nvim',
   event = 'VeryLazy',
+  -- enabled = not _G.NVIM_TERMINAL_ONLY,
   version = '*',
   dependencies = {
     'nvim-lua/plenary.nvim',

@@ -1,5 +1,6 @@
 return { -- Useful plugin to show you pending keybinds.
   'folke/which-key.nvim',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   event = 'VeryLazy', -- Sets the loading event to 'VimEnter'
   commit = 'f4518ca5',
   config = function() -- This is the function that runs, AFTER loading

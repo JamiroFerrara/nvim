@@ -1,5 +1,6 @@
 return {
   'DNLHC/glance.nvim',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   -- opts = {
   --   height = 40, -- Height of the window
   --   zindex = 45,

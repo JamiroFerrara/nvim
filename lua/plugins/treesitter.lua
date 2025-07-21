@@ -1,5 +1,6 @@
 return { -- Highlight, edit, and navigate code
   'nvim-treesitter/nvim-treesitter',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   event = 'BufRead',
   build = ':TSUpdate',
   dependencies = {

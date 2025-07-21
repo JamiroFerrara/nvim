@@ -3,6 +3,7 @@ return {
   'anuvyklack/pretty-fold.nvim',
   lazy = true,
   opts = {},
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   config = function()
     require('pretty-fold').setup {
       sections = {

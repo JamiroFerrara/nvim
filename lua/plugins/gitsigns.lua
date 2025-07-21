@@ -2,6 +2,7 @@ return { -- Adds git related signs to the gutter, as well as utilities for manag
   'lewis6991/gitsigns.nvim',
   -- lazy = 'BufReadPre',
   event = 'VeryLazy',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   opts = {
     -- signs                        = {
     --   add          = { text = '│' },
