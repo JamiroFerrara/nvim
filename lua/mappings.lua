@@ -296,7 +296,7 @@ return {
     ['<C-t>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-g>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
 
-    ['<Tab>'] = { '<C-\\><C-n><cmd>Oil<cr>', desc = 'Open Oil' },
+    -- ['<C-Tab>'] = { '<C-\\><C-n><cmd>Oil<cr>', desc = 'Open Oil' },
 
     ['<C-j>'] = { '<NL>', desc = 'New Line' },
     ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
@@ -305,9 +305,10 @@ return {
     ['jj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     [':'] = { '<C-\\><C-N>:', desc = 'Go to normal mode' },
 
-    -- [Splits]
-    ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h; tmux select-pane -L")<CR>' },
-    ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v; tmux select-pane -U")<CR>' },
+    -- [Splits] FIX: This is not selecting the pane 
+    ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h")<cr>' },
+    ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v")<cr>' },
+
     ['<C-f>'] = { '<C-\\><C-N><cmd>lua GlobalSnacksPicker()<cr>' },
 
     ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
