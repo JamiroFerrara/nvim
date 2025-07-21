@@ -7,11 +7,11 @@ return {
     ['>'] = { '>>', desc = 'Shift right' },
     ['<'] = { '<<', desc = 'Shift left' },
     ['à'] = { '0', desc = 'Letter a with grave accent' },
-    ['e'] = { 'E'},
+    ['e'] = { 'E' },
     ['<A-n>'] = { '*', desc = 'Follow' },
 
     -- Marks
-    ["m"] = { "'", desc = 'Follow' },
+    ['m'] = { "'", desc = 'Follow' },
     -- ["="] = { "'h", desc = 'Go to mark h' },
     -- ["["] = { "'j", desc = 'Go to mark k' },
     -- ["]"] = { "'k", desc = 'Go to mark l' },
@@ -30,6 +30,7 @@ return {
     ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
     ['<leader>dB'] = { '<cmd>DBUI<cr>', desc = 'Open DAP UI' },
     ['<leader>c'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },
+    ['cc'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },
     ['<leader>mp'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make publish; tmux select-pane -U")<CR>', desc = 'Make publish' },
     ['<leader>md'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make down; tmux select-pane -U")<CR>', desc = 'Make publish' },
     ['<leader>mr'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make run; tmux select-pane -U")<CR>', desc = 'Make run' },
@@ -218,7 +219,7 @@ return {
     ['<leader>lE'] = { '<cmd>Lspsaga diagnostic_jump_prev<cr>' },
     ['<leader>le'] = { '<cmd>Lspsaga diagnostic_jump_next<cr>' },
     ['<leader>lr'] = { '<cmd>Lspsaga rename<cr>' },
-    ['<leader>lR'] = { '<cmd>LspRestart<cr>' },
+    ['<leader>lR'] = { '<cmd>Lsp<cr>' },
     ['<leader>ll'] = { '<cmd>Lspsaga hover_doc<cr>' },
     ['<leader>lo'] = { '<cmd>Lspsaga outline<cr>' },
     ['<leader>ls'] = { '<cmd>Lspsaga outline<cr>' },
@@ -283,10 +284,10 @@ return {
   -- Terminal Mode
   t = {
     ['è'] = { 'p', desc = 'Print' },
-    ['<esc>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
-    ['<A-s>'] = { '<cmd>2ToggleTerm<cr>', desc = 'Toggle Terminal' },
-    ['<C-s>'] = { '<cmd>2ToggleTerm<cr>', desc = 'Toggle Terminal' },
-    ['q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    -- ['<esc>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    -- ['<A-s>'] = { '<cmd>2ToggleTerm<cr>', desc = 'Toggle Terminal' },
+    -- ['<C-s>'] = { '<cmd>2ToggleTerm<cr>', desc = 'Toggle Terminal' },
+    -- ['q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     -- ['j'] = false,
     ['<C-^M>'] = { '<NL>', desc = 'New Line' },
     ['<leader>q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
@@ -296,21 +297,29 @@ return {
     ['<C-g>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-j>'] = { '<NL>', desc = 'New Line' },
     ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
+    ['<Esc>'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
+    ['kj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
+    ['jj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
+
+    -- [Splits]
+    ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h; tmux select-pane -L")<CR>' },
+    ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v; tmux select-pane -U")<CR>' },
+    ['<C-f>'] = { '<C-\\><C-N>' },
+
+    ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
+    ['<A-h>'] = { '<cmd>lua require("tmux").move_left()<cr>' },
+    ['<A-k>'] = { '<cmd>lua require("tmux").move_top()<cr>' },
+    ['<A-l>'] = { '<cmd>lua require("tmux").move_right()<cr>' },
 
     ['<C-k>'] = { '<Cmd>wincmd k<cr>', desc = 'Move to Upper Window' },
     ['<C-l>'] = { '<Cmd>wincmd l<cr><C-\\><C-n>i', desc = 'Move to Right Window' },
-    ['<A-j>'] = { '<NL>', desc = 'New Line' },
-    ['<A-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
-    ['<A-k>'] = { '<Cmd>wincmd k<cr>', desc = 'Move to Upper Window' },
-
-    ['<A-l>'] = { '<Cmd>wincmd l<cr><C-\\><C-n>i', desc = 'Move to Right Window' },
   },
 
   -- Visual Mode
- v = {
+  v = {
     -- ['<leader>jv'] = { '<cmd>JiraView<cr>', desc = 'View jira issue' },
 
-    ['e'] = { 'E'},
+    ['e'] = { 'E' },
     ['<leader>re'] = { '<cmd>lua require("react-extract").extract_to_current_file()<cr>' },
     ['<leader>rE'] = { '<cmd>lua require("react-extract").extract_to_new_file()<cr>' },
 

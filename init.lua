@@ -86,6 +86,10 @@ vim.opt.foldenable = false
 vim.api.nvim_command [[nnoremap <expr> k (v:count > 1 ? "m'" . v:count : '') . 'k']]
 vim.api.nvim_command [[nnoremap <expr> j (v:count > 1 ? "m'" . v:count : '') . 'j']]
 
+-- In your init.lua
+local is_terminal_mode = (vim.fn.argc() == 0 and vim.fn.getcmdline():find("^terminal"))
+_G.NVIM_TERMINAL_ONLY = is_terminal_mode
+
 require 'loaders.lazy'
 require 'loaders.mappings'
 require 'autocommands'

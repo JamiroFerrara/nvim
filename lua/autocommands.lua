@@ -15,6 +15,24 @@ vim.api.nvim_create_autocmd("BufWinEnter", {
   end,
 })
 
+vim.api.nvim_create_autocmd("TermOpen", {
+  pattern = "*",
+  callback = function()
+    vim.cmd("startinsert")
+    vim.opt_local.number = false
+    vim.opt_local.relativenumber = false
+    vim.opt_local.laststatus = 0
+    vim.wo.signcolumn = "no"
+  end,
+})
+
+vim.api.nvim_create_autocmd("TermClose", {
+  pattern = "*",
+  callback = function()
+    vim.cmd("qa!")  -- quit all without saving
+  end,
+})
+
 -- vim.api.nvim_create_autocmd("QuickFixCmdPost", {
 --   callback = function()
 --     vim.cmd([[Trouble qflist open]])
