@@ -1,6 +1,9 @@
 return {
   -- Normal Mode
   n = {
+    -- DEV
+    ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
+
     -- Basic Indentation
     ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Shift right' },
     ['#'] = { '<cmd>Telescope commands<cr>', desc = 'Shift right' },
@@ -101,7 +104,8 @@ return {
     -- Quick Actions
     ['<A-o>'] = { '<C-o>', desc = '' },
     ['<A-i>'] = { '<C-i>', desc = '' },
-    ['<C-o>'] = { '<C-o>', desc = '' },
+    -- ['<C-o>'] = { '<C-o>', desc = '' },
+    ['<C-o>'] = { '<cmd>bprev<cr>', desc = 'Follow' },
     ['<C-i>'] = { '<C-i>', desc = '' },
 
     -- Text Objects
@@ -195,7 +199,7 @@ return {
     ['<leader>ac'] = { '<cmd>Copilot<CR>', desc = 'Complete code' },
 
     ['<leader>oo'] = { 'zi' },
-    ['<cr>'] = { 'za' },
+    -- ['<cr>'] = { 'za' },
     ['<leader>oc'] = { '<cmd>AerialTreeSyncFolds<cr>zRzm' },
     ['<leader>oa'] = { '<cmd>AerialTreeSyncFolds<cr>zRjk' },
     ['<leader>P'] = { ':Prettier<cr>' },
@@ -271,6 +275,9 @@ return {
     ['<leader>se'] = { '<cmd>lua require("luasnip.loaders").edit_snippet_files()<cr><cr>")' },
     ['<leader>ip'] = { '<cmd>IconPickerNormal<cr>' },
     ['<leader>q'] = { '<C-\\><C-n>:q<cr>' },
+
+    ['<M-w>'] = { '<cmd>q<cr>' },
+
     ['<leader>w'] = { '<cmd>only<cr><cmd>lua os.execute("tmux resize-pane -Z")<cr>' },
     ['<A-w>'] = { '<cmd>q<cr><cmd>Telescope quickfix<cr>' },
 
@@ -295,6 +302,8 @@ return {
     ['<C-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-t>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-g>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+
+    ['<M-w>'] = { '<C-\\><C-n><cmd>q<cr>', desc = 'Quit' },
 
     -- ['<C-Tab>'] = { '<C-\\><C-n><cmd>Oil<cr>', desc = 'Open Oil' },
 
@@ -322,6 +331,7 @@ return {
 
   -- Visual Mode
   v = {
+    ['<leader>jq'] = { '<cmd>JqVisual<CR>', desc = 'Shift right' },
     -- ['<leader>jv'] = { '<cmd>JiraView<cr>', desc = 'View jira issue' },
 
     ['e'] = { 'E' },

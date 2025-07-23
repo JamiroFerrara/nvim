@@ -16,14 +16,14 @@ return { -- LSP Configuration & Plugins
     -- `neodev` configures Lua LSP for your Neovim config, runtime and plugins
     -- used for completion, annotations and signatures of Neovim apis
     { 'folke/neodev.nvim', opts = {} },
-    { 'nvim-java/nvim-java', event = 'VeryLazy' }, -- Setup nvim-java
-    {
-      'mfussenegger/nvim-jdtls',
-      event = 'VeryLazy',
-      config = function()
-        require('java').setup()
-      end,
-    }, -- Setup nvim-java
+    -- { 'nvim-java/nvim-java', event = 'VeryLazy' }, -- Setup nvim-java
+    -- {
+    --   'mfussenegger/nvim-jdtls',
+    --   event = 'VeryLazy',
+    --   config = function()
+    --     require('java').setup()
+    --   end,
+    -- }, -- Setup nvim-java
     {
       'pmizio/typescript-tools.nvim',
       dependencies = { 'nvim-lua/plenary.nvim', 'neovim/nvim-lspconfig' },

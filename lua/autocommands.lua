@@ -23,6 +23,9 @@ vim.api.nvim_create_autocmd("TermOpen", {
     vim.opt_local.relativenumber = false
     vim.opt_local.laststatus = 0
     vim.wo.signcolumn = "no"
+    vim.opt_local.modifiable = true
+    vim.opt_local.readonly = false
+    vim.api.nvim_buf_set_keymap(0, "n", "<Tab>", "<cmd>Oil<CR>", { noremap = true, silent = true, desc = "Enter Oil if in terminal normal mode" })
   end,
 })
 

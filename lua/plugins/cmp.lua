@@ -1,7 +1,7 @@
 return { -- Autocompletion
   'hrsh7th/nvim-cmp',
   -- event = 'InsertEnter',
-  enabled = not _G.NVIM_TERMINAL_ONLY,
+  -- enabled = not _G.NVIM_TERMINAL_ONLY,
   dependencies = {
     -- Snippet Engine & its associated nvim-cmp source
     {
@@ -61,6 +61,7 @@ return { -- Autocompletion
   config = function()
     -- See `:help cmp`
     local cmp = require 'cmp'
+
     local luasnip = require 'luasnip'
     luasnip.config.setup {
       enable_autosnippets = true,
