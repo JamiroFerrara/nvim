@@ -21,7 +21,7 @@ return {
     -- ["@"] = { "'l", desc = 'Go to mark l' },
 
     -- Jira
-    ['<leader>jic'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 jira issue comment add; tmux select-pane -U")<CR>', desc = 'Follow' },
+    -- ['<leader>jic'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 jira issue comment add; tmux select-pane -U")<CR>', desc = 'Follow' },
 
     ['<leader>fml'] = { '<cmd>CellularAutomaton make_it_rain<CR>', desc = 'Follow' },
 
