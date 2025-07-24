@@ -312,7 +312,7 @@ return {
     ['<Esc>'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     ['kj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     ['jj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
-    [':'] = { '<C-\\><C-N>:', desc = 'Go to normal mode' },
+    -- ['<C-.>'] = { '<C-\\><C-N>:', desc = 'Go to normal mode' },
 
     -- [Splits] FIX: This is not selecting the pane 
     ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h")<cr>' },

@@ -29,12 +29,12 @@ vim.api.nvim_create_autocmd("TermOpen", {
   end,
 })
 
-vim.api.nvim_create_autocmd("TermClose", {
-  pattern = "*",
-  callback = function()
-    vim.cmd("qa!")  -- quit all without saving
-  end,
-})
+-- nvim.api.nvim_create_autocmd("TermClose", {
+--   pattern = "*",
+--   callback = function()
+--     vim.cmd("qa!")  -- quit all without saving
+--   end,
+-- })
 
 vim.api.nvim_create_autocmd("FocusLost", {
     pattern = "*",
