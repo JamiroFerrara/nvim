@@ -279,7 +279,7 @@ return {
     ['<M-w>'] = { '<cmd>q<cr>' },
 
     ['<leader>w'] = { '<cmd>only<cr><cmd>lua os.execute("tmux resize-pane -Z")<cr>' },
-    ['<A-w>'] = { '<cmd>q<cr><cmd>Telescope quickfix<cr>' },
+    -- ['<A-w>'] = { '<cmd>q<cr><cmd>Telescope quickfix<cr>' },
 
     ['H'] = { '^' },
     ['L'] = { '$' },
@@ -307,7 +307,8 @@ return {
 
     -- ['<C-Tab>'] = { '<C-\\><C-n><cmd>Oil<cr>', desc = 'Open Oil' },
 
-    ['<C-j>'] = { '<NL>', desc = 'New Line' },
+    -- ['<C-j>'] = { '<NL>', desc = 'New Line' },
+
     ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
     ['<Esc>'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     ['kj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
