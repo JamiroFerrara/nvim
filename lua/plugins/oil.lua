@@ -181,7 +181,7 @@ return {
   },
   dependencies = { 'nvim-tree/nvim-web-devicons' },
   keys = {
-    { '\\', '<cmd>Oil<cr>', { desc = 'NeoTree reveal' } },
+    -- { '\\', '<cmd>Oil<cr>', { desc = 'NeoTree reveal' } },
     { '<Tab>', '<cmd>Oil<cr>', { desc = 'NeoTree reveal' } },
   },
 }

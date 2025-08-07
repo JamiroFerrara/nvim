@@ -2,7 +2,8 @@ return {
   -- Normal Mode
   n = {
     -- DEV
-    ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
+    ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'OpensJqFile' },
+    ['<leader>np'] = { '<cmd>Neopostman<CR>', desc = 'Neopostman' },
 
     -- Basic Indentation
     ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Shift right' },

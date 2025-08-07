@@ -29,22 +29,30 @@ vim.api.nvim_create_autocmd("TermOpen", {
   end,
 })
 
--- nvim.api.nvim_create_autocmd("TermClose", {
---   pattern = "*",
---   callback = function()
---     vim.cmd("qa!")  -- quit all without saving
---   end,
--- })
+vim.api.nvim_create_autocmd("TermClose", {
+  pattern = "*",
+  callback = function()
+    vim.cmd("qa!")  -- quit all without saving
+  end,
+})
+
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = "*.http",
+  callback = function()
+    vim.api.nvim_set_keymap('n', '<cr>', "<cmd>lua require('kulala').run()<cr>", { noremap = true, silent = true })
+    vim.api.nvim_set_keymap('n', 'p', "<cmd>lua require('kulala').from_curl()<cr>", { noremap = true, silent = true })
+  end,
+})
 
 vim.api.nvim_create_autocmd("FocusLost", {
     pattern = "*",
     callback = function()
-        vim.cmd("hi TermCursor cterm=reverse gui=reverse")
+        vim.cmd("hi TermCursor cterm=NONE gui=NONE")
     end,
 })
 vim.api.nvim_create_autocmd("FocusGained", {
     pattern = "*",
     callback = function()
-        vim.cmd("hi TermCursor cterm=NONE gui=NONE")
+        vim.cmd("hi TermCursor cterm=reverse gui=reverse")
     end,
 })
