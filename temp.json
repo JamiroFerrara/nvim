@@ -1,0 +1,1979 @@
+{
+    "number": "ORD000487",
+    "referenceDate": "2025-08-03 11:06:10",
+    "expirationDate": null,
+    "description": null,
+    "totalPriceAmount": "555.95",
+    "state": "Approvato",
+    "transportedBy": null,
+    "portoResa": null,
+    "deliveryRequestDate": null,
+    "deliveryPromiseDate": null,
+    "deliveryPlanedDate": null,
+    "shippedStoreDate": null,
+    "destinationOrderAmountCommissionPercentage": null,
+    "destinationOrderAmountRefundPercentage": null,
+    "destinationOrderAmountCommission": "0.00",
+    "destinationOrderAmountRefund": "0.00",
+    "amountForEndYearBonus": "555.95",
+    "totalRowsMaster": "591.25",
+    "totalRowsCustomer": "402.56",
+    "totalRowsFlatUnit": "0.00",
+    "totalRowsCommissionAmount": "0.00",
+    "totalRowsRefundAmount": "0.00",
+    "totalGrossPriceAmount": "815.49",
+    "totalBuyPriceAmount": "217.73",
+    "avarageDiscount": "31.83",
+    "maxDiscount": "57.93",
+    "avarageMarkup": "155.34",
+    "delivery": "Mercoledi",
+    "internalNote": null,
+    "deliveryNote": null,
+    "finalized": true,
+    "nonCompliant": true,
+    "nonCompliantInsolvent": false,
+    "nonCompliantAverageDiscount": true,
+    "nonCompliantProductDiscount": 0,
+    "nonCompliantProductMarkup": 0,
+    "documentNumber": null,
+    "documentAlfa": null,
+    "stampCosts": 0,
+    "transportCosts": 0,
+    "receiptCosts": 0,
+    "cig": null,
+    "customerOrderNumber": null,
+    "imported": false,
+    "serial": null,
+    "netPriceEdited": 0,
+    "id": "80c3b54d-7058-11f0-abbf-026a3238d89a",
+    "createdAt": {
+        "date": "2025-08-03 10:56:26.000000",
+        "timezone_type": 3,
+        "timezone": "UTC"
+    },
+    "updatedAt": {
+        "date": "2025-08-04 07:25:47.000000",
+        "timezone_type": 3,
+        "timezone": "UTC"
+    },
+    "deletedAt": null,
+    "noteText": null,
+    "talkedTo": null,
+    "noteNumber": null,
+    "expireDate": null,
+    "readAt": {
+        "date": "2025-08-04 07:27:07.000000",
+        "timezone_type": 3,
+        "timezone": "UTC"
+    },
+    "writeAt": {
+        "date": "2025-08-04 07:27:07.000000",
+        "timezone_type": 3,
+        "timezone": "UTC"
+    },
+    "isActive": true,
+    "orderType": {
+        "id": "a37eb9eb-0db3-11ed-bf20-020f15a448a2",
+        "code": "OCP",
+        "description": "Prodotti"
+    },
+    "deterchimicaBank": null,
+    "commercialDirector": null,
+    "agent1": null,
+    "agent2": null,
+    "subagent": null,
+    "areaManager": null,
+    "buyingGroup": null,
+    "destinationPaymentTerm": null,
+    "destinationBank": null,
+    "agentCommissionElaboration": null,
+    "watchers": [],
+    "contract": null,
+    "mailItems": [],
+    "noteReason": null,
+    "noteType": null,
+    "_embedded": {
+        "customer": {
+            "id": "82396c53-b7b7-45d9-9ded-2e5903fff0b6",
+            "displayName": "FAM SRL",
+            "businessName": "FAM SRL",
+            "_links": []
+        },
+        "rows": [
+            {
+                "priceAmount": "24.06",
+                "quantity": 1,
+                "discountValue": "27.2012102874",
+                "extraDiscount": "0.00",
+                "minQuantity": null,
+                "registrationCode": null,
+                "workorderNumber": null,
+                "netPrice": "24.06",
+                "grossPrice": "24.06",
+                "loan": false,
+                "goodsDiscount": false,
+                "productPricelist": "customerPrice",
+                "effectiveDiscount": 27.2,
+                "destinationCommissionPercentage": "1.00",
+                "destinationRefundPercentage": "0.00",
+                "destinationIncludedInBonus": true,
+                "amountForEndYearBonus": "24.06",
+                "productFlatUnit": null,
+                "productCommission": null,
+                "productRefund": null,
+                "productMasterPrice": "33.05",
+                "productCustomerPrice": "24.06",
+                "isSample": null,
+                "totalFlatUnit": "0.00",
+                "totalCommissionAmount": null,
+                "totalRefundAmount": null,
+                "totalCommission": null,
+                "orderCommissionPercentage": null,
+                "orderRefundPercentage": null,
+                "totalRefundPercentage": null,
+                "totalCommissionPercentage": null,
+                "productPromotionPrice": "0.00",
+                "rowNumber": 9,
+                "flatValue": null,
+                "promotionApplied": false,
+                "note": "",
+                "description": null,
+                "markup": "157.05",
+                "grossPriceAmount": "33.05",
+                "buyPrice": "9.36",
+                "buyPriceAmount": "9.36",
+                "hasLogs": null,
+                "discountValue1": 0,
+                "discountValue2": 0,
+                "discountValue3": 0,
+                "discountValue4": 0,
+                "notCompliant": false,
+                "netPriceEdited": false,
+                "offerPrice": null,
+                "orderPrice": 24.06,
+                "orderQuantity": 0,
+                "isProcessed": false,
+                "id": "cc6105cc-7058-11f0-abbf-026a3238d89a",
+                "createdAt": {
+                    "date": "2025-08-03 10:58:33.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "updatedAt": {
+                    "date": "2025-08-03 11:06:10.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "deletedAt": null,
+                "readAt": null,
+                "writeAt": null,
+                "isActive": true,
+                "product": {
+                    "id": "a7ca33db-9cc1-4b03-9478-eaf6cc03a798",
+                    "productCode": "HC023               ",
+                    "title": "BIOGERM 750ML  PZ.6",
+                    "description": "",
+                    "noteOffer": "Detergente igienizzante professionale per superfici e attrezzature dove \u00e8 richiesto un alto standard di pulizia e igiene.  Attivit\u00e0 battericida testata secondo UNI EN 1276:2009  Attivit\u00e0 fungicida testata secondo UNI EN 1650:2008  Prodotto idoneo all\u0027autocontrollo HACCP (Reg. Com. n.852\/2004)  La sua particolare formula chimica consente di non intaccare le superfici compreso teflon, alluminio e plastiche, quindi pu\u00f2 essere utilizzato su qualsiasi superficie grazie al suo PH neutro. Non \u00e8 aggressivo per l\u0027operatore.  Idoneo nel settore alimentare, sanitario, comunitario, industriale, imprese di pulizie, ecc.  Il prodotto garantisce una pulizia rapida, efficace e senza risciacquo.  Grazie alla sua elevata evaporabilit\u00e0 non lascia residui sulle superfici trattate comprese le superfici che vanno a contatto con alimenti.  Rimuove i cattivi odore lasciando la superfice neutra e senza profumi.",
+                    "sellLoan": false,
+                    "domain": null,
+                    "category": null,
+                    "subcategory": {
+                        "id": "4764948f-c34a-41cf-ba8f-a94cc08cb94a",
+                        "description": "DISINFETTANTI"
+                    }
+                },
+                "order": {
+                    "id": "80c3b54d-7058-11f0-abbf-026a3238d89a",
+                    "number": "ORD000487",
+                    "destination": "FAM MAGAZZINO PABOS",
+                    "totalPriceAmount": "555.95",
+                    "referenceDate": {
+                        "date": "2025-08-03 11:06:10.000000",
+                        "timezone_type": 3,
+                        "timezone": "UTC"
+                    },
+                    "avarageDiscount": "31.83",
+                    "avarageMarkup": "155.34",
+                    "nonCompliant": true,
+                    "nonCompliantInsolvent": false,
+                    "nonCompliantAverageDiscount": true,
+                    "nonCompliantProductDiscount": 0,
+                    "nonCompliantProductMarkup": 0
+                },
+                "agentCommissionElaboration": null,
+                "promotionRow": null,
+                "_embedded": {
+                    "orderType": {
+                        "code": "OCP",
+                        "description": "Prodotti",
+                        "id": "a37eb9eb-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "orders": {},
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/order-type\/a37eb9eb-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "discountType": {
+                        "id": "b0152c4d-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "code": "PERCENTAGE",
+                        "description": "Percentage",
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/discount-type\/b0152c4d-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "createdBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "updatedBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    }
+                },
+                "_links": {
+                    "self": {
+                        "href": "https:\/\/ar.deterchimica.it\/api\/order-row\/cc6105cc-7058-11f0-abbf-026a3238d89a"
+                    }
+                }
+            },
+            {
+                "priceAmount": "73.76",
+                "quantity": 1,
+                "discountValue": "22.5779363913",
+                "extraDiscount": "0.00",
+                "minQuantity": null,
+                "registrationCode": null,
+                "workorderNumber": null,
+                "netPrice": "73.76",
+                "grossPrice": "73.76",
+                "loan": false,
+                "goodsDiscount": false,
+                "productPricelist": "customerPrice",
+                "effectiveDiscount": 22.58,
+                "destinationCommissionPercentage": "1.00",
+                "destinationRefundPercentage": "0.00",
+                "destinationIncludedInBonus": true,
+                "amountForEndYearBonus": "73.76",
+                "productFlatUnit": null,
+                "productCommission": null,
+                "productRefund": null,
+                "productMasterPrice": "95.27",
+                "productCustomerPrice": "73.76",
+                "isSample": null,
+                "totalFlatUnit": "0.00",
+                "totalCommissionAmount": null,
+                "totalRefundAmount": null,
+                "totalCommission": null,
+                "orderCommissionPercentage": null,
+                "orderRefundPercentage": null,
+                "totalRefundPercentage": null,
+                "totalCommissionPercentage": null,
+                "productPromotionPrice": "0.00",
+                "rowNumber": 8,
+                "flatValue": null,
+                "promotionApplied": false,
+                "note": "",
+                "description": null,
+                "markup": "672.36",
+                "grossPriceAmount": "95.27",
+                "buyPrice": "9.55",
+                "buyPriceAmount": "9.55",
+                "hasLogs": null,
+                "discountValue1": 0,
+                "discountValue2": 0,
+                "discountValue3": 0,
+                "discountValue4": 0,
+                "notCompliant": false,
+                "netPriceEdited": false,
+                "offerPrice": null,
+                "orderPrice": 73.76,
+                "orderQuantity": 0,
+                "isProcessed": false,
+                "id": "c4c45dd3-7058-11f0-abbf-026a3238d89a",
+                "createdAt": {
+                    "date": "2025-08-03 10:58:20.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "updatedAt": {
+                    "date": "2025-08-03 11:06:10.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "deletedAt": null,
+                "readAt": null,
+                "writeAt": null,
+                "isActive": true,
+                "product": {
+                    "id": "4e662814-19e5-4824-9443-5c7b4d6001c8",
+                    "productCode": "HC9188              ",
+                    "title": "BRILLANT MATIC BRILL.  LT.10",
+                    "description": "",
+                    "noteOffer": "Additivo brillantante super concentrato, acido a base alcolica. Utilizzato in fase di risciacquo per un\u0027azione auto asciugante, brillantante senza aloni ed anticalcare. Adatto per tutte le lavastoviglie. Usare i dosatori per un\u0027ergazione pi\u00f9 precisa.\r\n\r\nDosaggio:  acqua dolce    0,2 gr.\/LT.          acqua media    0,35 gr.\/LT.           acqua dura oltre     0,5 gr.\/LT.",
+                    "sellLoan": false,
+                    "domain": null,
+                    "category": {
+                        "id": "c52d6d51-b9d5-4a22-bd44-2f39431e5858",
+                        "description": "Prodotti Cucina"
+                    },
+                    "subcategory": {
+                        "id": "27a36ae0-b97b-4b2d-86dc-3eb12f5c60ef",
+                        "description": "DETERSIVO LAVASTOVIGLIE"
+                    }
+                },
+                "order": {
+                    "id": "80c3b54d-7058-11f0-abbf-026a3238d89a",
+                    "number": "ORD000487",
+                    "destination": "FAM MAGAZZINO PABOS",
+                    "totalPriceAmount": "555.95",
+                    "referenceDate": {
+                        "date": "2025-08-03 11:06:10.000000",
+                        "timezone_type": 3,
+                        "timezone": "UTC"
+                    },
+                    "avarageDiscount": "31.83",
+                    "avarageMarkup": "155.34",
+                    "nonCompliant": true,
+                    "nonCompliantInsolvent": false,
+                    "nonCompliantAverageDiscount": true,
+                    "nonCompliantProductDiscount": 0,
+                    "nonCompliantProductMarkup": 0
+                },
+                "agentCommissionElaboration": null,
+                "promotionRow": null,
+                "_embedded": {
+                    "orderType": {
+                        "code": "OCP",
+                        "description": "Prodotti",
+                        "id": "a37eb9eb-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "orders": {},
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/order-type\/a37eb9eb-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "discountType": {
+                        "id": "b0152c4d-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "code": "PERCENTAGE",
+                        "description": "Percentage",
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/discount-type\/b0152c4d-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "createdBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "updatedBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    }
+                },
+                "_links": {
+                    "self": {
+                        "href": "https:\/\/ar.deterchimica.it\/api\/order-row\/c4c45dd3-7058-11f0-abbf-026a3238d89a"
+                    }
+                }
+            },
+            {
+                "priceAmount": "37.43",
+                "quantity": 1,
+                "discountValue": "57.9296392042",
+                "extraDiscount": "0.00",
+                "minQuantity": null,
+                "registrationCode": null,
+                "workorderNumber": null,
+                "netPrice": "37.43",
+                "grossPrice": "37.43",
+                "loan": false,
+                "goodsDiscount": false,
+                "productPricelist": "customerPrice",
+                "effectiveDiscount": 57.93,
+                "destinationCommissionPercentage": "1.00",
+                "destinationRefundPercentage": "0.00",
+                "destinationIncludedInBonus": true,
+                "amountForEndYearBonus": "37.43",
+                "productFlatUnit": null,
+                "productCommission": null,
+                "productRefund": null,
+                "productMasterPrice": "88.97",
+                "productCustomerPrice": "37.43",
+                "isSample": null,
+                "totalFlatUnit": "0.00",
+                "totalCommissionAmount": null,
+                "totalRefundAmount": null,
+                "totalCommission": null,
+                "orderCommissionPercentage": null,
+                "orderRefundPercentage": null,
+                "totalRefundPercentage": null,
+                "totalCommissionPercentage": null,
+                "productPromotionPrice": "0.00",
+                "rowNumber": 7,
+                "flatValue": null,
+                "promotionApplied": false,
+                "note": "",
+                "description": null,
+                "markup": "76.56",
+                "grossPriceAmount": "88.97",
+                "buyPrice": "21.2",
+                "buyPriceAmount": "21.20",
+                "hasLogs": null,
+                "discountValue1": 0,
+                "discountValue2": 0,
+                "discountValue3": 0,
+                "discountValue4": 0,
+                "notCompliant": false,
+                "netPriceEdited": false,
+                "offerPrice": null,
+                "orderPrice": 37.43,
+                "orderQuantity": 0,
+                "isProcessed": false,
+                "id": "bae0e083-7058-11f0-abbf-026a3238d89a",
+                "createdAt": {
+                    "date": "2025-08-03 10:58:04.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "updatedAt": {
+                    "date": "2025-08-03 11:06:10.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "deletedAt": null,
+                "readAt": null,
+                "writeAt": null,
+                "isActive": true,
+                "product": {
+                    "id": "6163b991-4195-4652-b543-4c3e6590ea14",
+                    "productCode": "HP176               ",
+                    "title": "LIMFORM DETER. IGIENIZ.LT.5 x4",
+                    "description": "",
+                    "noteOffer": "E\u2019 un prodotto che consente di ottenere in un\u2019unica operazione il triplice effetto di detergere, sanificare e deodorare. Grazie alle sue caratteristiche, \u00e8 ideale da impiegare su tutte le superfici dove si ritiene usare un prodotto specifico: negli scarichi, porta immondizie, toilette, lavatoi ed in luoghi dove spesso possono verificarsi pericolose infezioni. Il prodotto elimina inoltre i cattivi odori, non intacca i metalli, la plastica e non macchia.",
+                    "sellLoan": false,
+                    "domain": null,
+                    "category": null,
+                    "subcategory": {
+                        "id": "29566b38-002c-4966-aabc-a494c63d1d22",
+                        "description": "PRODOTTI PAVIMENTI"
+                    }
+                },
+                "order": {
+                    "id": "80c3b54d-7058-11f0-abbf-026a3238d89a",
+                    "number": "ORD000487",
+                    "destination": "FAM MAGAZZINO PABOS",
+                    "totalPriceAmount": "555.95",
+                    "referenceDate": {
+                        "date": "2025-08-03 11:06:10.000000",
+                        "timezone_type": 3,
+                        "timezone": "UTC"
+                    },
+                    "avarageDiscount": "31.83",
+                    "avarageMarkup": "155.34",
+                    "nonCompliant": true,
+                    "nonCompliantInsolvent": false,
+                    "nonCompliantAverageDiscount": true,
+                    "nonCompliantProductDiscount": 0,
+                    "nonCompliantProductMarkup": 0
+                },
+                "agentCommissionElaboration": null,
+                "promotionRow": null,
+                "_embedded": {
+                    "orderType": {
+                        "code": "OCP",
+                        "description": "Prodotti",
+                        "id": "a37eb9eb-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "orders": {},
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/order-type\/a37eb9eb-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "discountType": {
+                        "id": "b0152c4d-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "code": "PERCENTAGE",
+                        "description": "Percentage",
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/discount-type\/b0152c4d-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "createdBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "updatedBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    }
+                },
+                "_links": {
+                    "self": {
+                        "href": "https:\/\/ar.deterchimica.it\/api\/order-row\/bae0e083-7058-11f0-abbf-026a3238d89a"
+                    }
+                }
+            },
+            {
+                "priceAmount": "100.78",
+                "quantity": 2,
+                "discountValue": "18.2246024018",
+                "extraDiscount": "0.00",
+                "minQuantity": null,
+                "registrationCode": null,
+                "workorderNumber": null,
+                "netPrice": "50.39",
+                "grossPrice": "50.39",
+                "loan": false,
+                "goodsDiscount": false,
+                "productPricelist": "customerPrice",
+                "effectiveDiscount": 18.22,
+                "destinationCommissionPercentage": "1.00",
+                "destinationRefundPercentage": "0.00",
+                "destinationIncludedInBonus": true,
+                "amountForEndYearBonus": "100.78",
+                "productFlatUnit": null,
+                "productCommission": null,
+                "productRefund": null,
+                "productMasterPrice": "61.62",
+                "productCustomerPrice": "50.39",
+                "isSample": null,
+                "totalFlatUnit": "0.00",
+                "totalCommissionAmount": null,
+                "totalRefundAmount": null,
+                "totalCommission": null,
+                "orderCommissionPercentage": null,
+                "orderRefundPercentage": null,
+                "totalRefundPercentage": null,
+                "totalCommissionPercentage": null,
+                "productPromotionPrice": "0.00",
+                "rowNumber": 6,
+                "flatValue": null,
+                "promotionApplied": false,
+                "note": "",
+                "description": null,
+                "markup": "364.00",
+                "grossPriceAmount": "123.24",
+                "buyPrice": "10.86",
+                "buyPriceAmount": "21.72",
+                "hasLogs": null,
+                "discountValue1": 0,
+                "discountValue2": 0,
+                "discountValue3": 0,
+                "discountValue4": 0,
+                "notCompliant": false,
+                "netPriceEdited": false,
+                "offerPrice": null,
+                "orderPrice": 50.39,
+                "orderQuantity": 0,
+                "isProcessed": false,
+                "id": "b0e85e61-7058-11f0-abbf-026a3238d89a",
+                "createdAt": {
+                    "date": "2025-08-03 10:57:47.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "updatedAt": {
+                    "date": "2025-08-03 11:06:10.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "deletedAt": null,
+                "readAt": null,
+                "writeAt": null,
+                "isActive": true,
+                "product": {
+                    "id": "d90c268a-8790-4d88-8f55-9b96c41bae3b",
+                    "productCode": "HC9197              ",
+                    "title": "MATIC LIQUIDO DETERG.  KG.12",
+                    "description": "UN 1719 LIQUIDO ALCALINO CAUSTICO, N.A.S. (POTASSIO IDRATO; ETILENDIAMMINOTETRAACETATO DI TETRASODIO (EDTA 4 Na)) 8, II (E)",
+                    "noteOffer": "Prodotto per il lavaggio meccanico di piatti e stoviglie.UNICO nella concentrazione, pulisce ed igienizza contemporaneamente. Aiuta a ridurer la formazione di calcare, utilizzato con dosatori per una completa automatizzazione.Per tutt i tipi d\u0027acqua\r\n\r\nContiene protettivi per le parti metalliche dell\u2019impianto lavastoviglie. \r\nIl lavaggio \u00e9 eseguito con PH 9,5-10.    \r\nDosaggio:   acqua dolce    0,8 gr.\/LT.                     acqua media    1 gr.\/LT.            acqua dura oltre    1,2 gr.\/LT.",
+                    "sellLoan": false,
+                    "domain": null,
+                    "category": {
+                        "id": "c52d6d51-b9d5-4a22-bd44-2f39431e5858",
+                        "description": "Prodotti Cucina"
+                    },
+                    "subcategory": {
+                        "id": "27a36ae0-b97b-4b2d-86dc-3eb12f5c60ef",
+                        "description": "DETERSIVO LAVASTOVIGLIE"
+                    }
+                },
+                "order": {
+                    "id": "80c3b54d-7058-11f0-abbf-026a3238d89a",
+                    "number": "ORD000487",
+                    "destination": "FAM MAGAZZINO PABOS",
+                    "totalPriceAmount": "555.95",
+                    "referenceDate": {
+                        "date": "2025-08-03 11:06:10.000000",
+                        "timezone_type": 3,
+                        "timezone": "UTC"
+                    },
+                    "avarageDiscount": "31.83",
+                    "avarageMarkup": "155.34",
+                    "nonCompliant": true,
+                    "nonCompliantInsolvent": false,
+                    "nonCompliantAverageDiscount": true,
+                    "nonCompliantProductDiscount": 0,
+                    "nonCompliantProductMarkup": 0
+                },
+                "agentCommissionElaboration": null,
+                "promotionRow": null,
+                "_embedded": {
+                    "orderType": {
+                        "code": "OCP",
+                        "description": "Prodotti",
+                        "id": "a37eb9eb-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "orders": {},
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/order-type\/a37eb9eb-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "discountType": {
+                        "id": "b0152c4d-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "code": "PERCENTAGE",
+                        "description": "Percentage",
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/discount-type\/b0152c4d-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "createdBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "updatedBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    }
+                },
+                "_links": {
+                    "self": {
+                        "href": "https:\/\/ar.deterchimica.it\/api\/order-row\/b0e85e61-7058-11f0-abbf-026a3238d89a"
+                    }
+                }
+            },
+            {
+                "priceAmount": "49.94",
+                "quantity": 1,
+                "discountValue": "33.4576948701",
+                "extraDiscount": "0.00",
+                "minQuantity": null,
+                "registrationCode": null,
+                "workorderNumber": null,
+                "netPrice": "49.94",
+                "grossPrice": "49.94",
+                "loan": false,
+                "goodsDiscount": false,
+                "productPricelist": "customerPrice",
+                "effectiveDiscount": 33.46,
+                "destinationCommissionPercentage": "1.00",
+                "destinationRefundPercentage": "0.00",
+                "destinationIncludedInBonus": true,
+                "amountForEndYearBonus": "49.94",
+                "productFlatUnit": null,
+                "productCommission": null,
+                "productRefund": null,
+                "productMasterPrice": "75.05",
+                "productCustomerPrice": "49.94",
+                "isSample": null,
+                "totalFlatUnit": "0.00",
+                "totalCommissionAmount": null,
+                "totalRefundAmount": null,
+                "totalCommission": null,
+                "orderCommissionPercentage": null,
+                "orderRefundPercentage": null,
+                "totalRefundPercentage": null,
+                "totalCommissionPercentage": null,
+                "productPromotionPrice": "0.00",
+                "rowNumber": 5,
+                "flatValue": null,
+                "promotionApplied": false,
+                "note": "",
+                "description": null,
+                "markup": "147.23",
+                "grossPriceAmount": "75.05",
+                "buyPrice": "20.2",
+                "buyPriceAmount": "20.20",
+                "hasLogs": null,
+                "discountValue1": 0,
+                "discountValue2": 0,
+                "discountValue3": 0,
+                "discountValue4": 0,
+                "notCompliant": false,
+                "netPriceEdited": false,
+                "offerPrice": null,
+                "orderPrice": 49.94,
+                "orderQuantity": 0,
+                "isProcessed": false,
+                "id": "a89dd1f7-7058-11f0-abbf-026a3238d89a",
+                "createdAt": {
+                    "date": "2025-08-03 10:57:33.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "updatedAt": {
+                    "date": "2025-08-03 11:06:10.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "deletedAt": null,
+                "readAt": null,
+                "writeAt": null,
+                "isActive": true,
+                "product": {
+                    "id": "5bcd082a-cd96-46f2-aad7-45f1dca68f36",
+                    "productCode": "HC185               ",
+                    "title": "HYGIEN PIATTI DETERG. LT.5  PZ.4",
+                    "description": "",
+                    "noteOffer": "Prodotto, per il lavaggio manuale di piatti, bicchieri, stoviglie d\u2019ogni genere, a base di sostanze tensioattive. Profumazione al limone. Non contiene sali inorganici alcalini e pertanto consente un prolungato contatto delle sue soluzioni acquose con l\u2019epidermide senza che si manifestino fenomeni irritativi.  Hygien piatti contiene sostanze che conferiscono brillantezza alle superfici deterse: inoltre particolari additivi permettono di ottenere il massimo effetto detergente anche con acque particolarmente dure.",
+                    "sellLoan": false,
+                    "domain": null,
+                    "category": null,
+                    "subcategory": {
+                        "id": "cccfe2b3-8100-4ccb-ac1d-3d301aabdba8",
+                        "description": "DETERSIVO PIATTI MANUALE"
+                    }
+                },
+                "order": {
+                    "id": "80c3b54d-7058-11f0-abbf-026a3238d89a",
+                    "number": "ORD000487",
+                    "destination": "FAM MAGAZZINO PABOS",
+                    "totalPriceAmount": "555.95",
+                    "referenceDate": {
+                        "date": "2025-08-03 11:06:10.000000",
+                        "timezone_type": 3,
+                        "timezone": "UTC"
+                    },
+                    "avarageDiscount": "31.83",
+                    "avarageMarkup": "155.34",
+                    "nonCompliant": true,
+                    "nonCompliantInsolvent": false,
+                    "nonCompliantAverageDiscount": true,
+                    "nonCompliantProductDiscount": 0,
+                    "nonCompliantProductMarkup": 0
+                },
+                "agentCommissionElaboration": null,
+                "promotionRow": null,
+                "_embedded": {
+                    "orderType": {
+                        "code": "OCP",
+                        "description": "Prodotti",
+                        "id": "a37eb9eb-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "orders": {},
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/order-type\/a37eb9eb-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "discountType": {
+                        "id": "b0152c4d-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "code": "PERCENTAGE",
+                        "description": "Percentage",
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/discount-type\/b0152c4d-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "createdBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "updatedBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    }
+                },
+                "_links": {
+                    "self": {
+                        "href": "https:\/\/ar.deterchimica.it\/api\/order-row\/a89dd1f7-7058-11f0-abbf-026a3238d89a"
+                    }
+                }
+            },
+            {
+                "priceAmount": "40.89",
+                "quantity": 1,
+                "discountValue": "17.1931956258",
+                "extraDiscount": "0.00",
+                "minQuantity": null,
+                "registrationCode": null,
+                "workorderNumber": null,
+                "netPrice": "40.89",
+                "grossPrice": "40.89",
+                "loan": false,
+                "goodsDiscount": false,
+                "productPricelist": "customerPrice",
+                "effectiveDiscount": 17.19,
+                "destinationCommissionPercentage": "1.00",
+                "destinationRefundPercentage": "0.00",
+                "destinationIncludedInBonus": true,
+                "amountForEndYearBonus": "40.89",
+                "productFlatUnit": null,
+                "productCommission": null,
+                "productRefund": null,
+                "productMasterPrice": "49.38",
+                "productCustomerPrice": "40.89",
+                "isSample": null,
+                "totalFlatUnit": "0.00",
+                "totalCommissionAmount": null,
+                "totalRefundAmount": null,
+                "totalCommission": null,
+                "orderCommissionPercentage": null,
+                "orderRefundPercentage": null,
+                "totalRefundPercentage": null,
+                "totalCommissionPercentage": null,
+                "productPromotionPrice": "0.00",
+                "rowNumber": 4,
+                "flatValue": null,
+                "promotionApplied": false,
+                "note": "",
+                "description": null,
+                "markup": "83.12",
+                "grossPriceAmount": "49.38",
+                "buyPrice": "22.33",
+                "buyPriceAmount": "22.33",
+                "hasLogs": null,
+                "discountValue1": 0,
+                "discountValue2": 0,
+                "discountValue3": 0,
+                "discountValue4": 0,
+                "notCompliant": false,
+                "netPriceEdited": false,
+                "offerPrice": null,
+                "orderPrice": 40.89,
+                "orderQuantity": 0,
+                "isProcessed": false,
+                "id": "a2a94dab-7058-11f0-abbf-026a3238d89a",
+                "createdAt": {
+                    "date": "2025-08-03 10:57:23.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "updatedAt": {
+                    "date": "2025-08-03 11:06:10.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "deletedAt": null,
+                "readAt": null,
+                "writeAt": null,
+                "isActive": true,
+                "product": {
+                    "id": "98c8f371-45de-40cc-851e-6aaaeb5f6540",
+                    "productCode": "HB020               ",
+                    "title": "LOBEN POLVERE DETERSIVO SECCHIO KG 10",
+                    "description": "",
+                    "noteOffer": "Completo, enzimatico e con ossi\u00acgeno attivo. Efficace gi\u00e0 a 20\u00b0. Pu\u00aclisce in profondit\u00e0 e rispetta i colori. Per tutti i tipi di cotone e sintetico bianchi e colorati.   Indicato anche per acque partico\u00aclarmente dure.   Grazie all\u2019alta concentrazione si riducono i consumi con risultati ottimali.",
+                    "sellLoan": false,
+                    "domain": null,
+                    "category": {
+                        "id": "7138fe2c-4bc0-450f-a572-0d0bef1ec169",
+                        "description": "DETERGENTI"
+                    },
+                    "subcategory": {
+                        "id": "6919d537-1370-4169-a73c-b3a21564d727",
+                        "description": "DETERSIVO"
+                    }
+                },
+                "order": {
+                    "id": "80c3b54d-7058-11f0-abbf-026a3238d89a",
+                    "number": "ORD000487",
+                    "destination": "FAM MAGAZZINO PABOS",
+                    "totalPriceAmount": "555.95",
+                    "referenceDate": {
+                        "date": "2025-08-03 11:06:10.000000",
+                        "timezone_type": 3,
+                        "timezone": "UTC"
+                    },
+                    "avarageDiscount": "31.83",
+                    "avarageMarkup": "155.34",
+                    "nonCompliant": true,
+                    "nonCompliantInsolvent": false,
+                    "nonCompliantAverageDiscount": true,
+                    "nonCompliantProductDiscount": 0,
+                    "nonCompliantProductMarkup": 0
+                },
+                "agentCommissionElaboration": null,
+                "promotionRow": null,
+                "_embedded": {
+                    "orderType": {
+                        "code": "OCP",
+                        "description": "Prodotti",
+                        "id": "a37eb9eb-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "orders": {},
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/order-type\/a37eb9eb-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "discountType": {
+                        "id": "b0152c4d-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "code": "PERCENTAGE",
+                        "description": "Percentage",
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/discount-type\/b0152c4d-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "createdBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "updatedBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    }
+                },
+                "_links": {
+                    "self": {
+                        "href": "https:\/\/ar.deterchimica.it\/api\/order-row\/a2a94dab-7058-11f0-abbf-026a3238d89a"
+                    }
+                }
+            },
+            {
+                "priceAmount": "74.59",
+                "quantity": 1,
+                "discountValue": "30.0281425891",
+                "extraDiscount": "0.00",
+                "minQuantity": null,
+                "registrationCode": null,
+                "workorderNumber": null,
+                "netPrice": "74.59",
+                "grossPrice": "74.59",
+                "loan": false,
+                "goodsDiscount": false,
+                "productPricelist": "customerPrice",
+                "effectiveDiscount": 30.03,
+                "destinationCommissionPercentage": "1.00",
+                "destinationRefundPercentage": "0.00",
+                "destinationIncludedInBonus": true,
+                "amountForEndYearBonus": "74.59",
+                "productFlatUnit": null,
+                "productCommission": null,
+                "productRefund": null,
+                "productMasterPrice": "106.60",
+                "productCustomerPrice": "74.59",
+                "isSample": null,
+                "totalFlatUnit": "0.00",
+                "totalCommissionAmount": null,
+                "totalRefundAmount": null,
+                "totalCommission": null,
+                "orderCommissionPercentage": null,
+                "orderRefundPercentage": null,
+                "totalRefundPercentage": null,
+                "totalCommissionPercentage": null,
+                "productPromotionPrice": "0.00",
+                "rowNumber": 3,
+                "flatValue": null,
+                "promotionApplied": false,
+                "note": "",
+                "description": null,
+                "markup": "68.00",
+                "grossPriceAmount": "106.60",
+                "buyPrice": "44.4",
+                "buyPriceAmount": "44.40",
+                "hasLogs": null,
+                "discountValue1": 0,
+                "discountValue2": 0,
+                "discountValue3": 0,
+                "discountValue4": 0,
+                "notCompliant": false,
+                "netPriceEdited": false,
+                "offerPrice": null,
+                "orderPrice": 74.59,
+                "orderQuantity": 0,
+                "isProcessed": false,
+                "id": "9ba4d771-7058-11f0-abbf-026a3238d89a",
+                "createdAt": {
+                    "date": "2025-08-03 10:57:11.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "updatedAt": {
+                    "date": "2025-08-03 11:06:10.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "deletedAt": null,
+                "readAt": null,
+                "writeAt": null,
+                "isActive": true,
+                "product": {
+                    "id": "0876dfa5-ab13-450f-8358-418a42403cb5",
+                    "productCode": "TOUNL134            ",
+                    "title": "TOV.LI 40X40 T.U.LIGHT BORDEAUX PZ800",
+                    "description": "",
+                    "noteOffer": "Tovagliolo 40x40, in tessuto non tessuto, coniuga praticit\u00e0,versatilit\u00e0 in un prodotto economico ma accattivante. Offre una gamma molto ampia di colori e di formati con un ottimo rapporto qualit\u00e0-prezzo. Tovagliato monouso \u00e8 prodotto in Italia con materie prime certificate idonee al contatto con alimenti.",
+                    "sellLoan": false,
+                    "domain": null,
+                    "category": null,
+                    "subcategory": {
+                        "id": "77d286b8-6db7-433f-bc7e-ef068392e6d0",
+                        "description": "TOVAGLIOLI CARTA"
+                    }
+                },
+                "order": {
+                    "id": "80c3b54d-7058-11f0-abbf-026a3238d89a",
+                    "number": "ORD000487",
+                    "destination": "FAM MAGAZZINO PABOS",
+                    "totalPriceAmount": "555.95",
+                    "referenceDate": {
+                        "date": "2025-08-03 11:06:10.000000",
+                        "timezone_type": 3,
+                        "timezone": "UTC"
+                    },
+                    "avarageDiscount": "31.83",
+                    "avarageMarkup": "155.34",
+                    "nonCompliant": true,
+                    "nonCompliantInsolvent": false,
+                    "nonCompliantAverageDiscount": true,
+                    "nonCompliantProductDiscount": 0,
+                    "nonCompliantProductMarkup": 0
+                },
+                "agentCommissionElaboration": null,
+                "promotionRow": null,
+                "_embedded": {
+                    "orderType": {
+                        "code": "OCP",
+                        "description": "Prodotti",
+                        "id": "a37eb9eb-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "orders": {},
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/order-type\/a37eb9eb-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "discountType": {
+                        "id": "b0152c4d-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "code": "PERCENTAGE",
+                        "description": "Percentage",
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/discount-type\/b0152c4d-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "createdBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "updatedBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    }
+                },
+                "_links": {
+                    "self": {
+                        "href": "https:\/\/ar.deterchimica.it\/api\/order-row\/9ba4d771-7058-11f0-abbf-026a3238d89a"
+                    }
+                }
+            },
+            {
+                "priceAmount": "87.75",
+                "quantity": 3,
+                "discountValue": "29.2110358180",
+                "extraDiscount": "0.00",
+                "minQuantity": null,
+                "registrationCode": null,
+                "workorderNumber": null,
+                "netPrice": "29.25",
+                "grossPrice": "29.25",
+                "loan": false,
+                "goodsDiscount": false,
+                "productPricelist": "customerPrice",
+                "effectiveDiscount": 29.21,
+                "destinationCommissionPercentage": "1.00",
+                "destinationRefundPercentage": "0.00",
+                "destinationIncludedInBonus": true,
+                "amountForEndYearBonus": "87.75",
+                "productFlatUnit": null,
+                "productCommission": null,
+                "productRefund": null,
+                "productMasterPrice": "41.32",
+                "productCustomerPrice": "29.25",
+                "isSample": null,
+                "totalFlatUnit": "0.00",
+                "totalCommissionAmount": null,
+                "totalRefundAmount": null,
+                "totalCommission": null,
+                "orderCommissionPercentage": null,
+                "orderRefundPercentage": null,
+                "totalRefundPercentage": null,
+                "totalCommissionPercentage": null,
+                "productPromotionPrice": "0.00",
+                "rowNumber": 2,
+                "flatValue": null,
+                "promotionApplied": false,
+                "note": "",
+                "description": null,
+                "markup": "195.45",
+                "grossPriceAmount": "123.96",
+                "buyPrice": "9.9",
+                "buyPriceAmount": "29.70",
+                "hasLogs": null,
+                "discountValue1": 0,
+                "discountValue2": 0,
+                "discountValue3": 0,
+                "discountValue4": 0,
+                "notCompliant": false,
+                "netPriceEdited": false,
+                "offerPrice": null,
+                "orderPrice": 29.25,
+                "orderQuantity": 0,
+                "isProcessed": false,
+                "id": "9117a15c-7058-11f0-abbf-026a3238d89a",
+                "createdAt": {
+                    "date": "2025-08-03 10:56:54.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "updatedAt": {
+                    "date": "2025-08-03 11:06:10.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "deletedAt": null,
+                "readAt": null,
+                "writeAt": null,
+                "isActive": true,
+                "product": {
+                    "id": "467fac6c-3b4c-4090-9cdd-ce017303195a",
+                    "productCode": "DG080               ",
+                    "title": "ROTOLO CARTA ASC.AUTOCUT 2 VELI PZ.6",
+                    "description": "H.21 PURA CELLULOSA GOFFRATA",
+                    "noteOffer": "ROTOLO DI CARTA ASCIUGAMANI PER DISTRIBUTORE A TAGLIO AUTOMATICO  PURA CELLULOSA, 2 VELI goffrata  GRAMMATURA CARTA: 17+17 gr\/mq  PESO ROTOLO: GR. 714 + PESO ANIMA GR. 21  ALTEZZA ROTOLO: CM. 21  LUNGHEZZA ROTOLO: MT. 100  DIAMETRO MAX cm. 17,5  SENZA PRETAGLIO",
+                    "sellLoan": false,
+                    "domain": null,
+                    "category": {
+                        "id": "8c091c8a-a555-46c7-8da9-4e3f489d28fa",
+                        "description": "DESCRIZIONE DA MODIFICARE"
+                    },
+                    "subcategory": {
+                        "id": "c87cefb6-57b2-40cf-bc91-8df8bd79b696",
+                        "description": "BOBINE CARTA"
+                    }
+                },
+                "order": {
+                    "id": "80c3b54d-7058-11f0-abbf-026a3238d89a",
+                    "number": "ORD000487",
+                    "destination": "FAM MAGAZZINO PABOS",
+                    "totalPriceAmount": "555.95",
+                    "referenceDate": {
+                        "date": "2025-08-03 11:06:10.000000",
+                        "timezone_type": 3,
+                        "timezone": "UTC"
+                    },
+                    "avarageDiscount": "31.83",
+                    "avarageMarkup": "155.34",
+                    "nonCompliant": true,
+                    "nonCompliantInsolvent": false,
+                    "nonCompliantAverageDiscount": true,
+                    "nonCompliantProductDiscount": 0,
+                    "nonCompliantProductMarkup": 0
+                },
+                "agentCommissionElaboration": null,
+                "promotionRow": null,
+                "_embedded": {
+                    "orderType": {
+                        "code": "OCP",
+                        "description": "Prodotti",
+                        "id": "a37eb9eb-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "orders": {},
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/order-type\/a37eb9eb-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "discountType": {
+                        "id": "b0152c4d-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "code": "PERCENTAGE",
+                        "description": "Percentage",
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/discount-type\/b0152c4d-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "createdBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "updatedBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    }
+                },
+                "_links": {
+                    "self": {
+                        "href": "https:\/\/ar.deterchimica.it\/api\/order-row\/9117a15c-7058-11f0-abbf-026a3238d89a"
+                    }
+                }
+            },
+            {
+                "priceAmount": "66.75",
+                "quantity": 3,
+                "discountValue": "44.3610902726",
+                "extraDiscount": "0.00",
+                "minQuantity": null,
+                "registrationCode": null,
+                "workorderNumber": null,
+                "netPrice": "22.25",
+                "grossPrice": "22.25",
+                "loan": false,
+                "goodsDiscount": false,
+                "productPricelist": "customerPrice",
+                "effectiveDiscount": 44.36,
+                "destinationCommissionPercentage": "1.00",
+                "destinationRefundPercentage": "0.00",
+                "destinationIncludedInBonus": true,
+                "amountForEndYearBonus": "66.75",
+                "productFlatUnit": null,
+                "productCommission": null,
+                "productRefund": null,
+                "productMasterPrice": "39.99",
+                "productCustomerPrice": "22.25",
+                "isSample": null,
+                "totalFlatUnit": "0.00",
+                "totalCommissionAmount": null,
+                "totalRefundAmount": null,
+                "totalCommission": null,
+                "orderCommissionPercentage": null,
+                "orderRefundPercentage": null,
+                "totalRefundPercentage": null,
+                "totalCommissionPercentage": null,
+                "productPromotionPrice": "0.00",
+                "rowNumber": 1,
+                "flatValue": null,
+                "promotionApplied": false,
+                "note": "",
+                "description": null,
+                "markup": "69.98",
+                "grossPriceAmount": "119.97",
+                "buyPrice": "13.09",
+                "buyPriceAmount": "39.27",
+                "hasLogs": null,
+                "discountValue1": 0,
+                "discountValue2": 0,
+                "discountValue3": 0,
+                "discountValue4": 0,
+                "notCompliant": false,
+                "netPriceEdited": false,
+                "offerPrice": null,
+                "orderPrice": 22.25,
+                "orderQuantity": 0,
+                "isProcessed": false,
+                "id": "8b78a123-7058-11f0-abbf-026a3238d89a",
+                "createdAt": {
+                    "date": "2025-08-03 10:56:44.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "updatedAt": {
+                    "date": "2025-08-03 11:06:10.000000",
+                    "timezone_type": 3,
+                    "timezone": "UTC"
+                },
+                "deletedAt": null,
+                "readAt": null,
+                "writeAt": null,
+                "isActive": true,
+                "product": {
+                    "id": "02ec9874-1386-458f-96d9-74c1d5860304",
+                    "productCode": "DG123               ",
+                    "title": "BOBINA EXTRA CELL.WSA KG.3,5 PZ.2",
+                    "description": "",
+                    "noteOffer": "Strofinaccio in PURA CELLULOSA W.S.A. goffrata a nido d\u2019ape.Offre sempre un perfetto assorbimento.   N.B.: IDONEO AL CONTATTO CON ALIMENTI \u2013 (art. 6 D.M. 21\/03\/73)  CARATTERISTICHE DEL ROTOLO:  -CANDEGGIANTI OTTICI ASSENT  -2 VELI \u2013 GOFFRATI  -PESO LORDO 24\/25 GR.\/MQ.  -ALTEZZA CM. 27  -STRAPPO CM. 37  -N\u00b0 704 STRAPPI  -LUNGHEZZA ROTOLO MT. 260.46  -48 COLLI PER PALLET",
+                    "sellLoan": false,
+                    "domain": null,
+                    "category": null,
+                    "subcategory": {
+                        "id": "c87cefb6-57b2-40cf-bc91-8df8bd79b696",
+                        "description": "BOBINE CARTA"
+                    }
+                },
+                "order": {
+                    "id": "80c3b54d-7058-11f0-abbf-026a3238d89a",
+                    "number": "ORD000487",
+                    "destination": "FAM MAGAZZINO PABOS",
+                    "totalPriceAmount": "555.95",
+                    "referenceDate": {
+                        "date": "2025-08-03 11:06:10.000000",
+                        "timezone_type": 3,
+                        "timezone": "UTC"
+                    },
+                    "avarageDiscount": "31.83",
+                    "avarageMarkup": "155.34",
+                    "nonCompliant": true,
+                    "nonCompliantInsolvent": false,
+                    "nonCompliantAverageDiscount": true,
+                    "nonCompliantProductDiscount": 0,
+                    "nonCompliantProductMarkup": 0
+                },
+                "agentCommissionElaboration": null,
+                "promotionRow": null,
+                "_embedded": {
+                    "orderType": {
+                        "code": "OCP",
+                        "description": "Prodotti",
+                        "id": "a37eb9eb-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:31.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "orders": {},
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/order-type\/a37eb9eb-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "discountType": {
+                        "id": "b0152c4d-0db3-11ed-bf20-020f15a448a2",
+                        "createdAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "updatedAt": {
+                            "date": "2022-07-27 13:54:52.000000",
+                            "timezone_type": 3,
+                            "timezone": "UTC"
+                        },
+                        "code": "PERCENTAGE",
+                        "description": "Percentage",
+                        "_embedded": {
+                            "createdBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            },
+                            "updatedBy": {
+                                "id": "0c6061c0-0db3-11ed-bf20-020f15a448a2",
+                                "_links": {
+                                    "self": {
+                                        "href": "https:\/\/ar.deterchimica.it\/api\/user\/0c6061c0-0db3-11ed-bf20-020f15a448a2"
+                                    }
+                                }
+                            }
+                        },
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/discount-type\/b0152c4d-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "createdBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    },
+                    "updatedBy": {
+                        "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+                        "_links": {
+                            "self": {
+                                "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                            }
+                        }
+                    }
+                },
+                "_links": {
+                    "self": {
+                        "href": "https:\/\/ar.deterchimica.it\/api\/order-row\/8b78a123-7058-11f0-abbf-026a3238d89a"
+                    }
+                }
+            }
+        ],
+        "destination": {
+            "id": "55e217c3-318a-4613-b112-3c74cd9af406",
+            "code": "0009108-001",
+            "businessName": "FAM MAGAZZINO PABOS",
+            "businessAddressTitle": "VIA PROVINCIALE,13,25050,OME (BS)",
+            "delivery": "",
+            "cig": null,
+            "cup": null,
+            "agent1": {
+                "displayName": "(64) CARGNONI IVAN",
+                "code": "64"
+            },
+            "_links": []
+        },
+        "createdBy": {
+            "id": "11b4627b-0db3-11ed-bf20-020f15a448a2",
+            "_links": {
+                "self": {
+                    "href": "https:\/\/ar.deterchimica.it\/api\/user\/11b4627b-0db3-11ed-bf20-020f15a448a2"
+                }
+            }
+        },
+        "updatedBy": {
+            "id": "129e0a3d-0db3-11ed-bf20-020f15a448a2",
+            "_links": {
+                "self": {
+                    "href": "https:\/\/ar.deterchimica.it\/api\/user\/129e0a3d-0db3-11ed-bf20-020f15a448a2"
+                }
+            }
+        }
+    },
+    "_links": {
+        "self": {
+            "href": "https:\/\/ar.deterchimica.it\/api\/order\/80c3b54d-7058-11f0-abbf-026a3238d89a"
+        }
+    }
+}

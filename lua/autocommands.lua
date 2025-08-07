@@ -32,15 +32,7 @@ vim.api.nvim_create_autocmd("TermOpen", {
 vim.api.nvim_create_autocmd("TermClose", {
   pattern = "*",
   callback = function()
-    vim.cmd("qa!")  -- quit all without saving
-  end,
-})
-
-vim.api.nvim_create_autocmd("BufEnter", {
-  pattern = "*.http",
-  callback = function()
-    vim.api.nvim_set_keymap('n', '<cr>', "<cmd>lua require('kulala').run()<cr>", { noremap = true, silent = true })
-    vim.api.nvim_set_keymap('n', 'p', "<cmd>lua require('kulala').from_curl()<cr>", { noremap = true, silent = true })
+    vim.cmd("q!")  -- quit all without saving
   end,
 })
 
