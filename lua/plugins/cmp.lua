@@ -1,7 +1,8 @@
+--NOTE: Slowest to load
 return { -- Autocompletion
   'hrsh7th/nvim-cmp',
-  -- event = 'InsertEnter',
-  -- enabled = not _G.NVIM_TERMINAL_ONLY,
+  -- event = 'BufEnter',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
   dependencies = {
     -- Snippet Engine & its associated nvim-cmp source
     {

@@ -2,7 +2,7 @@ return {
   'folke/snacks.nvim',
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
   priority = 1000,
-  lazy = false,
+  event = 'VeryLazy', 
   ---@type snacks.Config
   opts = {
     -- your configuration comes here

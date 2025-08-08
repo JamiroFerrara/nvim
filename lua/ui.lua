@@ -1,5 +1,18 @@
 return {
   lazy_ui = {
+    performance = {
+      cache = { enabled = true },
+      rtp = {
+        disabled_plugins = {
+          'netrwPlugin',
+          'gzip',
+          'tarPlugin',
+          'tohtml',
+          'tutor',
+          'zipPlugin',
+        },
+      },
+    },
     -- If you are using a Nerd Font: set icons to an empty table which will use the
     -- default lazy.nvim defined Nerd Font icons, otherwise define a unicode icons table
     change_detection = {

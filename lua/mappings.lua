@@ -289,16 +289,31 @@ return {
     ['gA'] = { '%%', desc = '' },
   },
 
+  tn = {
+    ['<leader>x'] = function()
+      local word = vim.fn.expand '<cWORD>'
+      vim.notify('chmod +x ' .. word, vim.log.levels.INFO)
+      vim.fn.chansend(vim.b.terminal_job_id, 'chmod +x ' .. word .. '\n')
+      vim.cmd.startinsert()
+    end,
+    ['<cr>'] = function()
+      local word = vim.fn.expand '<cWORD>'
+      vim.notify('Entering -> ' .. word, vim.log.levels.INFO)
+      vim.fn.chansend(vim.b.terminal_job_id, 'cd ' .. word .. '\n')
+      vim.cmd.startinsert()
+    end,
+    ['<bs>'] = function()
+      vim.notify('Going back!', vim.log.levels.INFO)
+      vim.fn.chansend(vim.b.terminal_job_id, 'cd .. \n')
+      vim.cmd.startinsert()
+    end,
+    ['<C-p>'] = "<cmd>lua require('neopostman').run()<cr>",
+  },
+
   -- Terminal Mode
   t = {
     ['è'] = { 'p', desc = 'Print' },
-    -- ['<esc>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
-    -- ['<A-s>'] = { '<cmd>2ToggleTerm<cr>', desc = 'Toggle Terminal' },
-    -- ['<C-s>'] = { '<cmd>2ToggleTerm<cr>', desc = 'Toggle Terminal' },
-    -- ['q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
-    -- ['j'] = false,
     ['<C-^M>'] = { '<NL>', desc = 'New Line' },
-    -- ['<leader>q'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<A-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-t>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
@@ -306,21 +321,16 @@ return {
 
     ['<M-w>'] = { '<C-\\><C-n><cmd>q<cr>', desc = 'Quit' },
 
-    -- ['<C-Tab>'] = { '<C-\\><C-n><cmd>Oil<cr>', desc = 'Open Oil' },
-
-    -- ['<C-j>'] = { '<NL>', desc = 'New Line' },
-
     ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
     ['<Esc>'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     ['kj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     ['jj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
-    -- ['<C-.>'] = { '<C-\\><C-N>:', desc = 'Go to normal mode' },
 
-    -- [Splits] FIX: This is not selecting the pane 
     ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h")<cr>' },
     ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v")<cr>' },
 
-    ['<C-f>'] = { '<C-\\><C-N><cmd>lua GlobalSnacksPicker()<cr>' },
+    -- ['<C-f>'] = { '<C-\\><C-N><cmd>lua GlobalSnacksPicker()<cr>' },
+    ['<C-f>'] = { '<C-\\><C-N>/' },
 
     ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
     ['<A-h>'] = { '<cmd>lua require("tmux").move_left()<cr>' },
