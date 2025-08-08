@@ -3,6 +3,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Special mappings
+-- TODO: Move me
 vim.api.nvim_set_keymap('n', '<C-w>d', '<Nop>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<C-w><C-d>', '<Nop>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<C-w>', '<cmd>lua require("harpoon.ui").nav_file(2)<cr>', { noremap = true, silent = true, nowait = true })
@@ -82,10 +83,11 @@ vim.opt.foldnestmax = 1
 vim.opt.foldlevel = 3
 vim.opt.foldenable = false
 
--- Key Mappings
+-- LineNr jumplist mappings for 'k' and 'j'
 vim.api.nvim_command [[nnoremap <expr> k (v:count > 1 ? "m'" . v:count : '') . 'k']]
 vim.api.nvim_command [[nnoremap <expr> j (v:count > 1 ? "m'" . v:count : '') . 'j']]
 
+-- Check if Neovim was launched with the +terminal argument
 local argv = vim.v.argv or {}
 local function launched_with_terminal()
   for _, arg in ipairs(argv) do
