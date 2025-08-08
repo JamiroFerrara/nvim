@@ -62,8 +62,6 @@ vim.opt.autoindent = true
 vim.opt.softtabstop = -1
 vim.opt.textwidth = 80
 vim.opt.incsearch = true
-vim.opt.clipboard = 'unnamedplus'
-vim.opt.laststatus = 2
 vim.opt.cursorline = false
 vim.opt.swapfile = false
 vim.opt.ruler = false
@@ -83,15 +81,32 @@ vim.opt.foldnestmax = 1
 vim.opt.foldlevel = 3
 vim.opt.foldenable = false
 
+vim.opt.laststatus = vim.opt.clipboard:append 'unnamedplus' -- use system clipboard as default register
+vim.g.clipboard = {
+  name = 'xclip-wsl',
+  copy = {
+    ['+'] = { 'xclip', '-quiet', '-i', '-selection', 'clipboard' },
+    ['*'] = { 'xclip', '-quiet', '-i', '-selection', 'primary' },
+  },
+  paste = {
+    ['+'] = { 'xclip', '-o', '-selection', 'clipboard' },
+    ['*'] = { 'xclip', '-o', '-selection', 'primary' },
+  },
+  cache_enabled = 1, -- cache MUST be enabled, or else it hangs on dd/y/x and all other copy operations
+}
+
 -- LineNr jumplist mappings for 'k' and 'j'
 vim.api.nvim_command [[nnoremap <expr> k (v:count > 1 ? "m'" . v:count : '') . 'k']]
 vim.api.nvim_command [[nnoremap <expr> j (v:count > 1 ? "m'" . v:count : '') . 'j']]
+
+vim.keymap.set("t", "<C-p>", "<cmd>Lazy profile<cr>", {})
+vim.keymap.set("n", "<C-p>", "<cmd>Lazy profile<cr>", {})
 
 -- Check if Neovim was launched with the +terminal argument
 local argv = vim.v.argv or {}
 local function launched_with_terminal()
   for _, arg in ipairs(argv) do
-    if arg == "+terminal" then
+    if arg == '+terminal' then
       return true
     end
   end
