@@ -97,7 +97,7 @@ return {
     }
 
     vim.keymap.set('n', '<F5>', dap.continue, { desc = 'Debug: Start/Continue' })
-    vim.keymap.set('n', '<leader>dd', dap.continue, { desc = 'Debug: Start/Continue' })
+    -- vim.keymap.set('n', '<leader>dd', dap.continue, { desc = 'Debug: Start/Continue' })
     vim.keymap.set('n', '<C-d>', dap.continue, { desc = 'Debug: Start/Continue' })
     vim.keymap.set('n', '@', dap.continue, { desc = 'Debug: Start/Continue' })
     vim.keymap.set('n', '<F10>', dap.step_over, { desc = 'Debug: Step Over' })

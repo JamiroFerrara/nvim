@@ -2,7 +2,7 @@
 return { -- Autocompletion
   'hrsh7th/nvim-cmp',
   -- event = 'BufEnter',
-  enabled = not _G.NVIM_TERMINAL_ONLY,
+  -- enabled = not _G.NVIM_TERMINAL_ONLY,
   dependencies = {
     -- Snippet Engine & its associated nvim-cmp source
     {

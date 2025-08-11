@@ -317,20 +317,20 @@ return {
       end,
       desc = 'Command History',
     },
-    {
-      '<leader>n',
-      function()
-        Snacks.picker.notifications()
-      end,
-      desc = 'Notification History',
-    },
-    {
-      '<leader>e',
-      function()
-        Snacks.explorer()
-      end,
-      desc = 'File Explorer',
-    },
+    -- {
+    --   '<leader>n',
+    --   function()
+    --     Snacks.picker.notifications()
+    --   end,
+    --   desc = 'Notification History',
+    -- },
+    -- {
+    --   '<leader>e',
+    --   function()
+    --     Snacks.explorer()
+    --   end,
+    --   desc = 'File Explorer',
+    -- },
     -- find
     {
       '<leader>fb',
@@ -357,7 +357,7 @@ return {
     {
       '<C-p>',
       function()
-        Snacks.picker.files { layout = 'ivy', matcher = { frecency = true } }
+        Snacks.picker.files { layout = 'ivy_split', matcher = { frecency = true } }
       end,
       desc = 'Find Files',
     },
