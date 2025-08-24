@@ -99,8 +99,10 @@ vim.g.clipboard = {
 vim.api.nvim_command [[nnoremap <expr> k (v:count > 1 ? "m'" . v:count : '') . 'k']]
 vim.api.nvim_command [[nnoremap <expr> j (v:count > 1 ? "m'" . v:count : '') . 'j']]
 
-vim.keymap.set("t", "<C-p>", "<cmd>Lazy profile<cr>", {})
-vim.keymap.set("n", "<C-p>", "<cmd>Lazy profile<cr>", {})
+-- vim.keymap.set("t", "<C-p>", "<cmd>Lazy profile<cr>", {})
+-- vim.keymap.set("n", "<C-p>", "<cmd>Lazy profile<cr>", {})
+
+vim.cmd([[tnoremap <C-z> pwd\|xclip -selection clipboard<CR><C-\><C-n>:cd <C-r>+<CR>i]])
 
 -- Check if Neovim was launched with the +terminal argument
 local argv = vim.v.argv or {}

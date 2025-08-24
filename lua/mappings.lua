@@ -212,7 +212,7 @@ return {
     ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" },
 
     ['<C-g>'] = { '<cmd>ToggleTerm size=10 direction=horizontal<cr>' },
-    ['<C-p>'] = { '<cmd>Telescope find_files<cr>' },
+    -- ['<C-p>'] = { '<cmd>Telescope find_files<cr>' },
     ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
     ['<leader>lc'] = {
       "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
@@ -307,17 +307,75 @@ return {
       vim.fn.chansend(vim.b.terminal_job_id, 'cd .. \n')
       vim.cmd.startinsert()
     end,
-    ['<C-p>'] = "<cmd>lua require('neopostman').run()<cr>",
   },
 
   -- Terminal Mode
   t = {
     ['è'] = { 'p', desc = 'Print' },
+
+    --TODO: Refactor me out as this is a duplicate of the below
+    ['<C-p>'] = function()
+      local tmpfile = '/tmp/nvim_term_cwd'
+
+      -- Step 1: Ask the shell to write its current directory to the temp file
+      vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
+
+      -- Step 2: Wait briefly (not ideal but practical)
+      vim.wait(80) -- Wait 80ms for shell to write
+
+      -- Step 3: Read the file
+      local cwd = vim.fn.readfile(tmpfile)[1]
+
+      if cwd then
+        -- Step 4: Copy to clipboard
+        vim.fn.setreg('+', cwd)
+        print('Copied to clipboard:', cwd)
+
+        -- Step 5: Open picker with that cwd
+        Snacks.picker.files {
+          layout = 'ivy_split',
+          matcher = { frecency = true },
+          cwd = cwd,
+          on_show = function()
+            vim.schedule(function()
+              vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, false, true), 'n', false)
+            end)
+          end,
+        }
+      else
+        print 'Failed to read terminal cwd.'
+      end
+    end,
+
+    --TODO: Refactor me out as this is a duplicate of the above
+    ['<C-g>'] = function()
+      local tmpfile = '/tmp/nvim_term_cwd'
+
+      -- Step 1: Ask the shell to write its current directory to the temp file
+      vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
+
+      -- Step 2: Wait briefly (not ideal but practical)
+      vim.wait(100) -- Wait 100ms for shell to write
+
+      -- Step 3: Read the file
+      local cwd = vim.fn.readfile(tmpfile)[1]
+
+      if cwd then
+        -- Step 4: Copy to clipboard
+        vim.fn.setreg('+', cwd)
+        print('Copied to clipboard:', cwd)
+
+        -- Step 5: Open picker with that cwd
+        Snacks.picker.grep { layout = 'ivy_split', need_search = false, limit = 30, matcher = { fuzzy = false, sort_empty = false }, cwd = cwd }
+      else
+        print 'Failed to read terminal cwd.'
+      end
+    end,
+
     ['<C-^M>'] = { '<NL>', desc = 'New Line' },
     ['<A-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-t>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
-    ['<C-g>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
 
     ['<M-w>'] = { '<C-\\><C-n><cmd>q<cr>', desc = 'Quit' },
 
