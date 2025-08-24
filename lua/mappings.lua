@@ -60,7 +60,7 @@ return {
 
     ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
     -- ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
-    ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
+    -- ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
     -- ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>" },
     ['vap'] = { 'vip' },
 
@@ -314,6 +314,8 @@ return {
     ['è'] = { 'p', desc = 'Print' },
 
     --TODO: Refactor me out as this is a duplicate of the below
+    --BUG: This works only once when terminal is open. It needs to be able to
+    --reliably get the current working directory of the terminal session
     ['<C-p>'] = function()
       local tmpfile = '/tmp/nvim_term_cwd'
 
@@ -348,6 +350,8 @@ return {
     end,
 
     --TODO: Refactor me out as this is a duplicate of the above
+    --BUG: This works only once when terminal is open. It needs to be able to
+    --reliably get the current working directory of the terminal session
     ['<C-g>'] = function()
       local tmpfile = '/tmp/nvim_term_cwd'
 
@@ -366,7 +370,18 @@ return {
         print('Copied to clipboard:', cwd)
 
         -- Step 5: Open picker with that cwd
-        Snacks.picker.grep { layout = 'ivy_split', need_search = false, limit = 30, matcher = { fuzzy = false, sort_empty = false }, cwd = cwd }
+        Snacks.picker.grep {
+          layout = 'ivy_split',
+          need_search = false,
+          limit = 30,
+          matcher = { fuzzy = false, sort_empty = false },
+          cwd = cwd,
+          on_show = function()
+            vim.schedule(function()
+              vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, false, true), 'n', false)
+            end)
+          end,
+        }
       else
         print 'Failed to read terminal cwd.'
       end

@@ -8,6 +8,7 @@ tags: []
 - [ ] Change working directory on CD, and automatically tell nvim to change it's working dir  
 - [ ] Allow lazy load of heavy plugins also when running terminal 
 - [ ] Lightspeed integration with terminal 
+- [ ] Grep in terminal seems to work only once 
 
 #### Markdown
 - [ ] Plugins: 

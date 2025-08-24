@@ -361,13 +361,13 @@ return {
       end,
       desc = 'Find Files',
     },
-    -- {
-    --   '<leader>fw',
-    --   function()
-    --     Snacks.picker.grep { layout = 'ivy', need_search = false, limit = 30, matcher = { fuzzy = false, sort_empty = false } }
-    --   end,
-    --   desc = 'Grep',
-    -- },
+    {
+      '<leader>fw',
+      function()
+        Snacks.picker.grep { layout = 'ivy_split', need_search = false, limit = 30, matcher = { fuzzy = false, sort_empty = false } }
+      end,
+      desc = 'Grep',
+    },
     {
       '<leader>fg',
       function()
