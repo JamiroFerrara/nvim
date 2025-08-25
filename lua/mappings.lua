@@ -2,10 +2,8 @@ return {
   -- Normal Mode
   n = {
     -- DEV
-    ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'OpensJqFile' },
     ['<leader>np'] = { '<cmd>Neopostman<CR>', desc = 'Neopostman' },
     ['<leader>lp'] = { '<cmd>LazyProfile<CR>', desc = 'Shift right' },
-
     ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
 
     -- Basic Indentation
@@ -212,8 +210,6 @@ return {
     ['<leader>bl'] = { "<cmd>lua require('user.helpers').npm_start_local()<cr>" },
     ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" },
 
-    ['<C-g>'] = { '<cmd>ToggleTerm size=10 direction=horizontal<cr>' },
-    -- ['<C-p>'] = { '<cmd>Telescope find_files<cr>' },
     ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
     ['<leader>lc'] = {
       "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
@@ -287,7 +283,11 @@ return {
     ['L'] = { '$' },
 
     ['ga'] = { '%', desc = '' },
+
     ['gA'] = { '%%', desc = '' },
+    ['<C-g>'] = function()
+      Snacks.picker.grep { layout = 'ivy_split', need_search = false, limit = 30, matcher = { fuzzy = false, sort_empty = false } }
+    end,
   },
 
   tn = {

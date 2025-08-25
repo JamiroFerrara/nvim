@@ -39,12 +39,12 @@ vim.api.nvim_create_autocmd("TermClose", {
 vim.api.nvim_create_autocmd("FocusLost", {
     pattern = "*",
     callback = function()
-        vim.cmd("hi TermCursor cterm=NONE gui=NONE")
+        vim.cmd("hi TermCursor cterm=reverse gui=reverse")
     end,
 })
 vim.api.nvim_create_autocmd("FocusGained", {
     pattern = "*",
     callback = function()
-        vim.cmd("hi TermCursor cterm=reverse gui=reverse")
+        vim.cmd("hi TermCursor cterm=NONE gui=NONE")
     end,
 })

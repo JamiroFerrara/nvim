@@ -461,14 +461,14 @@ return {
       end,
       desc = 'Grep',
     },
-    -- {
-    --   '<leader>fc',
-    --   function()
-    --     Snacks.picker.grep_word { layout = 'ivy' }
-    --   end,
-    --   desc = 'Visual selection or word',
-    --   mode = { 'n', 'x' },
-    -- },
+    {
+      '<leader>fc',
+      function()
+        Snacks.picker.grep_word { layout = 'ivy_split' }
+      end,
+      desc = 'Visual selection or word',
+      mode = { 'n', 'x' },
+    },
     -- search
     {
       '<leader>s"',
