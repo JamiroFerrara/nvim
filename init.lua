@@ -81,6 +81,7 @@ vim.opt.foldnestmax = 1
 vim.opt.foldlevel = 3
 vim.opt.foldenable = false
 
+-- TODO: Move to separate file
 vim.opt.laststatus = vim.opt.clipboard:append 'unnamedplus' -- use system clipboard as default register
 vim.g.clipboard = {
   name = 'xclip-wsl',

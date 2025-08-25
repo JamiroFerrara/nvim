@@ -4,6 +4,9 @@ return {
     -- DEV
     ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'OpensJqFile' },
     ['<leader>np'] = { '<cmd>Neopostman<CR>', desc = 'Neopostman' },
+    ['<leader>lp'] = { '<cmd>LazyProfile<CR>', desc = 'Shift right' },
+
+    ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
 
     -- Basic Indentation
     ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Shift right' },
@@ -46,9 +49,7 @@ return {
       '<cmd>lua os.execute("tmux split-window -v -p 20 make watch; tmux select-pane -U")<CR><cmd>DapContinue<cr>',
       desc = 'Make watch and continue',
     },
-    ['<leader>mM'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make; tmux select-pane -U")<CR>', desc = 'Make' },
-
-    ['<leader>mm'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 ~/.scripts/m.sh")<CR>', desc = 'Make' },
+    ['<leader>mm'] = { '<cmd>Neomake<CR>', desc = 'Make' },
     --FIX: ['C-m'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 ~/.scripts/m.sh")<CR>', desc = 'Make' },
     --FIX: ['A-m'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 ~/.scripts/m.sh")<CR>', desc = 'Make' },
 

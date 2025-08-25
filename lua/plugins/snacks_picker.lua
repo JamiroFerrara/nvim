@@ -339,13 +339,13 @@ return {
       end,
       desc = 'Buffers',
     },
-    {
-      '<leader>fc',
-      function()
-        Snacks.picker.files { cwd = vim.fn.stdpath 'config' }
-      end,
-      desc = 'Find Config File',
-    },
+    -- {
+    --   '<leader>fc',
+    --   function()
+    --     Snacks.picker.files { cwd = vim.fn.stdpath 'config' }
+    --   end,
+    --   desc = 'Find Config File',
+    -- },
     {
       '<leader><space>',
       function()
@@ -461,14 +461,14 @@ return {
       end,
       desc = 'Grep',
     },
-    {
-      '<leader>fc',
-      function()
-        Snacks.picker.grep_word { layout = 'ivy' }
-      end,
-      desc = 'Visual selection or word',
-      mode = { 'n', 'x' },
-    },
+    -- {
+    --   '<leader>fc',
+    --   function()
+    --     Snacks.picker.grep_word { layout = 'ivy' }
+    --   end,
+    --   desc = 'Visual selection or word',
+    --   mode = { 'n', 'x' },
+    -- },
     -- search
     {
       '<leader>s"',
