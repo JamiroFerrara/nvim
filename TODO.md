@@ -5,8 +5,10 @@ tags: []
 ---
 # TODO
 
-### ChatGPT
+### Plugins
 - [ ] Implement the new GP plugin. 
+- [ ] Golden ration splits
+- [ ] Checkboxes 
 
 ### Terminal
 - [ ] Change working directory on CD, and automatically tell nvim to change it's working dir  
