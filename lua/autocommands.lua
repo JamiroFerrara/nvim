@@ -36,6 +36,13 @@ vim.api.nvim_create_autocmd("TermClose", {
   end,
 })
 
+vim.api.nvim_create_autocmd("BufWinEnter", {
+  pattern = "*",
+  callback = function()
+    vim.api.nvim_set_keymap("n", "gd", "<cmd>lua require('omnisharp_extended').lsp_definition()<cr>", {})
+  end,
+})
+
 vim.api.nvim_create_autocmd("FocusLost", {
     pattern = "*",
     callback = function()
