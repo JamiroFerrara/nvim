@@ -522,14 +522,14 @@ return {
     {
       '<leader>sh',
       function()
-        Snacks.picker.help()
+        Snacks.picker.help({ layout = 'ivy' })
       end,
       desc = 'Help Pages',
     },
     {
       '<leader>sH',
       function()
-        Snacks.picker.highlights()
+        Snacks.picker.highlights({ layout = 'ivy' })
       end,
       desc = 'Highlights',
     },

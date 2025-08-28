@@ -8,7 +8,8 @@ tags: []
 ### Plugins
 - [ ] Implement the new GP plugin. 
 - [ ] Golden ration splits
-- [ ] Checkboxes 
+- [ ] Checkboxes
+- [ ] Replace wilder 
 
 ### Terminal
 - [ ] Change working directory on CD, and automatically tell nvim to change it's working dir  
