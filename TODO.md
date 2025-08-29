@@ -9,8 +9,8 @@ tags: []
 - [ ] Bullets.nvim doesn't really work for some reason 
 - [ ] Implement the new GP plugin. 
 - [ ] Golden ration splits
-- [ ] Checkboxes
-- [ ] Replace wilder 
+- [x] Checkboxes
+- [~] Replace wilder 
 - [ ] Replace grep with telescope ivy mode 
 - [?] In chatgpt nvim start in insert mode 
 - [?] Mark plugin is showing symbols on debug windows 
