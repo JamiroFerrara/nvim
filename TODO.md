@@ -31,7 +31,7 @@ tags: []
 - [ ] Autoformat sql using !sleek
 
 #### Markdown
-- [ ] Remove markdown sidebar delimiter highlighting
+- [x] Remove markdown sidebar delimiter highlighting
 - [ ] bold fonts for markdown
 - [ ] italic fonts for markdown 
 
