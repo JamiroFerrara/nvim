@@ -1,13 +1,17 @@
 return {
   'robitx/gp.nvim',
   config = function()
+    local handle = io.popen('/home/jferrara/.scripts/cgptapikey.sh')
+    local api_key = handle:read("*a"):gsub("%s+", "")
+    handle:close()
+
     require('gp').setup {
       default_command_agent = 'ChatGPT4o',
       default_chat_agent = 'ChatGPT4o',
       providers = {
         openai = {
           endpoint = 'https://api.openai.com/v1/chat/completions',
-          secret = '',
+          secret = api_key,
         },
       },
       agents = {
