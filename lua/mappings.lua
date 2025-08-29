@@ -56,6 +56,8 @@ return {
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
     ['<leader>aa'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
     -- ['<leader><leader>i'] = { '<cmd>IconPickerNormal<cr>', desc = 'Pick icon' },
+    --
+    ['mt'] = { '<cmd>e TODO.md<cr>', desc = 'Toggle Aerial' },
 
     ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
     -- ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
@@ -135,8 +137,10 @@ return {
     ['va8'] = { 'va(' },
 
     -- Navigation
-    ['<leader>ai'] = { '<cmd>ChatGPT<CR>' },
-    ['<leader>aI'] = { '<cmd>ChatGPTActAs<CR>' },
+    -- ['<leader>ai'] = { '<cmd>ChatGPT<CR>' },
+    ['<leader>ai'] = { '<cmd>GpChatNew vsplit<CR>' },
+    ['<leader>aI'] = { '<cmd>GpChatToggle vsplit<CR>' },
+    -- ['<leader>aI'] = { '<cmd>ChatGPTActAs<CR>' },
     ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>' },
     ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>' },
     ['<leader>at'] = { '<cmd>lua require("user.helpers").cs2ts()<CR>' },

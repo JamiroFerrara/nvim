@@ -13,6 +13,7 @@ tags: []
 - [ ] Replace wilder 
 - [ ] Replace grep with telescope ivy mode 
 - [ ] In chatgpt nvim start in insert mode 
+- [ ] Mark plugin is showing symbols on debug windows 
 
 ### Terminal
 - [ ] Change working directory on CD, and automatically tell nvim to change it's working dir  
