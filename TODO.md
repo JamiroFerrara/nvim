@@ -12,14 +12,15 @@ tags: []
 - [ ] Checkboxes
 - [ ] Replace wilder 
 - [ ] Replace grep with telescope ivy mode 
-- [ ] In chatgpt nvim start in insert mode 
-- [ ] Mark plugin is showing symbols on debug windows 
+- [?] In chatgpt nvim start in insert mode 
+- [?] Mark plugin is showing symbols on debug windows 
 
 ### Terminal
-- [ ] Change working directory on CD, and automatically tell nvim to change it's working dir  
 - [ ] Allow lazy load of heavy plugins also when running terminal 
+- [ ] Change working directory on CD, and automatically tell nvim to change it's working dir  
 - [ ] Lightspeed integration with terminal 
 - [ ] Grep in terminal seems to work only once 
+- [ ] Neogrep fix in terminal
 - [ ] Currently, when running nvim from terminal the initial terminal instance dies, but it should restore if term instance is open
 
 ### Csharp
