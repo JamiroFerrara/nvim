@@ -160,6 +160,8 @@ return {
     ['}'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
     ['+'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
 
+    ['zz'] = { '<cmd>lua Snacks.zen.zen()<cr>' },
+
     -- ['}'] = { '{' },
     -- ['{'] = { '}' },
 

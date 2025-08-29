@@ -5,26 +5,17 @@ return {
   event = 'VeryLazy',
   ---@type snacks.Config
   opts = {
-    -- your configuration comes here
-    -- or leave it empty to use the default settings
-    -- refer to the configuration section below
-    quickfile = { enabled = true },
-    bigfile = { enabled = true },
-    dashboard = { enabled = true },
-    indent = { enabled = true },
-    input = { enabled = true },
-    notifier = { enabled = true },
     zen = {
       -- You can add any `Snacks.toggle` id here.
       -- Toggle state is restored when the window is closed.
       -- Toggle config options are NOT merged.
       ---@type table<string, boolean>
       toggles = {
-        dim = true,
-        git_signs = false,
+        dim = false,
+        git_signs = true,
         mini_diff_signs = false,
-        -- diagnostics = false,
-        -- inlay_hints = false,
+        diagnostics = true,
+        inlay_hints = true,
       },
       show = {
         statusline = false, -- can only be shown when using the global statusline
