@@ -14,6 +14,7 @@ tags: []
 - [ ] Replace grep with telescope ivy mode 
 - [?] In chatgpt nvim start in insert mode 
 - [?] Mark plugin is showing symbols on debug windows 
+- [x] Make cmp transparent
 
 ### Terminal
 - [ ] Allow lazy load of heavy plugins also when running terminal 
@@ -41,3 +42,4 @@ tags: []
 
 #### Highlights
 - [ ] Flash highlight fixes
+

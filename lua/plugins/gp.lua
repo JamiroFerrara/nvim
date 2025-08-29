@@ -1,5 +1,6 @@
 return {
   'robitx/gp.nvim',
+  event = 'VeryLazy',
   config = function()
     local handle = io.popen '/home/jferrara/.scripts/cgptapikey.sh'
     local api_key = handle:read('*a'):gsub('%s+', '')

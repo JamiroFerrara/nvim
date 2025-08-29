@@ -1,119 +1,243 @@
---NOTE: Slowest to load
-return { -- Autocompletion
+return {
   'hrsh7th/nvim-cmp',
-  -- event = 'BufEnter',
-  -- enabled = not _G.NVIM_TERMINAL_ONLY,
-  dependencies = {
-    -- Snippet Engine & its associated nvim-cmp source
-    {
-      'L3MON4D3/LuaSnip',
-      event = 'VeryLazy',
-      build = (function()
-        -- Build Step is needed for regex support in snippets.
-        -- This step is not supported in many windows environments.
-        -- Remove the below condition to re-enable on windows.
-
-        if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
-          return
-        end
-        return 'make install_jsregexp'
-      end)(),
-      dependencies = {
-        -- {
-        --   'rafamadriz/friendly-snippets',
-        --   config = function()
-        --     require('luasnip.loaders.from_vscode').lazy_load()
-        --   end,
-        -- },
-      },
-      config = function()
-        local user_settings = {
-          
-          filetype_extend = {
-            javascript = { 'javascriptreact' },
-          },
-          -- Configure luasnip loaders (vscode, lua, and/or snipmate)
-          lua = {
-            paths = { '~/dotfiles/nvim/snippets/lua-snippets/' },
-          },
-          snipmate = {
-            paths = { '~/dotfiles/nvim/snippets/snipmate-snippets/' },
-          },
-        }
-        local loader = require 'luasnip.loaders.from_snipmate'
-        loader.lazy_load()
-        local paths = user_settings.snipmate.paths
-        if paths then
-          loader.lazy_load { paths = paths }
-        end
-      end,
-    },
-    {'saadparwaiz1/cmp_luasnip', event = 'VeryLazy', after = 'nvim-cmp'},
-
-    -- Adds other completion capabilities.
-    --  nvim-cmp does not ship with all sources by default. They are split
-    --  into multiple repos for maintenance purposes.
-
-    {'hrsh7th/cmp-nvim-lsp', event = 'VeryLazy', after = 'nvim-cmp'},
-    {'hrsh7th/cmp-path', event = 'VeryLazy', after = 'nvim-cmp'},
-    {'hrsh7th/cmp-buffer', event = 'VeryLazy', after = 'nvim-cmp'},
+  enabled = true,
+  event = {
+    'BufReadPost',
+    'BufNewFile',
+    'BufWritePre',
   },
+  opts = function(_, opts)
+    -- {{{ opts function begins and overrides LazyVim default behavior.
 
-  config = function()
-    -- See `:help cmp`
     local cmp = require 'cmp'
-
     local luasnip = require 'luasnip'
-    luasnip.config.setup {
-      enable_autosnippets = true,
+
+    -- --------------------------------------------------------------------- }}}
+    -- {{{ Confirmation options
+
+    local confirm_opts = {
+      -- behavior = cmp.ConfirmBehavior.Select,
+      behavior = cmp.ConfirmBehavior.Replace,
+      select = true,
+    }
+    -- --------------------------------------------------------------------- }}}
+    -- {{{ Add boarders to completion windows.
+
+    local window = {
+      completion = {
+        border = 'rounded',
+        winhighlight = 'Normal:@text,FloatBorder:FloatBorder,CursorLine:PmenuSel,Search:@text',
+        scrollbar = false,
+      },
+      documentation = {
+        border = 'rounded',
+        winhighlight = 'Normal:@text,FloatBorder:FloatBorder,CursorLine:PmenuSel,Search:@text',
+        scrollbar = false,
+      },
     }
 
-    cmp.setup {
-      snippet = {
-        expand = function(args)
-          luasnip.lsp_expand(args.body)
-        end,
-      },
-      completion = { completeopt = 'menu,menuone,noinsert' },
-      preselect = cmp.PreselectMode.Item,
-      mapping = {
-        ['<Up>'] = cmp.mapping.select_prev_item(),
-        ['<Down>'] = cmp.mapping.select_next_item(),
-        ['<C-k>'] = cmp.mapping.select_prev_item(),
-        ['<C-j>'] = cmp.mapping.select_next_item(),
-        ['<A-k>'] = cmp.mapping.select_prev_item(),
-        ['<A-j>'] = cmp.mapping.select_next_item(),
-        ['<C-d>'] = cmp.mapping(cmp.mapping.scroll_docs(-1), { 'i', 'c' }),
-        ['<C-f>'] = cmp.mapping(cmp.mapping.scroll_docs(1), { 'i', 'c' }),
-        ['<C-Space>'] = cmp.mapping(cmp.mapping.complete(), { 'i', 'c' }),
-        ['<A-l>'] = cmp.mapping {
-          i = cmp.mapping.abort(),
-          c = cmp.mapping.close(),
-        },
-        -- ['<C-l>'] = cmp.mapping(function()
-        --   if luasnip.expand_or_locally_jumpable() then
-        --     luasnip.expand_or_jump()
-        --   end
-        -- end, { 'i', 's' }),
-        -- ['<C-h>'] = cmp.mapping(function()
-        --   if luasnip.locally_jumpable(-1) then
-        --     luasnip.jump(-1)
-        --   end
-        -- end, { 'i', 's' }),
-        ['<CR>'] = cmp.mapping.confirm { select = true },
-      },
-      window = {
-        completion = cmp.config.window.bordered(border_opts),
-        documentation = cmp.config.window.bordered(border_opts),
-      },
+    -- --------------------------------------------------------------------- }}}
+    -- {{{ Setup filetype and cmdline preferences.
 
-      sources = {
-        { name = 'luasnip' },
-        { name = 'nvim_lsp' },
+    cmp.setup.filetype('gitcommit', {
+      sources = cmp.config.sources {
+        { name = 'fugitive' },
         { name = 'buffer' },
-        { name = 'path' },
-        { name = 'vim-dadbod-completion' },
+        { name = 'spell' },
       },
+    })
+
+    cmp.setup.filetype('sql', {
+      sources = cmp.config.sources {
+        { name = 'vim-dadbod-completion' },
+        { name = 'buffer' },
+      },
+    })
+
+    cmp.setup.cmdline({ '/', '?' }, {
+      mapping = cmp.mapping.preset.cmdline(),
+      sources = {
+        { name = 'buffer' },
+      },
+    })
+
+    cmp.setup.cmdline(':', {
+      mapping = cmp.mapping.preset.cmdline(),
+      sources = cmp.config.sources({
+        { name = 'path' },
+      }, {
+        { name = 'cmdline', option = { ignore_cmds = { 'Man', "!'" } } },
+      }),
+    })
+
+    -- --------------------------------------------------------------------- }}}
+    -- {{{ Has words before
+
+    local function has_words_before()
+      local line, col = (unpack or table.unpack)(vim.api.nvim_win_get_cursor(0))
+      return col ~= 0 and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match '%s' == nil
+    end
+
+    local check_backspace = function()
+      local col = vim.fn.col '.' - 1
+      return col == 0 or vim.fn.getline('.'):sub(col, col):match '%s'
+    end
+
+    -- --------------------------------------------------------------------- }}}
+    -- {{{ lsp kind icons
+
+    local kind_icons = {
+      Array = ' ',
+      Boolean = ' ',
+      Calc = ' ',
+      Class = ' ',
+      Codium = '',
+      Color = ' ',
+      Constant = ' ',
+      Constructor = '',
+      Control = '',
+      Copilot = ' ',
+      Enum = '',
+      EnumMember = '',
+      Event = '',
+      Field = ' ',
+      File = ' ',
+      Folder = '󰉋 ',
+      Function = ' ',
+      Interface = ' ',
+      Key = ' ',
+      Keyword = '',
+      Method = ' ',
+      Module = '',
+      Namespace = ' ',
+      Null = '󰟢 ',
+      Number = ' ',
+      Object = ' ',
+      Operator = ' ',
+      Package = ' ',
+      Property = '',
+      Reference = ' ',
+      Snippet = ' ',
+      Spell = ' ',
+      String = ' ',
+      Struct = ' ',
+      TabNine = ' ',
+      Text = ' ',
+      TypeParameter = ' ',
+      Unit = '',
+      Value = ' ',
+      Variable = 'β',
+      Vsnip = ' ',
+      buffer = '',
+      calc = ' ',
+      nvim_lsp = '',
+      path = '',
+      spell = ' ',
+      vsnip = ' ',
     }
+
+    -- --------------------------------------------------------------------- }}}
+    -- {{{ Snippets
+
+    local snippet = {
+      expand = function(args)
+        luasnip.lsp_expand(args.body)
+      end,
+    }
+
+    -- --------------------------------------------------------------------- }}}
+    -- {{{ Mappings
+
+    local mapping = {
+      ['<C-j>'] = cmp.mapping.select_next_item { behavior = cmp.SelectBehavior.Insert },
+      ['<C-k>'] = cmp.mapping.select_prev_item { behavior = cmp.SelectBehavior.Insert },
+
+      ['<C-n>'] = cmp.mapping.select_next_item { behavior = cmp.SelectBehavior.Insert },
+      ['<C-p>'] = cmp.mapping.select_prev_item { behavior = cmp.SelectBehavior.Insert },
+
+      ['<C-c>'] = cmp.mapping { i = cmp.mapping.abort(), c = cmp.mapping.close() },
+
+      ['<CR>'] = cmp.mapping.confirm { select = true },
+
+      ['<Tab>'] = cmp.mapping(function(fallback)
+        if cmp.visible() then
+          cmp.select_next_item()
+        -- elseif luasnip.expandable() then
+        --   luasnip.expand()
+        elseif luasnip.expand_or_jumpable() then
+          luasnip.expand_or_jump()
+        elseif check_backspace() then
+          fallback()
+        elseif has_words_before() then
+          cmp.complete()
+        else
+          fallback()
+        end
+      end, { 'i', 's' }),
+
+      ['<S-Tab>'] = cmp.mapping(function(fallback)
+        if cmp.visible() then
+          cmp.select_prev_item()
+        elseif luasnip.jumpable(-1) then
+          luasnip.jump(-1)
+        else
+          fallback()
+        end
+      end, { 'i', 's' }),
+    }
+
+    -- --------------------------------------------------------------------- }}}
+    -- {{{ Source mapping and formatting
+
+    local source_mapping = {
+      spell = '[Spell]',
+      buffer = '[Buffer]',
+      calc = '[calc]',
+      luasnip = '[Snippet]',
+      nvim_lsp = '[LSP]',
+      nvim_lua = '[Lua]',
+      path = '[Path]',
+    }
+
+    local formatting = {
+      fields = { 'kind', 'abbr', 'menu' },
+      format = function(entry, vim_item)
+        vim_item.kind = string.format('%s', kind_icons[vim_item.kind])
+        vim_item.menu = (source_mapping)[entry.source.name]
+        return vim_item
+      end,
+    }
+
+    -- --------------------------------------------------------------------- }}}
+    -- {{{ Sources
+
+    local sources = {
+      { name = 'spell', keyword_length = 4, max_item_count = 10, priority = 450 },
+      { name = 'buffer', keyword_length = 3, max_item_count = 10, prioirty = 500 },
+      { name = 'calc', keyword_length = 3, max_item_count = 10, priority = 250 },
+      { name = 'luasnip', keyword_length = 1, max_item_count = 10, prioirty = 825 },
+      { name = 'nvim_lsp', keyword_length = 1, max_item_count = 10, priority = 900 },
+      { name = 'nvim_lua', keyword_length = 1, max_item_count = 10, priority = 800 },
+      { name = 'path', keyword_length = 3, max_item_count = 20, prioirty = 250 },
+    }
+
+    -- --------------------------------------------------------------------- }}}
+    -- {{{ Update the function argument opts with local choices made.
+
+    opts.confirm_opts = confirm_opts
+    opts.formatting = formatting
+    opts.mapping = mapping
+    opts.snippet = snippet
+    opts.sources = sources
+    opts.window = window
+
+    -- --------------------------------------------------------------------- }}}
+  end,
+
+  config = function(_, opts)
+    for _, source in ipairs(opts.sources) do
+      source.group_index = source.group_index or 1
+    end
+    require('cmp').setup(opts)
   end,
 }
