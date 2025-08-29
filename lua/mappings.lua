@@ -3,7 +3,7 @@ return {
   n = {
     -- DEV
     ['<leader>np'] = { '<cmd>Neopostman<CR>', desc = 'Neopostman' },
-    ['<leader>lp'] = { '<cmd>LazyProfile<CR>', desc = 'Shift right' },
+    ['<leader>lp'] = { '<cmd>Lazy profile<CR>', desc = 'Shift right' },
     ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
 
     -- Basic Indentation
