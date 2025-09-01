@@ -1,7 +1,7 @@
 return {
   {
     'JamiroFerrara/neopostman.nvim',
-    event = 'VeryLazy',
+    -- event = 'VeryLazy',
     cmd = {
       "Neogrep",
       "NeogrepToggle",

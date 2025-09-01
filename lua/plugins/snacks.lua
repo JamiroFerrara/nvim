@@ -8,6 +8,7 @@ return {
     -- your configuration comes here
     -- or leave it empty to use the default settings
     -- refer to the configuration section below
+    explorer = { enabled = true },
     quickfile = { enabled = true },
     bigfile = { enabled = true },
     dashboard = { enabled = true },

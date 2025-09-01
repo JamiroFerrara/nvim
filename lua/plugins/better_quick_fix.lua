@@ -1,7 +1,7 @@
 return {
   'kevinhwang91/nvim-bqf',
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
-  event = 'VeryLazy',
+  event = "FileType qf",
   dependencies = { 'nvim-treesitter/nvim-treesitter'},
   opts = {
     auto_enable = true,

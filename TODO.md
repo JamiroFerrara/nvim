@@ -5,12 +5,18 @@ tags: []
 ---
 # TODO
 
+# important
+- [ ] Block versions for mason + lspconfig 
+- [ ] Remove cr to create a checkbox 
+- [ ] ctrl+j to confirm suggestion
+- [ ] ctrl+delete remove full word in nvim
+- [ ] ctrl+delete remove full word in term
+
 ### Plugins
 - [ ] Bullets.nvim doesn't really work for some reason 
 - [ ] Implement the new GP plugin. 
 - [ ] Golden ration splits
 - [x] Checkboxes
-- [~] Replace wilder 
 - [ ] Replace grep with telescope ivy mode 
 - [?] In chatgpt nvim start in insert mode 
 - [?] Mark plugin is showing symbols on debug windows 
@@ -18,6 +24,7 @@ tags: []
 - [ ] junegunn/vim-easy-align
 - [ ] ysmb-wtsg/in-and-out.nvim
 - [ ] nguyenvukhang/nvim-toggler
+- [ ] markdown nvim conflicts with GP
 
 ### Terminal
 - [ ] Allow lazy load of heavy plugins also when running terminal 

@@ -1,6 +1,7 @@
 return {
   'JamiroFerrara/neojira.nvim',
-  event = 'VeryLazy',
+  -- event = 'VeryLazy',
+  cmd = 'Neojira',
   config = function()
     require('neojira').setup({
       browser = 'chrome.exe',

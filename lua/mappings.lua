@@ -29,8 +29,10 @@ return {
 
     -- Leader Shortcuts
     ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
-    ['<leader>e'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
-    ['<C-e>'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
+
+    ['<leader>e'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
+    ['<C-e>'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
+
     ['<leader>gg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
     ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
     ['<leader>dB'] = { '<cmd>DBUI<cr>', desc = 'Open DAP UI' },
@@ -291,9 +293,9 @@ return {
     ['ga'] = { '%', desc = '' },
 
     ['gA'] = { '%%', desc = '' },
-    ['<C-g>'] = function()
-      Snacks.picker.grep { layout = 'ivy_split', need_search = false, limit = 30, matcher = { fuzzy = false, sort_empty = false } }
-    end,
+    -- ['<C-g>'] = function()
+    --   Snacks.picker.grep { layout = 'ivy_split', need_search = false, limit = 30, matcher = { fuzzy = false, sort_empty = false } }
+    -- end,
   },
 
   tn = {
