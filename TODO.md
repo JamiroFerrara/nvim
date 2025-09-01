@@ -15,6 +15,9 @@ tags: []
 - [?] In chatgpt nvim start in insert mode 
 - [?] Mark plugin is showing symbols on debug windows 
 - [x] Make cmp transparent
+- [ ] junegunn/vim-easy-align
+- [ ] ysmb-wtsg/in-and-out.nvim
+- [ ] nguyenvukhang/nvim-toggler
 
 ### Terminal
 - [ ] Allow lazy load of heavy plugins also when running terminal 

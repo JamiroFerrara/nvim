@@ -1,7 +1,8 @@
 return { -- Fuzzy Finder (files, lsp, etc)
   'nvim-telescope/telescope.nvim',
-  -- enabled = not _G.NVIM_TERMINAL_ONLY,
-  event = 'CmdlineEnter',
+  enabled = not _G.NVIM_TERMINAL_ONLY,
+  -- event = 'CmdlineEnter',
+  cmd = { 'Telescope' },
   branch = '0.1.x',
   dependencies = {
     'nvim-lua/plenary.nvim',

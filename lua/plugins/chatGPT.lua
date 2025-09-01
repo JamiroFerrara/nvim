@@ -1,6 +1,13 @@
 return {
   'jackMort/ChatGPT.nvim',
-  event = 'VeryLazy',
+  -- event = 'VeryLazy',
+  cmd = {
+    "ChatGPT",
+    "ChatGPTRun",
+    "ChatActAs",
+    "ChatGPTCompleteCode",
+    "ChatGPTEditWithInstructions",
+  },
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
   dependencies = {
     'github/copilot.vim',

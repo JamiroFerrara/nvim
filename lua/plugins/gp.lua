@@ -1,6 +1,10 @@
 return {
   'robitx/gp.nvim',
-  event = 'VeryLazy',
+  -- event = 'VeryLazy',
+  cmd = {
+    'GpChatNew',
+    'GpChatToggle'
+  },
   config = function()
     local handle = io.popen '/home/jferrara/.scripts/cgptapikey.sh'
     local api_key = handle:read('*a'):gsub('%s+', '')

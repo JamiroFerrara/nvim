@@ -2,6 +2,17 @@ return {
   {
     'JamiroFerrara/neopostman.nvim',
     event = 'VeryLazy',
+    cmd = {
+      "Neogrep",
+      "NeogrepToggle",
+      "NeogrepWord",
+      "NeogrepBuffer",
+      "TmuxSessions",
+      "NeoMake",
+      "Neogithub",
+      "NeoNotifications",
+      "Neopostman"
+    },
     dependencies = { 'MunifTanjim/nui.nvim' },
     config = function()
       require('neopostman').setup {}

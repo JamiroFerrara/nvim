@@ -1,6 +1,11 @@
 return {
   'L3MON4D3/LuaSnip',
-  event = 'VeryLazy',
+  -- event = 'VeryLazy',
+  event = {
+    "BufReadPost",
+    "BufNewFile",
+    "BufWritePre"
+  },
   build = (function()
     -- Build Step is needed for regex support in snippets.
     -- This step is not supported in many windows environments.
