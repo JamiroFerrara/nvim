@@ -80,6 +80,7 @@ vim.opt.foldmethod = 'syntax'
 vim.opt.foldnestmax = 1
 vim.opt.foldlevel = 3
 vim.opt.foldenable = false
+vim.opt.fillchars = { eob = " " }
 
 -- TODO: Move to separate file
 vim.opt.laststatus = vim.opt.clipboard:append 'unnamedplus' -- use system clipboard as default register

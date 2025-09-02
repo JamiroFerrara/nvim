@@ -163,7 +163,6 @@ return {
     ['}'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
     ['+'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
 
-    ['zz'] = { '<cmd>lua Snacks.zen.zen()<cr>' },
 
     -- ['}'] = { '{' },
     -- ['{'] = { '}' },
@@ -217,7 +216,9 @@ return {
     ['<leader>bn'] = { "<cmd>lua require('user.helpers').npm_start()<cr>" },
     ['<leader>bp'] = { "<cmd>lua require('user.helpers').publish()<cr>" },
     ['<leader>bl'] = { "<cmd>lua require('user.helpers').npm_start_local()<cr>" },
-    ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" },
+
+    ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" }, --FIX: This should just use the snacks version, but need to figure out the window. Also fights with other zen
+    ['<C-z>'] = { '<cmd>lua Snacks.zen.zen()<cr>' },
 
     ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
     ['<leader>lc'] = {

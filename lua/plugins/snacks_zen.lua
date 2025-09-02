@@ -11,6 +11,7 @@ return {
       -- Toggle config options are NOT merged.
       ---@type table<string, boolean>
       toggles = {
+        line_number = true,
         dim = false,
         git_signs = true,
         mini_diff_signs = false,
@@ -25,7 +26,11 @@ return {
       win = { style = 'zen' },
       --- Callback when the window is opened.
       ---@param win snacks.win
-      on_open = function(win) end,
+      on_open = function(win)
+        vim.opt_local.number = false
+        vim.opt_local.relativenumber = false
+        vim.opt_local.laststatus = 0
+      end,
       --- Callback when the window is closed.
       ---@param win snacks.win
       on_close = function(win) end,

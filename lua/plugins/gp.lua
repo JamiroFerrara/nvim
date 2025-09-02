@@ -11,7 +11,7 @@ return {
     handle:close()
 
     require('gp').setup {
-      chat_shortcut_respond = { modes = { 'n', 'v', 'x' }, shortcut = '<cr>' },
+      chat_shortcut_respond = { modes = { 'n', 'i', 'v', 'x' }, shortcut = '<M-e>' },
       default_command_agent = 'ChatGPT4o',
       default_chat_agent = 'ChatGPT4o',
       providers = {

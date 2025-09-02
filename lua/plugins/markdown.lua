@@ -1,8 +1,9 @@
 return {
   'MeanderingProgrammer/markdown.nvim',
   -- event = 'VeryLazy',
-  enabled = not _G.NVIM_TERMINAL_ONLY,
+  -- enabled = not _G.NVIM_TERMINAL_ONLY,
   main = 'render-markdown',
+  ft = 'markdown',
   opts = {
     heading = {
       -- Turn on / off heading icon & background rendering
@@ -69,9 +70,9 @@ return {
       above = '▄',
       -- Used below code blocks for thin border
       below = '▀',
-      -- Highlight for code blocks & inline code
-      highlight = 'RenderMarkdownCodeInline',
-      highlight_inline = 'RenderMarkdownCodeInline',
+      --FIX: Highlight for code blocks & inline code
+      highlight = '',
+      highlight_inline = '',
     },
     dash = {
       -- Turn on / off thematic break rendering
