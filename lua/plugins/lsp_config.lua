@@ -1,12 +1,13 @@
 return { -- LSP Configuration & Plugins
   'neovim/nvim-lspconfig',
+  commit = 'dddd094',
   enabled = not _G.NVIM_TERMINAL_ONLY,
   event = { 'BufReadPost', 'BufNewFile' },
   cmd = { 'LspInfo', 'LspInstall', 'LspUninstall' },
   dependencies = {
     -- Automatically install LSPs and related tools to stdpath for Neovim
     { 'williamboman/mason.nvim', config = true }, -- NOTE: Must be loaded before dependants
-    'williamboman/mason-lspconfig.nvim',
+    { 'williamboman/mason-lspconfig.nvim', commit = 'f995805' },
     'WhoIsSethDaniel/mason-tool-installer.nvim',
 
     -- Useful status updates for LSP.
@@ -24,10 +25,25 @@ return { -- LSP Configuration & Plugins
     --     require('java').setup()
     --   end,
     -- }, -- Setup nvim-java
+
     {
       'pmizio/typescript-tools.nvim',
       dependencies = { 'nvim-lua/plenary.nvim', 'neovim/nvim-lspconfig' },
       opts = {},
+      config = function()
+        require('typescript-tools').setup {
+          on_attach = function(client, bufnr)
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
+          end,
+          settings = {
+            jsx_close_tag = {
+              enable = true,
+              filetypes = { 'javascriptreact', 'typescriptreact' },
+            },
+          },
+        }
+      end,
     },
   },
   config = function()

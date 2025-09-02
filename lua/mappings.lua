@@ -4,6 +4,7 @@ return {
     -- DEV
     ['<leader>np'] = { '<cmd>Neopostman<CR>', desc = 'Neopostman' },
     ['<leader>lp'] = { '<cmd>Lazy profile<CR>', desc = 'Shift right' },
+    ['<leader>ji'] = { '<cmd>Neojira<cr>' },
     ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
 
     -- Basic Indentation
@@ -95,8 +96,8 @@ return {
     -- Git Commands
     ['<leader>gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>' },
     ['<leader>gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>' },
-    ['gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>' },
-    ['gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>' },
+    ['gj'] = { '<cmd>lua require("gitsigns").nav_hunk("next", { navigation_message = false })<cr>' },
+    ['gk'] = { '<cmd>lua require("gitsigns").nav_hunk("prev", { navigation_message = false })<cr>' },
     ['<leader>gp'] = { '<cmd>lua require("gitsigns").preview_hunk()<cr>' },
     ['<leader>gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>' },
     ['gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>' },
@@ -243,6 +244,8 @@ return {
     ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },
     ['<leader>hj'] = { "<cmd>lua require('user/jira-helpers').commands()<cr>" },
 
+    ['<leader>td'] = { '<cmd>TodoTrouble<cr>' },
+
     ['<C-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
     ['<C-h>'] = { '<cmd>lua require("helpers.tmux").move_top()<cr>' },
 
@@ -327,22 +330,19 @@ return {
     --reliably get the current working directory of the terminal session
     ['<C-p>'] = function()
       local tmpfile = '/tmp/nvim_term_cwd'
-
-      -- Step 1: Ask the shell to write its current directory to the temp file
       vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
+      vim.wait(80)
 
-      -- Step 2: Wait briefly (not ideal but practical)
-      vim.wait(80) -- Wait 80ms for shell to write
-
-      -- Step 3: Read the file
       local cwd = vim.fn.readfile(tmpfile)[1]
-
       if cwd then
-        -- Step 4: Copy to clipboard
+        -- Change Neovim's working directory
+        vim.cmd('lcd ' .. vim.fn.fnameescape(cwd))
+
+        -- Copy to clipboard
         vim.fn.setreg('+', cwd)
         print('Copied to clipboard:', cwd)
 
-        -- Step 5: Open picker with that cwd
+        -- Open picker with that cwd
         Snacks.picker.files {
           layout = 'ivy_split',
           matcher = { frecency = true },
@@ -363,22 +363,19 @@ return {
     --reliably get the current working directory of the terminal session
     ['<C-g>'] = function()
       local tmpfile = '/tmp/nvim_term_cwd'
-
-      -- Step 1: Ask the shell to write its current directory to the temp file
       vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
+      vim.wait(80)
 
-      -- Step 2: Wait briefly (not ideal but practical)
-      vim.wait(100) -- Wait 100ms for shell to write
-
-      -- Step 3: Read the file
       local cwd = vim.fn.readfile(tmpfile)[1]
-
       if cwd then
-        -- Step 4: Copy to clipboard
+        -- Change Neovim's working directory
+        vim.cmd('lcd ' .. vim.fn.fnameescape(cwd))
+
+        -- Copy to clipboard
         vim.fn.setreg('+', cwd)
         print('Copied to clipboard:', cwd)
 
-        -- Step 5: Open picker with that cwd
+        -- Open picker with that cwd
         Snacks.picker.grep {
           layout = 'ivy_split',
           need_search = false,

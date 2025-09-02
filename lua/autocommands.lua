@@ -37,7 +37,7 @@ vim.api.nvim_create_autocmd("TermClose", {
 })
 
 vim.api.nvim_create_autocmd("BufWinEnter", {
-  pattern = "*",
+  pattern = "*.cs",
   callback = function()
     vim.api.nvim_set_keymap("n", "gd", "<cmd>lua require('omnisharp_extended').lsp_definition()<cr>", {})
   end,

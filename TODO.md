@@ -6,11 +6,12 @@ tags: []
 # TODO
 
 # important
-- [ ] Block versions for mason + lspconfig 
-- [ ] Remove cr to create a checkbox 
-- [ ] ctrl+j to confirm suggestion
-- [ ] ctrl+delete remove full word in nvim
-- [ ] ctrl+delete remove full word in term
+- [x] Block versions for mason + lspconfi
+- [>] ctrl+delete remove full word in nvim
+- [>] ctrl+delete remove full word in term
+- [ ] Better zsh completion
+- [ ] When running lazygit do the tmux trick like nvim
+- [ ] Folding ffs
 
 ### Plugins
 - [ ] Bullets.nvim doesn't really work for some reason 
@@ -25,6 +26,7 @@ tags: []
 - [ ] ysmb-wtsg/in-and-out.nvim
 - [ ] nguyenvukhang/nvim-toggler
 - [ ] markdown nvim conflicts with GP
+- [?] Replace Obsidian with Marksman
 
 ### Terminal
 - [ ] Allow lazy load of heavy plugins also when running terminal 
@@ -52,4 +54,9 @@ tags: []
 
 #### Highlights
 - [ ] Flash highlight fixes
+- [ ] Fix the lspserver loading black highlight
 
+#### Manual Patches
+->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
+->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
+-> ?? There is one more but can't remember precisely
