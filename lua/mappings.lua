@@ -376,8 +376,20 @@ return {
         vim.fn.setreg('+', cwd)
         print('Copied to clipboard:', cwd)
 
-        -- Open picker with that cwd
-        require'telescope.builtin'.live_grep(require('telescope.themes').get_ivy({}))
+        -- FIX: This is faster, but i don't like the style, would prefer ivy_split
+        -- require'telescope.builtin'.live_grep(require('telescope.themes').get_ivy({}))
+        Snacks.picker.grep {
+          layout = 'ivy_split',
+          need_search = false,
+          limit = 30,
+          matcher = { fuzzy = false, sort_empty = false },
+          cwd = cwd,
+          on_show = function()
+            vim.schedule(function()
+              vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, false, true), 'n', false)
+            end)
+          end,
+        }
       else
         print 'Failed to read terminal cwd.'
       end
