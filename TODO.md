@@ -14,6 +14,7 @@ tags: []
 - [ ] Dap broken for React 
 - [ ] Fix slow grep on large projects 
 - [ ] Folding ffs
+- [ ] Git log + file search from the log
 
 #### Plugins
 - [ ] junegunn/vim-easy-align
@@ -40,3 +41,4 @@ tags: []
 #### Manual Patches
 ->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
 ->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
+->Snacks picker ivy_split -> borderless

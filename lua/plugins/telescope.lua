@@ -109,7 +109,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
           mappings = {
             i = {
               ['<c-g>'] = actions.to_fuzzy_refine,
-              -- ['kj'] = actions.close(),
+              ['kj'] = actions.close,
             },
           },
         },

@@ -10,7 +10,7 @@ return { -- Highlight, edit, and navigate code
   },
   -- lazy = 'BufReadPre',
   opts = {
-    ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'vim', 'vimdoc', 'c_sharp', 'php' },
+    ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'vim', 'vimdoc', 'c_sharp', 'php', 'javascript', 'typescript' },
     -- Autoinstall languages that are not installed
     auto_install = true,
     highlight = {
