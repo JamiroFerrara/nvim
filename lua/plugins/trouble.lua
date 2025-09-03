@@ -4,12 +4,17 @@ return {
   opts = {
     auto_close = true,
   }, -- for default options, refer to the configuration section for custom setup.
-  cmd = 'Trouble',
-  event = 'VeryLazy',
+  cmd = {'Trouble', 'TodoTrouble'},
+  -- event = 'VeryLazy',
   keys = {
     {
       '<leader>lx',
       '<cmd>Trouble diagnostics filter.severity=vim.diagnostic.severity.ERROR <cr>',
+      desc = 'Diagnostics (Trouble)',
+    },
+    {
+      '<leader>lt',
+      '<cmd>lua require("trouble").toggle({ mode = "todo", focus = true })<cr><cmd>lua require("trouble").fold_close_all()<cr>',
       desc = 'Diagnostics (Trouble)',
     },
     {

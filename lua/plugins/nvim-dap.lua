@@ -41,6 +41,18 @@ return {
       },
     }
 
+    dap.configurations.cs = {
+      {
+        cwd = '${fileDirname}',
+        name = 'NetCoreDbg: Launch',
+        program = function()
+          return require('configs.nvim-dap-dotnet').build_dll_path()
+        end,
+        request = 'launch',
+        type = 'coreclr',
+      },
+    }
+
     dap.configurations.php = vim.tbl_deep_extend('force', dap.configurations.php or {}, {
       {
         type = 'php',
@@ -50,7 +62,7 @@ return {
         port = 9003,
         localSourceRoot = '${workspaceFolder}',
         pathMappings = {
-        ['/var/www/app'] = '${workspaceFolder}',
+          ['/var/www/app'] = '${workspaceFolder}',
         },
         xdebugSettings = {
           max_children = 512,
