@@ -63,9 +63,12 @@ return {
     ['mt'] = { '<cmd>e TODO.md<cr>', desc = 'Toggle Aerial' },
 
     ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
-    -- ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
-    ['<leader>fw'] = { "<cmd>lua require'telescope.builtin'.live_grep(require('telescope.themes').get_ivy({}))<cr>" },
-    -- ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>" },
+
+    -- ['<C-p>'] = { "<cmd>Telescope frecency workspace=CWD<cr>" },
+    -- ['<leader><space>'] = { "<cmd>Telescope frecency workspace=CWD<cr>" },
+    ['<leader>fw'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
+    ['<C-g>'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
+
     ['vap'] = { 'vip' },
 
     -- Obsidian Commands
@@ -344,6 +347,7 @@ return {
         print('Copied to clipboard:', cwd)
 
         -- Open picker with that cwd
+        -- vim.cmd("Telescope frecency workspace=CWD");
         Snacks.picker.files {
           layout = 'ivy_split',
           matcher = { frecency = true },
@@ -376,20 +380,19 @@ return {
         vim.fn.setreg('+', cwd)
         print('Copied to clipboard:', cwd)
 
-        -- FIX: This is faster, but i don't like the style, would prefer ivy_split
-        -- require'telescope.builtin'.live_grep(require('telescope.themes').get_ivy({}))
-        Snacks.picker.grep {
-          layout = 'ivy_split',
-          need_search = false,
-          limit = 30,
-          matcher = { fuzzy = false, sort_empty = false },
-          cwd = cwd,
-          on_show = function()
-            vim.schedule(function()
-              vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, false, true), 'n', false)
-            end)
-          end,
-        }
+        require'telescope.builtin'.live_grep(GET_IVY())
+        -- Snacks.picker.grep {
+        --   layout = 'ivy_split',
+        --   need_search = false,
+        --   limit = 30,
+        --   matcher = { fuzzy = false, sort_empty = false },
+        --   cwd = cwd,
+        --   on_show = function()
+        --     vim.schedule(function()
+        --       vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, false, true), 'n', false)
+        --     end)
+        --   end,
+        -- }
       else
         print 'Failed to read terminal cwd.'
       end

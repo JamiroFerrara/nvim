@@ -1,6 +1,53 @@
+function GET_IVY(opts)
+  opts = opts or {}
+
+  -- FIX: This does not work because it only limits the dirs, does not actually
+  -- implement frecency
+  -- local frecency = require('telescope').extensions.frecency
+  -- opts.search_dirs = frecency.query { workspace = "CWD" }
+
+  local theme_opts = {
+    theme = 'ivy_preview',
+    preview = false,
+
+    sorting_strategy = 'ascending',
+    layout_strategy = 'vertical',
+
+    layout_config = {
+      horizontal = {
+        prompt_position = 'top',
+        preview_width = 1,
+        results_width = 1,
+      },
+      vertical = {
+        mirror = false,
+      },
+      width = 1000,
+      height = 1000,
+      preview_cutoff = 1,
+    },
+
+    border = true,
+    borderchars = {
+      prompt = { ' ', ' ', '', ' ', ' ', ' ', '', '' },
+      results = { '', ' ', ' ', ' ', '', '', ' ', ' ' },
+      preview = { '', ' ', '', '', '', '', '', '' },
+    },
+  }
+
+  return vim.tbl_deep_extend('force', theme_opts, opts)
+end
+
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'TelescopePreviewerLoaded',
+  callback = function(args)
+    vim.wo.number = true
+  end,
+})
+
 return { -- Fuzzy Finder (files, lsp, etc)
   'nvim-telescope/telescope.nvim',
-  enabled = not _G.NVIM_TERMINAL_ONLY,
+  -- enabled = not _G.NVIM_TERMINAL_ONLY,
   event = 'VeryLazy',
   cmd = { 'Telescope' },
   branch = '0.1.x',
@@ -20,6 +67,14 @@ return { -- Fuzzy Finder (files, lsp, etc)
       end,
     },
     { 'nvim-telescope/telescope-ui-select.nvim' },
+    {
+      'nvim-telescope/telescope-frecency.nvim',
+      -- install the latest stable version
+      version = '^0.10.0',
+      config = function()
+        require('telescope').load_extension 'frecency'
+      end,
+    },
 
     -- Useful for getting pretty icons, but requires a Nerd Font.
     { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
@@ -49,21 +104,38 @@ return { -- Fuzzy Finder (files, lsp, etc)
     local actions = require 'telescope.actions'
 
     require('telescope').setup {
+      pickers = {
+        live_grep = {
+          mappings = {
+            i = {
+              ['<c-g>'] = actions.to_fuzzy_refine,
+              -- ['kj'] = actions.close(),
+            },
+          },
+        },
+      },
       defaults = {
+        border = false,
+        borderchars = {
+          prompt = { ' ', ' ', '', ' ', ' ', ' ', '', '' },
+          results = { '', ' ', ' ', ' ', '', '', ' ', ' ' },
+          preview = { '', ' ', '', '', '', '', '', '' },
+        },
         path_display = { 'truncate' },
         sorting_strategy = 'ascending',
+        layout_strategy = 'vertical',
         layout_config = {
           horizontal = {
             prompt_position = 'top',
-            preview_width = 0.55,
-            results_width = 0.8,
+            preview_width = 1,
+            results_width = 1,
           },
           vertical = {
             mirror = false,
           },
-          width = 0.87,
-          height = 0.80,
-          preview_cutoff = 120,
+          width = 1000,
+          height = 1000,
+          preview_cutoff = 1,
         },
         extensions = {
           fzf = {},

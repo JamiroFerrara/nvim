@@ -353,7 +353,7 @@ return {
       end,
       desc = 'Find Files',
     },
-    -- { "<leader>ff", function() Snacks.picker.files({layout = "ivy", matcher = {frecency = true}}) end, desc = "Find Files" },
+    { "<leader>ff", function() Snacks.picker.files({layout = "ivy", matcher = {frecency = true}}) end, desc = "Find Files" },
     {
       '<C-p>',
       function()
