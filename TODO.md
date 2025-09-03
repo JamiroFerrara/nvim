@@ -9,12 +9,11 @@ tags: []
 - [x] Block versions for mason + lspconfi
 - [>] ctrl+delete remove full word in nvim
 - [>] ctrl+delete remove full word in term
-- [ ] When running lazygit do the tmux trick like nvim
+- [>] When running lazygit do the tmux trick like nvim
 - [ ] Obsidian.nvim has a ripgrep bug
 - [ ] Dap broken for React 
 - [ ] Fix slow grep on large projects 
 - [ ] Folding ffs
-- [ ] Dadbod lsp broken for mysql
 
 #### Plugins
 - [ ] junegunn/vim-easy-align
@@ -41,4 +40,3 @@ tags: []
 #### Manual Patches
 ->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
 ->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
--> ?? There is one more but can't remember precisely

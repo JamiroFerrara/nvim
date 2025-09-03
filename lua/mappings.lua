@@ -64,7 +64,7 @@ return {
 
     ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
     -- ['<leader>ff'] = { '<cmd>Telescope find_files find_command=rg,--ignore,--hidden,--files<cr>' },
-    -- ['<leader>fw'] = { '<cmd>Telescope live_grep find_command=rg,--ignore,--hidden,--files<cr>' },
+    ['<leader>fw'] = { "<cmd>lua require'telescope.builtin'.live_grep(require('telescope.themes').get_ivy({}))<cr>" },
     -- ['<leader>dc'] = { "<cmd>lua require('user.helpers').dap_nodebug()<cr>" },
     ['vap'] = { 'vip' },
 
@@ -377,18 +377,7 @@ return {
         print('Copied to clipboard:', cwd)
 
         -- Open picker with that cwd
-        Snacks.picker.grep {
-          layout = 'ivy_split',
-          need_search = false,
-          limit = 30,
-          matcher = { fuzzy = false, sort_empty = false },
-          cwd = cwd,
-          on_show = function()
-            vim.schedule(function()
-              vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, false, true), 'n', false)
-            end)
-          end,
-        }
+        require'telescope.builtin'.live_grep(require('telescope.themes').get_ivy({}))
       else
         print 'Failed to read terminal cwd.'
       end

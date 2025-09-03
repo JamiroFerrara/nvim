@@ -219,6 +219,7 @@ return {
       { name = 'nvim_lsp', keyword_length = 1, max_item_count = 10, priority = 900 },
       { name = 'nvim_lua', keyword_length = 1, max_item_count = 10, priority = 800 },
       { name = 'path', keyword_length = 3, max_item_count = 20, prioirty = 250 },
+      { name = 'vim-dadbod-completion' },
     }
 
     -- --------------------------------------------------------------------- }}}
