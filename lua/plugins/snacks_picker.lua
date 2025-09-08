@@ -349,11 +349,17 @@ return {
     {
       '<leader><space>',
       function()
+        Snacks.picker.files { layout = 'ivy_split', matcher = { frecency = true } }
+      end,
+      desc = 'Find Files',
+    },
+    {
+      '<leader>ff',
+      function()
         Snacks.picker.files { layout = 'ivy', matcher = { frecency = true } }
       end,
       desc = 'Find Files',
     },
-    { "<leader>ff", function() Snacks.picker.files({layout = "ivy", matcher = {frecency = true}}) end, desc = "Find Files" },
     {
       '<C-p>',
       function()
@@ -522,14 +528,14 @@ return {
     {
       '<leader>sh',
       function()
-        Snacks.picker.help({ layout = 'ivy' })
+        Snacks.picker.help { layout = 'ivy' }
       end,
       desc = 'Help Pages',
     },
     {
       '<leader>sH',
       function()
-        Snacks.picker.highlights({ layout = 'ivy' })
+        Snacks.picker.highlights { layout = 'ivy' }
       end,
       desc = 'Highlights',
     },

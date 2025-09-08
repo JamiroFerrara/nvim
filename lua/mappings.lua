@@ -7,6 +7,8 @@ return {
     ['<leader>ji'] = { '<cmd>Neojira<cr>' },
     ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
 
+    ['<leader>ii'] = { '<cmd>lua require("nvim-toggler").toggle()<cr>', desc = 'Neopostman' },
+
     -- Basic Indentation
     ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Shift right' },
     ['#'] = { '<cmd>Telescope commands<cr>', desc = 'Shift right' },
@@ -165,7 +167,6 @@ return {
     ['{'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
     ['}'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
     ['+'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
-
 
     -- ['}'] = { '{' },
     -- ['{'] = { '}' },
@@ -380,7 +381,7 @@ return {
         vim.fn.setreg('+', cwd)
         print('Copied to clipboard:', cwd)
 
-        require'telescope.builtin'.live_grep(GET_IVY())
+        require('telescope.builtin').live_grep(GET_IVY())
         -- Snacks.picker.grep {
         --   layout = 'ivy_split',
         --   need_search = false,
@@ -449,7 +450,8 @@ return {
     ['<leader>qt'] = { ':!quicktype --just-types -l typescript<CR>', desc = 'Run quicktype for TypeScript' },
 
     -- NOTE: [ Ai ]
-    ['<leader>ai'] = { '<cmd>ChatGPTEditWithInstructions<CR>', desc = 'Edit with instructions' },
+    ['<leader>ai'] = { 'y<cmd>GpChatNew vsplit<CR>Gp' },
+
     ['<leader>ao'] = { '<cmd>ChatGPTRun organize_code<CR>', desc = 'Organize code' },
     ['<leader>aO'] = { '<cmd>ChatGPTRun optimize_code<CR>', desc = 'Optimize code' },
     ['<leader>ac'] = { '<cmd>ChatGPTRun complete_code<CR>', desc = 'Complete code' },

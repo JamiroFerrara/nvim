@@ -10,11 +10,17 @@ tags: []
 - [>] ctrl+delete remove full word in nvim
 - [>] ctrl+delete remove full word in term
 - [>] When running lazygit do the tmux trick like nvim
-- [ ] Obsidian.nvim has a ripgrep bug
-- [ ] Dap broken for React 
-- [ ] Fix slow grep on large projects 
-- [ ] Folding ffs
+- [ ] Obsidian.nvim has a ripgrep bug -> Command 'rg' with args '{ "--no-config", "--type=md", "--json", "--fixed-strings", "--ignore-case", "-m=1", "-e", "as", "/home/jferrara" }' exited with non-zero code 2. See logs for stderr.
 - [ ] Git log + file search from the log
+- [ ] Dap broken for React 
+- [ ] Folding ffs
+- [ ] Copilot is off 
+- [ ] viq does not allways work 
+- [ ] dap seems to not work from any file (c#)? 
+- [ ] Error executing vim.schedule lua callback: ...lazy/nvim-dap-virtual-text/lua/nvim-dap-virtual-text.lua:208: bad argument #1 to 'pairs' (table expected, got nil)
+- [ ] typescript lsp for javascript is definately broken, auto imports do not work etc
+- [ ] treesitter has gotten slower for some reason
+- [ ] %s/\r//g  -> implement me (CRLF line endings)
 
 #### Plugins
 - [ ] junegunn/vim-easy-align
@@ -41,4 +47,4 @@ tags: []
 #### Manual Patches
 ->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
 ->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
-->Snacks picker ivy_split -> borderless
+->/home/jferrara/.local/share/nvim/lazy/snacks.nvim/lua/snacks/picker/config/layouts.lua -> removed borders from ivy_split + vscode
