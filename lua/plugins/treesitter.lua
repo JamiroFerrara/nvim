@@ -1,8 +1,8 @@
 return { -- Highlight, edit, and navigate code
   'nvim-treesitter/nvim-treesitter',
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
-  event = 'BufRead',
-  -- event = 'VeryLazy',
+  -- event = 'BufEnter',
+  event = 'VeryLazy',
   build = ':TSUpdate',
   dependencies = {
     'nvim-treesitter/playground',

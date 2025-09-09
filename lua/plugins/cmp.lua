@@ -70,6 +70,10 @@ return {
       }),
     })
 
+    luasnip.config.setup {
+      enable_autosnippets = true,
+    }
+
     -- --------------------------------------------------------------------- }}}
     -- {{{ Has words before
 

@@ -10,6 +10,7 @@ tags: []
 - [>] ctrl+delete remove full word in nvim
 - [>] ctrl+delete remove full word in term
 - [>] When running lazygit do the tmux trick like nvim
+- [>] treesitter has gotten slower for some reason -> lazy loading
 - [ ] Obsidian.nvim has a ripgrep bug -> Command 'rg' with args '{ "--no-config", "--type=md", "--json", "--fixed-strings", "--ignore-case", "-m=1", "-e", "as", "/home/jferrara" }' exited with non-zero code 2. See logs for stderr.
 - [ ] Git log + file search from the log
 - [ ] Dap broken for React 
@@ -19,8 +20,13 @@ tags: []
 - [ ] dap seems to not work from any file (c#)? 
 - [ ] Error executing vim.schedule lua callback: ...lazy/nvim-dap-virtual-text/lua/nvim-dap-virtual-text.lua:208: bad argument #1 to 'pairs' (table expected, got nil)
 - [ ] typescript lsp for javascript is definately broken, auto imports do not work etc
-- [ ] treesitter has gotten slower for some reason
 - [ ] %s/\r//g  -> implement me (CRLF line endings)
+- [ ] lsp is slow:
+	- [ ] typescript
+	- [ ] csharp large projects
+- [ ] Firefox debugging 
+- [ ] Harpoon directly from terminal 
+- [ ] Close zen with alt+w 
 
 #### Plugins
 - [ ] junegunn/vim-easy-align
