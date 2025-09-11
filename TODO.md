@@ -26,7 +26,35 @@ tags: []
 	- [ ] csharp large projects
 - [ ] Firefox debugging 
 - [ ] Harpoon directly from terminal 
-- [ ] Close zen with alt+w 
+- [ ] Pragrmatic debugging for csharp 
+- [ ] On terminal enter auto insert mode (and re-enter)
+
+### Zen + Trydactyl - https://wiki.csgalileo.org/tips/tridactyl - https://raw.githubusercontent.com/arimasou16/dotfiles/master/.tridactylrc
+- [ ] Configuration file 
+- [ ] Search jira
+- [ ] Improve searching
+- [ ] tabdetach with alt+s
+- [ ] intall native messenger -> powershell -ExecutionPolicy Bypass -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12;(New-Object System.Net.WebClient).DownloadFile('https://raw.githubusercontent.com/tridactyl/native_messenger/master/installers/windows.ps1', '%TEMP%/tridactyl_installnative.ps1');& '%TEMP%/tridactyl_installnative.ps1' -Tag 1.24.4;Remove-Item '%TEMP%/tridactyl_installnative.ps1'"
+- [ ] run commands in new tabs also (--mode=browser)
+- [ ] use https://git.frogeye.fr/geoffrey/dotfiles/src/branch/prenix/config/tridactyl/tridactylrc
+- [ ] Map C-p in ex mode to traverse history 
+- [ ] Trydactyl tabs is overriding normal tabs? 
+- [ ] Insta tab switch when browsing buffers 
+- [ ] Fix visual themes  
+- [ ] Ctrl+shft+t for transparency hides restore tabs 
+- [ ] Tabs change direction? 
+
+##### Configuration opts
+set completions.History.autoselect true
+set tabsort mru
+set hintfiltermode simple
+set hintnames short
+bind --mode=normal b fillcmdline taball
+bind --mode=normal <C-s> composite tabdetach
+bind --mode=normal <A-s> composite tabdetach
+bind --mode=normal W composite tabdetach
+bind --mode=ex <C-j> ex.next_completion
+bind --mode=ex <C-k> ex.prev_completion
 
 #### Plugins
 - [ ] junegunn/vim-easy-align
