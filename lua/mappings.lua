@@ -251,6 +251,8 @@ return {
 
     ['<leader>td'] = { '<cmd>TodoTrouble<cr>' },
 
+    ['YY'] = { '<cmd>lua require("helpers.markdown").yank_code_block()<cr>' },
+
     ['<C-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
     ['<C-h>'] = { '<cmd>lua require("helpers.tmux").move_top()<cr>' },
 

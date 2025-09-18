@@ -5,7 +5,6 @@ return {
 
   -- Improvements
   { 'lewis6991/impatient.nvim' },
-  { 'ggandor/lightspeed.nvim', event = 'InsertEnter' },
   { 'max397574/better-escape.nvim', event = 'InsertEnter'},
   { 'ThePrimeagen/harpoon', event = 'VeryLazy', enabled = not _G.NVIM_TERMINAL_ONLY, },
   { 'haya14busa/is.vim', event = 'InsertEnter', enabled = not _G.NVIM_TERMINAL_ONLY, },
