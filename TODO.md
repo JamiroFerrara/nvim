@@ -18,6 +18,7 @@ tags: []
 - [ ] go back and fourth between file
 - [ ] bigger dadbod results window (half screen?)
 - [ ] glaze window ignore everything + float to top
+- [ ] focus url bar in brave
 - [ ] fzf + fzy keybinds
 - [!] bitbucket cli (unable to find decent cli)
 - [ ] terminal:
