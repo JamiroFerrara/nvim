@@ -58,6 +58,7 @@ return {
   opts = {
     dashboard = {
       width = 60,
+      enabled = true,
       row = nil,                                                                   -- dashboard position. nil for center
       col = nil,                                                                   -- dashboard position. nil for center
       pane_gap = 4,                                                                -- empty columns between vertical panes
@@ -109,31 +110,32 @@ return {
           return dir and { { dir .. "/", hl = "dir" }, { file, hl = "file" } } or { { fname, hl = "file" } }
         end,
       },
-      sections = {
-        -- { section = "startup" },
-        { section = "header" },
-        function()
-          local in_git = Snacks.git.get_root() ~= nil
-          local cmds = {
-            {
-              icon = " ",
-              title = "Git Status",
-              cmd = "git --no-pager diff --stat -B -M -C",
-              height = 5,
-            },
-          }
-          return vim.tbl_map(function(cmd)
-            return vim.tbl_extend("force", {
-              pane = 1,
-              section = "terminal",
-              enabled = in_git,
-              -- padding = 1,
-              -- ttl = 5 * 60,
-              indent = 3,
-            }, cmd)
-          end, cmds)
-        end,
-      },
+      -- sections = {
+      --   -- { section = "startup" },
+      --   { section = "header" },
+      --   -- function()
+      --   --   local in_git = Snacks.git.get_root() ~= nil
+      --   --   local cmds = {
+      --   --     {
+      --   --       icon = " ",
+      --   --       title = "Git Status",
+      --   --       cmd = "git --no-pager diff --stat -B -M -C",
+      --   --       height = 5,
+      --   --     },
+      --   --   }
+      --   --   return vim.tbl_map(function(cmd)
+      --   --     return vim.tbl_extend("force", {
+      --   --       pane = 1,
+      --   --       section = "terminal",
+      --   --       enabled = in_git,
+      --   --       -- padding = 1,
+      --   --       -- ttl = 5 * 60,
+      --   --       indent = 3,
+      --   --     }, cmd)
+      --   --   end, cmds)
+      --   -- end,
+      --   -- { section = "keys" },
+      -- },
     }
   }
 }

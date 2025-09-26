@@ -21,16 +21,20 @@ tags: []
 - [ ] focus url bar in brave
 - [ ] fzf + fzy keybinds
 - [!] bitbucket cli (unable to find decent cli)
+- [ ] himalaya setup using oAuth2.0 -> https://docs.rs/crate/himalaya/latest
+- [ ] remove scrollback on clear (terminal)
+- [ ] Buffer completion from debug watch window using cmp
+- [ ] Obsidian checkboxes aren't allways loading
+- [ ] Replace obsidian with marksman?
+- [ ] Flat list todo trouble
+[ ] %s/\r//g  -> implement me (CRLF line endings)
 - [ ] terminal:
 	- [ ] Harpoon directly from terminal (abstact the copy mechanism)
 	- [ ] On terminal enter auto insert mode (and re-enter)
-	- [ ] seach lucky is still on chrome
 - [ ] lsp:
 	- [ ] typescript slow and kinda not working
 	- [ ] csharp large projects slow
 - [ ] dap:
-	- [ ] Pragrmatic debugging for csharp 
-	- [ ] %s/\r//g  -> implement me (CRLF line endings)
 	- [ ] dap seems to not work from any file (c#)? 
 	- [ ] Error executing vim.schedule lua callback: ...lazy/nvim-dap-virtual-text/lua/nvim-dap-virtual-text.lua:208: bad argument #1 to 'pairs' (table expected, got nil)
 

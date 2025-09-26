@@ -135,6 +135,7 @@ return {
           elements = {
             { id = "scopes", size = 0.5 }, -- 100% of this panel is scopes
             { id = "watches", size = 0.5}, -- 100% of this panel is scopes
+            { id = "repl", size = 0.1 }
           },
           size = 15,                       -- height in lines (adjust to taste)
           position = "bottom",             -- "left", "right", "top", "bottom"
