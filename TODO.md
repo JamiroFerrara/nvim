@@ -4,9 +4,6 @@ aliases: []
 tags: []
 ---
 # TODO
-
-# important
-- [x] Block versions for mason + lspconfi
 - [ ] ctrl+delete remove full word in nvim
 - [ ] ctrl+delete remove full word in term
 - [>] When running lazygit do the tmux trick like nvim
@@ -28,6 +25,7 @@ tags: []
 - [ ] Replace obsidian with marksman?
 - [ ] Flat list todo trouble
 [ ] %s/\r//g  -> implement me (CRLF line endings)
+- [ ] go to terminal keymap
 - [ ] terminal:
 	- [ ] Harpoon directly from terminal (abstact the copy mechanism)
 	- [ ] On terminal enter auto insert mode (and re-enter)
