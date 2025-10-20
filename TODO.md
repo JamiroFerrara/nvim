@@ -10,31 +10,30 @@ tags: []
 - [>] treesitter has gotten slower for some reason -> lazy loading
 - [ ] Git log + file search from the log
 - [ ] Folding ffs -> nvim-origami + upgrade to 11
+- [ ] Markdown header folding -> https://linkarzu.com/posts/neovim/markdown-setup-2024/#marksman
+- [ ] Obsidian checkboxes aren't allways loading
+- [ ] Replace obsidian with marksman?
 - [ ] Copilot is off 
 - [ ] viq does not allways work 
 - [ ] go back and fourth between file
 - [ ] bigger dadbod results window (half screen?)
-- [ ] glaze window ignore everything + float to top
 - [ ] focus url bar in brave
 - [ ] fzf + fzy keybinds
-- [!] bitbucket cli (unable to find decent cli)
 - [ ] himalaya setup using oAuth2.0 -> https://docs.rs/crate/himalaya/latest
-- [ ] remove scrollback on clear (terminal)
-- [ ] Buffer completion from debug watch window using cmp
-- [ ] Obsidian checkboxes aren't allways loading
-- [ ] Replace obsidian with marksman?
 - [ ] Flat list todo trouble
 [ ] %s/\r//g  -> implement me (CRLF line endings)
-- [ ] go to terminal keymap
+- [ ] Fix bold colors on highlight
 - [ ] terminal:
 	- [ ] Harpoon directly from terminal (abstact the copy mechanism)
+	- [ ] remove scrollback on clear (terminal)
 	- [ ] On terminal enter auto insert mode (and re-enter)
 - [ ] lsp:
 	- [ ] typescript slow and kinda not working
 	- [ ] csharp large projects slow
 - [ ] dap:
 	- [ ] dap seems to not work from any file (c#)? 
-	- [ ] Error executing vim.schedule lua callback: ...lazy/nvim-dap-virtual-text/lua/nvim-dap-virtual-text.lua:208: bad argument #1 to 'pairs' (table expected, got nil)
+	- [ ] Error executing vim.sc lua callback: ...lazy/nvim-dap-virtual-text/lua/nvim-dap-virtual-text.lua:208: bad argument #1 to 'pairs' (table expected, got nil)
+	- [ ] Buffer completion from debug watch window using cmp
 
 #### Plugins
 - [ ] junegunn/vim-easy-align

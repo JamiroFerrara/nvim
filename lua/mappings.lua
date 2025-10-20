@@ -3,6 +3,7 @@ return {
   n = {
     -- DEV
     ['<leader>np'] = { '<cmd>Neopostman<CR>', desc = 'Neopostman' },
+    ['<leader>nc'] = { '<cmd>ChromeNetwork<CR>', desc = 'Neopostman' },
     ['<leader>lp'] = { '<cmd>Lazy profile<CR>', desc = 'Shift right' },
     ['<leader>ji'] = { '<cmd>Neojira<cr>' },
     ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
@@ -84,10 +85,7 @@ return {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z\\"")<CR>',
       desc = 'toggle term bottom',
     },
-    ['<A-t>'] = {
-      '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\"")<CR>',
-      desc = 'toggle term bottom',
-    },
+    ['<A-t>'] = { ':term<cr>', desc = 'Follow' },
     ['<C-t>'] = {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\"")<CR>',
       desc = 'toggle term bottom',
@@ -331,6 +329,7 @@ return {
   -- Terminal Mode
   t = {
     ['è'] = { 'p', desc = 'Print' },
+    ['<C-n>'] = { '<cmd>ChromeNetwork<cr>', desc = 'Open Chrome Network plugin' },
 
     --TODO: Refactor me out as this is a duplicate of the below
     --BUG: This works only once when terminal is open. It needs to be able to

@@ -35,6 +35,16 @@ return {
           -- system_prompt = require('gp.defaults').chat_system_prompt,
           system_prompt = "You are a coding assistant. Help with writing, understanding, and refactoring code. Be concise, clear, and focus only on what's necessary. Provide relevant explanations or examples when needed. Optimize for readability and efficiency. Adapt based on user interactions to improve guidance continuously. Answer with the minimum amount of words possible.",
         },
+        {
+          name = 'ChatGPT5',
+          chat = true,
+          command = true,
+          -- string with model name or table with model name and parameters
+          model = { model = 'gpt-5', temperature = 1.1, top_p = 1 },
+          -- system prompt (use this to specify the persona/role of the AI)
+          -- system_prompt = require('gp.defaults').chat_system_prompt,
+          system_prompt = "You are a coding assistant. Help with writing, understanding, and refactoring code. Be concise, clear, and focus only on what's necessary. Provide relevant explanations or examples when needed. Optimize for readability and efficiency. Adapt based on user interactions to improve guidance continuously. Answer with the minimum amount of words possible.",
+        },
       },
       	hooks = {
 		-- GpInspectPlugin provides a detailed inspection of the plugin state
