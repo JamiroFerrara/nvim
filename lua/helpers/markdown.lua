@@ -1,5 +1,18 @@
 local M = {}
 
+-- TODO: Implement conditonal code folding
+function M.smart_action()
+  local util = require("obsidian").util;
+  -- follow link if possible
+  if util.cursor_on_markdown_link(nil, nil, true) then
+    return "<cmd>ObsidianFollowLink<CR>"
+  end
+
+  -- cycles through your custom UI checkboxes, default: [ ] [~] [>] [x]
+  -- Uses the task warrior integration to toggle
+  return "<cmd>TWToggle<CR>"
+end
+
 function M.yank_code_block()
   local cursor = vim.api.nvim_win_get_cursor(0) -- {row, col}
   local row = cursor[1]

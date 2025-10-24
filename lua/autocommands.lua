@@ -49,6 +49,7 @@ vim.api.nvim_create_autocmd('FocusLost', {
     vim.cmd 'hi TermCursor cterm=reverse gui=reverse'
   end,
 })
+
 vim.api.nvim_create_autocmd('FocusGained', {
   pattern = '*',
   callback = function()

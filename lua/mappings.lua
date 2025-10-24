@@ -7,6 +7,9 @@ return {
     ['<leader>lp'] = { '<cmd>Lazy profile<CR>', desc = 'Shift right' },
     ['<leader>ji'] = { '<cmd>Neojira<cr>' },
     ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
+    ['<leader>cn'] = { '<cmd>ChromeNetwork<cr>', desc = 'Open Chrome Network plugin' },
+
+    ['<C-r>'] = { "<cmd>silent !tmux split-window -v -p 50 'source ~/.zshrc && run_script'<CR>", desc = "Open split, source .zshrc, and run the script" },
 
     ['<leader>ii'] = { '<cmd>lua require("nvim-toggler").toggle()<cr>', desc = 'Neopostman' },
 
@@ -65,10 +68,6 @@ return {
     --
     ['mt'] = { '<cmd>e TODO.md<cr>', desc = 'Toggle Aerial' },
 
-    ['<leader><cr>'] = { '<cmd>VimwikiToggleListItem<cr>', desc = 'Toggle Vimwiki list item' },
-
-    -- ['<C-p>'] = { "<cmd>Telescope frecency workspace=CWD<cr>" },
-    -- ['<leader><space>'] = { "<cmd>Telescope frecency workspace=CWD<cr>" },
     ['<leader>fw'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
     ['<C-g>'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
 
@@ -145,7 +144,7 @@ return {
     -- Navigation
     -- ['<leader>ai'] = { '<cmd>ChatGPT<CR>' },
     ['<leader>ai'] = { '<cmd>GpChatNew vsplit<CR>' },
-    ['<leader>aI'] = { '<cmd>GpChatToggle vsplit<CR>' },
+    ['<leader>aI'] = { '<cmd>GpChatNew<CR>' },
     -- ['<leader>aI'] = { '<cmd>ChatGPTActAs<CR>' },
     ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>' },
     ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>' },
@@ -329,7 +328,6 @@ return {
   -- Terminal Mode
   t = {
     ['è'] = { 'p', desc = 'Print' },
-    ['<C-n>'] = { '<cmd>ChromeNetwork<cr>', desc = 'Open Chrome Network plugin' },
 
     --TODO: Refactor me out as this is a duplicate of the below
     --BUG: This works only once when terminal is open. It needs to be able to
@@ -526,3 +524,5 @@ return {
     [';;'] = { '<esc>A;<esc>', desc = 'Append semicolon at end of line' },
   },
 }
+
+

@@ -65,6 +65,30 @@ return {
       min_chars = 2,
     },
 
+    mappings = {
+      -- Overrides the 'gf' mapping to work on markdown/wiki links within your vault.
+      ["gf"] = {
+        action = function()
+          return require("obsidian").util.gf_passthrough()
+        end,
+        opts = { noremap = false, expr = true, buffer = true },
+      },
+      -- Toggle check-boxes.
+      ["<leader>ch"] = {
+        action = function()
+          return require("obsidian").util.toggle_checkbox()
+        end,
+        opts = { buffer = true },
+      },
+      -- Smart action depending on context, either follow link or toggle checkbox.
+      ["<cr>"] = {
+        action = function()
+          return require('helpers.markdown').smart_action()
+        end,
+        opts = { buffer = true, expr = true },
+      }
+    },
+
     new_notes_location = 'current_dir',
 
     -- Optional, customize how note IDs are generated given an optional title.
@@ -172,7 +196,7 @@ return {
         insert_link = '<C-l>',
         ['<cr>'] = {
           action = function()
-            return require('obsidian').util.smart_action()
+            return require('helpers.markdown').smart_action()
           end,
           opts = { buffer = true, expr = true },
         },
@@ -224,8 +248,8 @@ return {
     -- Optional, configure additional syntax highlighting / extmarks.
     -- This requires you have `conceallevel` set to 1 or 2. See `:help conceallevel` for more details.
     ui = {
-      enable = false, -- set to false to disable all additional syntax features
-      update_debounce = 200, -- update delay after a text change (in milliseconds)
+      enable = false,         -- set to false to disable all additional syntax features
+      update_debounce = 200,  -- update delay after a text change (in milliseconds)
       max_file_length = 5000, -- disable UI features for files with more than this many lines
       -- Define how various check-boxes are displayed
       checkboxes = {
@@ -234,7 +258,7 @@ return {
         ['x'] = { char = '', hl_group = 'ObsidianDone' },
         ['>'] = { char = '', hl_group = 'ObsidianRightArrow' },
         ['~'] = { char = '', hl_group = 'ObsidianTilde' },
-        ['!'] = { char = '', hl_group = '@conditional' },
+        -- ['!'] = { char = '', hl_group = '@conditional' },
         ['?'] = { char = '', hl_group = '@comment.warning.gitcommit' },
       },
       -- Use bullet marks for non-checkbox lists.
