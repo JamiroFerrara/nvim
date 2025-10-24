@@ -165,9 +165,6 @@ return {
     ['}'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
     ['+'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
 
-    -- ['}'] = { '{' },
-    -- ['{'] = { '}' },
-
     -- ['<C-q>'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
     --NOTE:  2 done in init.lua (nowait argument)
     -- ['<C-e>'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
@@ -182,10 +179,6 @@ return {
     ['?'] = { '2' },
     ['&'] = { '3' },
     ['/'] = { '4' },
-    -- ['='] = { '6' },
-    -- ['['] = { '7' },
-    -- [']'] = { '8' },
-    -- ['+'] = { '<cmd>e#<cr>' },
     ['N'] = { 'Nzzzv' },
 
     ['U'] = { ':redo<cr>' },
@@ -193,9 +186,6 @@ return {
     ['n'] = { 'nzzzv' },
     ['J'] = { '<C-d>' },
     ['K'] = { '<C-u>' },
-    -- TODO: scroll left right
-    -- ['<C-L>'] = { 'zL' },
-    -- ['<C-H>'] = { 'zH' },
 
     ['<leader>j'] = { '}' },
     ['<leader>k'] = { '{' },
@@ -207,18 +197,9 @@ return {
 
     ['<leader>ac'] = { '<cmd>Copilot<CR>', desc = 'Complete code' },
 
-    ['<leader>oo'] = { 'zi' },
-    -- ['<cr>'] = { 'za' },
+    ['<leader>oo'] = { "<cmd>lua require('helpers.markdown').fold_headings_of_level(4)<cr>" },
     ['<leader>oc'] = { '<cmd>AerialTreeSyncFolds<cr>zRzm' },
     ['<leader>oa'] = { '<cmd>AerialTreeSyncFolds<cr>zRjk' },
-    ['<leader>P'] = { ':Prettier<cr>' },
-    ['<leader>bd'] = { "<cmd>lua require('user.helpers').dotnet_run()<cr>" },
-    ['<leader>bt'] = { '<cmd>lua require("user.helpers").dotnet_test()<CR>' },
-    ['<leader>bn'] = { "<cmd>lua require('user.helpers').npm_start()<cr>" },
-    ['<leader>bp'] = { "<cmd>lua require('user.helpers').publish()<cr>" },
-    ['<leader>bl'] = { "<cmd>lua require('user.helpers').npm_start_local()<cr>" },
-
-    ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" }, --FIX: This should just use the snacks version, but need to figure out the window. Also fights with other zen
     ['<C-z>'] = { '<cmd>lua Snacks.zen.zen()<cr>' },
 
     ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },

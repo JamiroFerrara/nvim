@@ -56,3 +56,9 @@ vim.api.nvim_create_autocmd('FocusGained', {
     vim.cmd 'hi TermCursor cterm=NONE gui=NONE'
   end,
 })
+
+-- Use autocommand to apply only to markdown files
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "markdown",
+  callback = require('helpers.markdown').set_markdown_folding,
+})

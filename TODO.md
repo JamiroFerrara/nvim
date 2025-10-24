@@ -46,7 +46,8 @@ tags: []
 - [ ] csharp large projects slow 
 
 #### Markdown 
-- [x] Markdown header folding -> https://linkarzu.com/posts/neovim/markdown-setup-2024/#marksman 
+- [ ] Markdown header folding -> https://linkarzu.com/posts/neovim/markdown-setup-2024/#marksman 
+- [ ] Markview ?
 - [ ] bold fonts for markdown 
 - [ ] italic fonts for markdown 
 

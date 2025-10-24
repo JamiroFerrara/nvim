@@ -17,16 +17,6 @@ vim.g.markdown_folding = 1
 
 vim.g.copilot_workspace_folders = { '~/repos' } -- NOTE: Should work?
 
--- FIX: Folding ?
-vim.opt.foldmethod = 'expr'
-vim.opt.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
-vim.opt.foldcolumn = '0'
-vim.opt.foldtext = ''
-vim.opt.foldlevel = 99
-vim.opt.foldlevelstart = 1
-vim.opt.foldnestmax = 2
-vim.o.foldenable = true
-
 -- Options for 'opt'
 vim.opt.foldopen:remove 'search'
 vim.opt.conceallevel = 2
@@ -77,16 +67,21 @@ vim.opt.joinspaces = false
 vim.opt.wildmode = 'longest:full,full'
 vim.opt.mouse = 'a'
 vim.opt.undofile = true
-vim.opt.foldmethod = 'syntax'
 vim.opt.foldnestmax = 1
 vim.opt.foldlevel = 3
 vim.opt.foldenable = false
-vim.opt.fillchars = { eob = " " }
-
 vim.opt.smoothscroll = true
-vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
-vim.opt.foldmethod = "expr"
-vim.opt.foldtext = ""
+
+--- Markdown folding
+vim.o.fillchars = "fold: ";
+vim.o.foldmethod = "expr";
+vim.o.foldexpr = "v:lua.vim.treesitter.foldexpr()";
+vim.o.foldtext = "";
+vim.opt.foldcolumn = '0'
+vim.opt.foldlevel = 99
+-- vim.opt.foldlevelstart = 1
+vim.opt.foldnestmax = 1
+vim.o.foldenable = true
 
 -- TODO: Move to separate file
 vim.opt.laststatus = vim.opt.clipboard:append 'unnamedplus' -- use system clipboard as default register
