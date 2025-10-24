@@ -10,7 +10,7 @@ function M.smart_action()
 
   -- cycles through your custom UI checkboxes, default: [ ] [~] [>] [x]
   -- Uses the task warrior integration to toggle
-  return "<cmd>TWToggle<CR>"
+  return "<cmd>ObsidianToggleCheckbox<CR>"
 end
 
 function M.yank_code_block()

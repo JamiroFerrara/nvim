@@ -23,28 +23,28 @@ return {
         name = 'personal',
         path = '~/vault',
       },
-      -- {
-      --   name = 'no-vault',
-      --   path = function()
-      --     -- alternatively use the CWD:
-      --     -- return assert(vim.fn.getcwd())
-      --     return '~'
-      --   end,
-      --   overrides = {
-      --     notes_subdir = vim.NIL, -- have to use 'vim.NIL' instead of 'nil'
-      --     new_notes_location = 'current_dir',
-      --     templates = {
-      --       folder = vim.NIL,
-      --     },
-      --     wiki_link_func = 'prepend_note_path',
-      --     disable_frontmatter = true,
-      --     note_path_func = function(spec)
-      --       -- This is equivalent to the default behavior.
-      --       local path = '/home/jferrara/vault/' .. tostring(spec.id)
-      --       return path .. '.md'
-      --     end,
-      --   },
-      -- },
+      {
+        name = 'no-vault',
+        path = function()
+          -- alternatively use the CWD:
+          -- return assert(vim.fn.getcwd())
+          return '~'
+        end,
+        overrides = {
+          notes_subdir = vim.NIL, -- have to use 'vim.NIL' instead of 'nil'
+          new_notes_location = 'current_dir',
+          templates = {
+            folder = vim.NIL,
+          },
+          wiki_link_func = 'prepend_note_path',
+          disable_frontmatter = true,
+          note_path_func = function(spec)
+            -- This is equivalent to the default behavior.
+            local path = '/home/jferrara/vault/' .. tostring(spec.id)
+            return path .. '.md'
+          end,
+        },
+      },
     },
     log_level = vim.log.levels.INFO,
     -- daily_notes = {

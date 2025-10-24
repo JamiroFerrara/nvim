@@ -17,7 +17,7 @@ return {
 
     -- WARNING: it may be slow to open large files, because it scan the whole buffer
     -- PERF: Figure out some performance hacks
-    vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost" }, {
+    vim.api.nvim_create_autocmd({ "BufWritePost" }, {
       group = vim.api.nvim_create_augroup("TWTask", { clear = true }),
       pattern = "*.md,*.markdown",
       callback = function()
