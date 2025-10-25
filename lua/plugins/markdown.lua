@@ -5,11 +5,12 @@ return {
   main = 'render-markdown',
   ft = 'markdown',
   opts = {
+    anti_conceal = { enabled = false },
     heading = {
       -- Turn on / off heading icon & background rendering
       enabled = true,
       -- Turn on / off any sign column related rendering
-      sign = true,
+      sign = false,
       -- Replaces '#+' of 'atx_h._marker'
       -- The number of '#' in the heading determines the 'level'
       -- The 'level' is used to index into the array using a cycle

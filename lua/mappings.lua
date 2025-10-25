@@ -24,14 +24,6 @@ return {
 
     -- Marks
     ['m'] = { "'", desc = 'Follow' },
-    -- ["="] = { "'h", desc = 'Go to mark h' },
-    -- ["["] = { "'j", desc = 'Go to mark k' },
-    -- ["]"] = { "'k", desc = 'Go to mark l' },
-    -- ["@"] = { "'l", desc = 'Go to mark l' },
-
-    -- Jira
-    -- ['<leader>jic'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 jira issue comment add; tmux select-pane -U")<CR>', desc = 'Follow' },
-
     ['<leader>fml'] = { '<cmd>CellularAutomaton make_it_rain<CR>', desc = 'Follow' },
 
     -- Leader Shortcuts
@@ -52,20 +44,10 @@ return {
     ['<leader>mt'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make test; tmux select-pane -U")<CR>', desc = 'Make test' },
     ['<leader>ml'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make local; tmux select-pane -U")<CR>', desc = 'Make local' },
     ['<leader>ms'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make start; tmux select-pane -U")<CR>', desc = 'Make start' },
-    ['<leader>mw'] = {
-      '<cmd>lua os.execute("tmux split-window -v -p 20 make watch; tmux select-pane -U")<CR><cmd>DapContinue<cr>',
-      desc = 'Make watch and continue',
-    },
-    ['<leader>mm'] = { '<cmd>Neomake<CR>', desc = 'Make' },
-    --FIX: ['C-m'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 ~/.scripts/m.sh")<CR>', desc = 'Make' },
-    --FIX: ['A-m'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 ~/.scripts/m.sh")<CR>', desc = 'Make' },
-
+    ['<leader>mw'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make watch; tmux select-pane -U")<CR><cmd>DapContinue<cr>', desc = 'Make watch and continue', },
     ['<leader>yy'] = { 'GVggy<cmd>q!<CR>', desc = 'Yank all and quit' },
-    -- ['<leader>dd'] = { '<cmd>set ma<cr><cmd>lua require("user.helpers").delete_lines()<CR>', desc = 'Delete lines' },
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
     ['<leader>aa'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
-    -- ['<leader><leader>i'] = { '<cmd>IconPickerNormal<cr>', desc = 'Pick icon' },
-    --
     ['mt'] = { '<cmd>e TODO.md<cr>', desc = 'Toggle Aerial' },
 
     ['<leader>fw'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
@@ -197,9 +179,11 @@ return {
 
     ['<leader>ac'] = { '<cmd>Copilot<CR>', desc = 'Complete code' },
 
-    ['<leader>oo'] = { "<cmd>lua require('helpers.markdown').fold_headings_of_level(4)<cr>" },
-    ['<leader>oc'] = { '<cmd>AerialTreeSyncFolds<cr>zRzm' },
-    ['<leader>oa'] = { '<cmd>AerialTreeSyncFolds<cr>zRjk' },
+    ['<leader>or'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(3)<cr>" },
+    ['<leader>oe'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(4)<cr>" },
+    ['<leader>ow'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(5)<cr>" },
+    ['<leader>oa'] = { "zR" },
+
     ['<C-z>'] = { '<cmd>lua Snacks.zen.zen()<cr>' },
 
     ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
@@ -505,5 +489,4 @@ return {
     [';;'] = { '<esc>A;<esc>', desc = 'Append semicolon at end of line' },
   },
 }
-
 

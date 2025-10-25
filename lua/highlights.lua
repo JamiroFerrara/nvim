@@ -22,12 +22,13 @@ vim.api.nvim_create_autocmd('BufEnter', {
 
     vim.cmd 'highlight @markup.quote guifg=@text'
 
-    vim.cmd 'highlight @markup.heading.1.markdown guifg=#ed8796 guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
-    vim.cmd 'highlight @markup.heading.2.markdown guifg=#f5a97f guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
-    vim.cmd 'highlight @markup.heading.3.markdown guifg=#eed49f guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
-    vim.cmd 'highlight @markup.heading.4.markdown guifg=#a6da95 guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
-    vim.cmd 'highlight @markup.heading.5.markdown guifg=#8aadf4 guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
-    vim.cmd 'highlight @markup.heading.6.markdown guifg=#b7bdf8 guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.1.markdown gui=bold guifg=#ed8796 guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.2.markdown gui=bold guifg=#f5a97f guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.3.markdown gui=bold guifg=#eed49f guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.4.markdown gui=bold guifg=#a6da95 guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.5.markdown gui=bold guifg=#8aadf4 guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight @markup.heading.6.markdown gui=bold guifg=#b7bdf8 guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+
     vim.cmd 'highlight @markup.link.label guifg=#c6a0f6' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
     vim.cmd 'highlight @markup.raw.block guibg=#292f45' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
 
@@ -37,3 +38,4 @@ vim.api.nvim_create_autocmd('BufEnter', {
     vim.cmd 'highlight Folded guibg=none guifg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
   end,
 })
+

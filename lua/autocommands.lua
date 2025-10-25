@@ -50,7 +50,8 @@ vim.api.nvim_create_autocmd('TermOpen', {
     vim.wo.signcolumn = 'no'
     vim.opt_local.modifiable = true
     vim.opt_local.readonly = false
-    vim.api.nvim_buf_set_keymap(0, 'n', '<Tab>', '<cmd>Oil<CR>', { noremap = true, silent = true, desc = 'Enter Oil if in terminal normal mode' })
+    vim.api.nvim_buf_set_keymap(0, 'n', '<Tab>', '<cmd>Oil<CR>',
+      { noremap = true, silent = true, desc = 'Enter Oil if in terminal normal mode' })
   end,
 })
 
@@ -86,7 +87,13 @@ vim.api.nvim_create_autocmd("FileType", {
 vim.api.nvim_create_autocmd('BufWinEnter', {
   pattern = { '*.md' },
   callback = function()
-    -- vim.opt.colorcolumn = "80"
     vim.opt.textwidth = 80
+    --- Markdown folding
+    function MarkdownFoldText()
+      local line = vim.fn.getline(vim.v.foldstart)
+      return line:gsub("^%s*", "") .. ""
+    end
+    vim.o.foldtext = 'v:lua.MarkdownFoldText()'
+    require('helpers.markdown').fold_headings_of_level(3)
   end,
 })

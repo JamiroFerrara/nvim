@@ -67,19 +67,13 @@ vim.opt.joinspaces = false
 vim.opt.wildmode = 'longest:full,full'
 vim.opt.mouse = 'a'
 vim.opt.undofile = true
-vim.opt.foldnestmax = 1
-vim.opt.foldlevel = 3
-vim.opt.foldenable = false
 vim.opt.smoothscroll = true
 
---- Markdown folding
 vim.o.fillchars = "fold: ";
 vim.o.foldmethod = "expr";
 vim.o.foldexpr = "v:lua.vim.treesitter.foldexpr()";
-vim.o.foldtext = "";
 vim.opt.foldcolumn = '0'
 vim.opt.foldlevel = 99
--- vim.opt.foldlevelstart = 1
 vim.opt.foldnestmax = 1
 vim.o.foldenable = true
 

@@ -6,7 +6,7 @@ function M.smart_action()
   local line = vim.api.nvim_get_current_line()
 
   -- Fold if the line contains at least one '#'
-  if line:find("#") then
+  if line:find("^#") then
     return "za"
   end
 
