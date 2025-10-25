@@ -37,18 +37,14 @@ tags: []
 - [ ] Flash highlight fixes 
 - [ ] Fix the lspserver loading black highlight 
 
-#### Manual Patches
-->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
-->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
-->/home/jferrara/.local/share/nvim/lazy/snacks.nvim/lua/snacks/picker/config/layouts.lua -> removed borders from ivy_split + vscode
 ### DAP 
 - [ ] Buffer completion from debug watch window using cmp 
 - [ ] dap seems to not work from any file (c#)? 
 - [ ] Error executing vim.sc lua callback: ...lazy/nvim-dap-virtual-text/lua/nvim-dap-virtual-text.lua:208: bad argument #1 to 'pairs' (table expected, got nil) 
 
 ### Keybinds 
-- [ ] viq does not allways work 
-- [ ] go back and fourth between file 
+- [?] viq does not allways work 
+- [?] go back and fourth between file 
 - [ ] %s///g  -> implement me (CRLF line endings) 
 - [ ] ctrl+delete remove full word in nvim 
 - [ ] ctrl+delete remove full word in term 
@@ -62,3 +58,8 @@ tags: []
 - [ ] Harpoon directly from terminal (abstact the copy mechanism) 
 - [ ] remove scrollback on clear (terminal) 
 - [ ] On terminal enter auto insert mode (and re-enter) 
+
+### Manual Patches
+->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
+->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
+->/home/jferrara/.local/share/nvim/lazy/snacks.nvim/lua/snacks/picker/config/layouts.lua -> removed borders from ivy_split + vscode

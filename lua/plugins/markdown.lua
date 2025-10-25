@@ -118,7 +118,7 @@ return {
         started = { raw = "[>]", rendered = "- ", highlight = "@markup.raw" },
         deleted = { raw = "[~]", rendered = "- ", highlight = "@markup.raw" },
         question = { raw = '[?]', rendered = '- ', highlight = '@comment.warning.gitcommit' },
-        -- warning = { raw = '[!]', rendered = '- ', highlight = '@comment.warning.gitcommit' },
+        warning = { raw = '[!]', rendered = '- ', highlight = '@comment.warning.gitcommit' },
       },
     },
     quote = {
