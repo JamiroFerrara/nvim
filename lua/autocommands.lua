@@ -1,3 +1,7 @@
+-------------------------------------------------
+-- [MISCELLANEUS]
+-------------------------------------------------
+
 -- Highlight when yanking (copying) text
 vim.api.nvim_create_autocmd('TextYankPost', {
   desc = 'Highlight when yanking (copying) text',
@@ -7,11 +11,32 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 
+-------------------------------------------------
+-- [C#]
+-------------------------------------------------
+
 vim.api.nvim_create_autocmd('BufWinEnter', {
-  pattern = { '*.md' },
+  pattern = '*.cs',
   callback = function()
-    -- vim.opt.colorcolumn = "80"
-    vim.opt.textwidth = 80
+    vim.api.nvim_set_keymap('n', 'gd', "<cmd>lua require('omnisharp_extended').lsp_definition()<cr>", {})
+  end,
+})
+
+-------------------------------------------------
+-- [TERMINAL]
+-------------------------------------------------
+
+vim.api.nvim_create_autocmd('FocusLost', {
+  pattern = '*',
+  callback = function()
+    vim.cmd 'hi TermCursor cterm=NONE gui=NONE'
+  end,
+})
+
+vim.api.nvim_create_autocmd('FocusGained', {
+  pattern = '*',
+  callback = function()
+    vim.cmd 'hi TermCursor cterm=reverse gui=reverse'
   end,
 })
 
@@ -36,24 +61,19 @@ vim.api.nvim_create_autocmd('TermClose', {
   end,
 })
 
-vim.api.nvim_create_autocmd('BufWinEnter', {
-  pattern = '*.cs',
-  callback = function()
-    vim.api.nvim_set_keymap('n', 'gd', "<cmd>lua require('omnisharp_extended').lsp_definition()<cr>", {})
-  end,
-})
+-------------------------------------------------
+-- [MARKDOWN]
+-------------------------------------------------
 
-vim.api.nvim_create_autocmd('FocusLost', {
-  pattern = '*',
+vim.api.nvim_create_autocmd('BufWritePre', {
+  pattern = '*.md',
   callback = function()
-    vim.cmd 'hi TermCursor cterm=reverse gui=reverse'
-  end,
-})
-
-vim.api.nvim_create_autocmd('FocusGained', {
-  pattern = '*',
-  callback = function()
-    vim.cmd 'hi TermCursor cterm=NONE gui=NONE'
+    vim.cmd([[
+      silent! TableModeEnable
+      silent! TableModeRealign
+      silent! TableEvalFormulaLine
+      silent! TableModeDisable
+    ]])
   end,
 })
 
@@ -61,4 +81,12 @@ vim.api.nvim_create_autocmd('FocusGained', {
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "markdown",
   callback = require('helpers.markdown').set_markdown_folding,
+})
+
+vim.api.nvim_create_autocmd('BufWinEnter', {
+  pattern = { '*.md' },
+  callback = function()
+    -- vim.opt.colorcolumn = "80"
+    vim.opt.textwidth = 80
+  end,
 })
