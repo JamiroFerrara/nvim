@@ -9,13 +9,6 @@ tags: []
 - [ ] Replace Omnisharp with Roslyn LSP 
 - [ ] csharp large projects slow 
 
-### Markdown 
-- [ ] Markdown header folding -> https://linkarzu.com/posts/neovim/markdown-setup-2024/#marksman 
-- [ ] Markview ?
-- [ ] bold fonts for markdown 
-- [ ] italic fonts for markdown 
-
-
 ## Plugins
 ### Plugins New 
 - [ ] junegunn/vim-easy-align 

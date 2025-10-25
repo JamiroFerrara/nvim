@@ -66,7 +66,7 @@ return {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z\\"")<CR>',
       desc = 'toggle term bottom',
     },
-    ['<A-t>'] = { ':term<cr>', desc = 'Follow' },
+    ['<A-t>'] = { '<cmd>term<cr>', desc = 'Follow' },
     ['<C-t>'] = {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\"")<CR>',
       desc = 'toggle term bottom',
@@ -252,7 +252,11 @@ return {
     ['X'] = { 's' },
     ['<leader>se'] = { '<cmd>lua require("luasnip.loaders").edit_snippet_files()<cr><cr>")' },
     ['<leader>ip'] = { '<cmd>IconPickerNormal<cr>' },
-    ['<leader>q'] = { '<C-\\><C-n>:q<cr>' },
+    
+    --NOTE: old quit, in terminal i'm faking it ['<leader>q'] = { '<C-\\><C-n>:q<cr>' },
+    ['<leader>q'] = { '<cmd>write<cr><cmd>term<cr>' },
+    ['<A-q>'] = { '<cmd>write<cr><cmd>term<cr>' },
+    ['<C-q>'] = { '<cmd>write<cr><cmd>term<cr>' },
 
     ['<M-w>'] = { '<cmd>q<cr>' },
 

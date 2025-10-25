@@ -29,6 +29,8 @@ vim.api.nvim_create_autocmd('BufEnter', {
     vim.cmd 'highlight @markup.heading.5.markdown gui=bold guifg=#8aadf4 guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
     vim.cmd 'highlight @markup.heading.6.markdown gui=bold guifg=#b7bdf8 guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
 
+    vim.cmd 'highlight link RenderMarkdownDash Comment'
+
     vim.cmd 'highlight @markup.link.label guifg=#c6a0f6' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
     vim.cmd 'highlight @markup.raw.block guibg=#292f45' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
 
