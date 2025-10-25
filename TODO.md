@@ -43,8 +43,8 @@ tags: []
 - [ ] Error executing vim.sc lua callback: ...lazy/nvim-dap-virtual-text/lua/nvim-dap-virtual-text.lua:208: bad argument #1 to 'pairs' (table expected, got nil) 
 
 ### Keybinds 
-- [?] viq does not allways work 
-- [?] go back and fourth between file 
+- [ ] viq does not allways work 
+- [ ] go back and fourth between file 
 - [ ] %s///g  -> implement me (CRLF line endings) 
 - [ ] ctrl+delete remove full word in nvim 
 - [ ] ctrl+delete remove full word in term 
