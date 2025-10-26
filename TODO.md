@@ -7,6 +7,13 @@ tags: []
 ## Languages
 ### Markdown
 - [ ] Better folding keybind ergonomics 
+- [ ] Auto heading folding
+- [ ] Fix markdown heading highlighs
+- [ ] Instant markdown heading checkbox add
+- [ ] Follow markdown url links with brave
+- [ ] Paste image in markdown
+- [ ] Cicle through less checkbox states
+
 ### Csharp 
 - [ ] Replace Omnisharp with Roslyn LSP 
 - [ ] csharp large projects slow 
@@ -45,6 +52,7 @@ tags: []
 - [ ] ctrl+delete remove full word in term 
 - [ ] focus url bar in brave 
 - [ ] Git log + file search from the log 
+- [ ] Delete last word
 
 ### Terminal 
 - [ ] Currently, when running nvim from terminal the initial terminal instance dies, but it should restore if term instance is open 
@@ -53,9 +61,17 @@ tags: []
 - [ ] Harpoon directly from terminal (abstact the copy mechanism) 
 - [ ] remove scrollback on clear (terminal) 
 - [ ] On terminal enter auto insert mode (and re-enter) 
+- [ ] Delete last word
+- [ ] Edit long command in terminal -> [h.misc edit command in terminal](https://www.youtube.com/watch?v=OKuUoZaPiwEk)
+- [ ] Paste without windows return chars
 
 ### Tmux
 - [ ] Make tmux look nicer [h.misc video](https://www.youtube.com/watch?v=6Jgl5wphD00&t=4s)
+
+### Moonlander
+- [ ] j+v should bring me to nvim config automatically
+- [ ] Add fucking tilde
+
 ### Manual Patches
 ->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
 ->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775

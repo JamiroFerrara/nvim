@@ -5,7 +5,7 @@ return {
   main = 'render-markdown',
   ft = 'markdown',
   opts = {
-    anti_conceal = { enabled = false },
+    -- anti_conceal = { enabled = false },
     heading = {
       -- Turn on / off heading icon & background rendering
       enabled = true,
