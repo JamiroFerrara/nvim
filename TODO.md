@@ -5,6 +5,8 @@ tags: []
 ---
 
 ## Languages
+### Markdown
+- [ ] Better folding keybind ergonomics 
 ### Csharp 
 - [ ] Replace Omnisharp with Roslyn LSP 
 - [ ] csharp large projects slow 
@@ -52,6 +54,8 @@ tags: []
 - [ ] remove scrollback on clear (terminal) 
 - [ ] On terminal enter auto insert mode (and re-enter) 
 
+### Tmux
+- [ ] Make tmux look nicer [h.misc video](https://www.youtube.com/watch?v=6Jgl5wphD00&t=4s)
 ### Manual Patches
 ->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
 ->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
