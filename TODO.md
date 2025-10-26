@@ -53,6 +53,7 @@ tags: []
 - [ ] focus url bar in brave 
 - [ ] Git log + file search from the log 
 - [ ] Delete last word
+- [ ] git push with insta commit keybind  
 
 ### Terminal 
 - [ ] Currently, when running nvim from terminal the initial terminal instance dies, but it should restore if term instance is open 
