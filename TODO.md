@@ -73,6 +73,9 @@ tags: []
 - [ ] j+v should bring me to nvim config automatically
 - [ ] Add fucking tilde
 
+### Yml scripts
+- [ ] Fix zsh yaml script text glitch 
+
 ### Manual Patches
 ->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
 ->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
