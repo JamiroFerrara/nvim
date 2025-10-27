@@ -70,6 +70,7 @@ tags: []
 - [ ] Delete word
 - [ ] Lazygit change copy path mapping
 - [ ] Lazygit automap to file with nvim
+- [ ] xdg-open -> brave
 
 ### Moonlander
 - [ ] j+v should bring me to nvim config automatically
@@ -79,7 +80,7 @@ tags: []
 ### Yml scripts
 - [ ] Fix zsh yaml script text glitch 
 
-### Manual Patches
+### Manual Package Patches
 ->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
 ->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
 ->/home/jferrara/.local/share/nvim/lazy/snacks.nvim/lua/snacks/picker/config/layouts.lua -> removed borders from ivy_split + vscode

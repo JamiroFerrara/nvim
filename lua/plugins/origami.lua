@@ -12,7 +12,7 @@ return {
 	foldtext = {
 		enabled = true,
 		lineCount = {
-			template = "", -- `%d` gets the number of folded lines
+			template = " ", -- `%d` gets the number of folded lines
 			hlgroup = "Comment",
 		},
 		diagnostics = {
