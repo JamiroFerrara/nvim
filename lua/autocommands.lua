@@ -55,6 +55,12 @@ vim.api.nvim_create_autocmd('TermOpen', {
   end,
 })
 
+-- -- FIX: Doesn't seem to be working
+-- vim.api.nvim_create_autocmd("BufEnter", {
+--   pattern = "term://*",
+--   command = "startinsert"
+-- })
+
 vim.api.nvim_create_autocmd('TermClose', {
   pattern = '*',
   callback = function()

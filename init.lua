@@ -6,8 +6,7 @@ vim.g.maplocalleader = ' '
 -- TODO: Move me
 vim.api.nvim_set_keymap('n', '<C-w>d', '<Nop>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<C-w><C-d>', '<Nop>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<C-w>', '<cmd>lua require("harpoon.ui").nav_file(2)<cr>',
-  { noremap = true, silent = true, nowait = true })
+vim.api.nvim_set_keymap('n', '<C-w>', '<cmd>lua require("harpoon.ui").nav_file(2)<cr>', { noremap = true, silent = true, nowait = true })
 
 -- General Settings
 vim.g.have_nerd_font = true
@@ -86,10 +85,10 @@ vim.g.clipboard = {
     ['*'] = { 'xclip', '-quiet', '-i', '-selection', 'primary' },
   },
   paste = {
-    ['+'] = { 'xclip', '-o', '-selection', 'clipboard' },
-    ['*'] = { 'xclip', '-o', '-selection', 'primary' },
+    ['+'] = { 'sh', '-c', 'xclip -o -selection clipboard | sed "s/\\r$//"' },
+    ['*'] = { 'sh', '-c', 'xclip -o -selection primary | sed "s/\\r$//"' },
   },
-  cache_enabled = 1, -- cache MUST be enabled, or else it hangs on dd/y/x and all other copy operations
+  cache_enabled = 1,
 }
 
 -- LineNr jumplist mappings for 'k' and 'j'
