@@ -84,3 +84,34 @@ tags: []
 ->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
 ->/home/jferrara/.local/share/nvim/lazy/snacks.nvim/lua/snacks/picker/config/layouts.lua -> removed borders from ivy_split + vscode
 ->/home/jferrara/.local/share/nvim/lazy/nvim-origami/lua/origami/features/foldtext.lua -> comment line 21 and 22
+
+## Optimization
+### Terminal Startup
+	1. neopostman.nvim 19.16ms
+	2. telescope.nvim 16.38ms
+	3. lazy.nvim 10.05ms
+	4. nvim-treesitter 7.46ms
+	5. lualine.nvim 5.05ms
+	6. telescope-frecency.nvim 4.94ms
+	7. tmux.nvim 3.48ms
+	8. playground 3.8ms
+	9. term-edit.nvim 2.79ms
+	10. nvim-origami 2.08ms
+	11. telescope-git-file-history.nvim 1.57ms
+	12. snacks.nvim 1.45ms
+	13. nvim-treesitter-textobjects 1.47ms
+	14. smear-cursor.nvim 1.14ms
+	15. flash.nvim 1.04ms
+	16. vim-fugitive 1.03ms
+	17. nvim-transparent 0.95ms
+	18. nui.nvim 0.27ms
+	19. zen-mode.nvim 0.25ms
+	20. nvim-web-devicons 0.24ms
+	21. telescope-ui-select.nvim 0.22ms
+	22. telescope-fzf-native.nvim 0.2ms
+	23. plenary.nvim 0.3ms
+	24. w3m.vim 0.32ms
+	25. conform.nvim 0.15ms
+	26. impatient.nvim 0.06ms
+	27. nvim 0.05ms colorscheme catppuccin
+
