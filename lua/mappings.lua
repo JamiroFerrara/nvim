@@ -183,6 +183,7 @@ return {
     ['<leader>oe'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(4)<cr>" },
     ['<leader>ow'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(5)<cr>" },
     ['<leader>oa'] = { "zR" },
+    ['<leader>oo'] = { "zR" },
 
     ['<C-z>'] = { '<cmd>lua Snacks.zen.zen()<cr>' },
 
@@ -491,6 +492,14 @@ return {
     ['j0'] = { '<esc>A<space>=<space>', desc = 'Append "= " at end of line' },
     ['§'] = { '`', desc = 'Jump to mark' },
     [';;'] = { '<esc>A;<esc>', desc = 'Append semicolon at end of line' },
+
+    ['<C-Del>'] = { '<C-w>', desc = 'Delete word' },
+    ['<C-BS>'] = { '<C-w>', desc = 'Delete word' },
   },
+
+  -- Command mode
+  c = {
+    ['<C-Del>'] = { '<C-w>', desc = 'Delete word' },
+  }
 }
 

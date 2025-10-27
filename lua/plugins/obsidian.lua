@@ -172,9 +172,8 @@ return {
     -- URL it will be ignored but you can customize this behavior here.
     ---@param url string
     follow_url_func = function(url)
-      --TODO: Open the URL in the default web browser.
-      vim.fn.jobstart { 'source ~/.zshrc && brave', url } -- Mac OS
-      -- vim.fn.jobstart({"xdg-open", url})  -- linux
+      -- FIX: This is not great since it's based on absolute paths, the second brave path changes it's going to break.
+      vim.fn.system('/mnt/c/Users/jferrara/AppData/Local/BraveSoftware/Brave-Browser/Application/brave.exe "' .. url .. '"')
     end,
 
     -- Optional, set to true if you use the Obsidian Advanced URI plugin.
