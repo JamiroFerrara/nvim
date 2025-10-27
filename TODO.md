@@ -41,6 +41,9 @@ tags: []
 - [ ] When running lazygit do the tmux trick like nvim 
 
 ## General
+### Folds
+- [ ] Fix csharp folding 
+
 ### Highlights
 - [ ] Flash highlight fixes 
 - [ ] Fix the lspserver loading black highlight 
@@ -69,10 +72,10 @@ tags: []
 - [ ] Harpoon directly from terminal (abstact the copy mechanism) 
 - [ ] remove scrollback on clear (terminal) 
 - [ ] On terminal enter auto insert mode (and re-enter) 
-- [ ] Delete last word
 - [ ] Edit long command in terminal -> [h.misc edit command in terminal](https://www.youtube.com/watch?v=OKuUoZaPiwEk)
 - [ ] Paste without windows return chars
 - [ ] Disable terminal blinking
+- [ ] Delete word
 
 ### Tmux
 - [ ] Make tmux look nicer [h.misc video](https://www.youtube.com/watch?v=6Jgl5wphD00&t=4s)
