@@ -12,6 +12,7 @@ function M.smart_action()
 
   -- Follow link if possible
   if util.cursor_on_markdown_link(nil, nil, true) then
+    -- TODO: Change to go to definition
     return "<cmd>ObsidianFollowLink<CR>"
   end
 

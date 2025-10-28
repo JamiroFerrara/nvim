@@ -15,6 +15,7 @@ tags: []
 - [ ] Cicle through less checkbox states
 - [ ] Search markdown headings with marksman
 - [ ] Jump between markdown headings in lazyvim
+- [ ] when i press o on markdown header it goes to line beneath
 - [>] Replace obsidian with marksman:
 	- [ ] Heading search
 
@@ -28,7 +29,6 @@ tags: []
 - [ ] ysmb-wtsg/in-and-out.nvim 
 - [ ] Markdown preview
 - [ ] https://github.com/lfilho/note2cal.nvim
-
 ### Plugins Edit
 - [ ] himalaya setup using oAuth2.0 -> https://docs.rs/crate/himalaya/latest 
 - [?] bigger dadbod results window (half screen?) 
@@ -36,6 +36,13 @@ tags: []
 - [ ] Flat list todo trouble 
 - [ ] Copilot is off 
 - [ ] When running lazygit do the tmux trick like nvim 
+- [ ] gcalcli change to stiwiemayday as to see all events
+
+### Chrome Network 
+- [ ] Add error state to api list 
+- [ ] curl repeat
+- [ ] view requesta data
+- [ ] parse url ?
 
 ## General
 ### Folds
@@ -51,16 +58,17 @@ tags: []
 - [ ] Error executing vim.sc lua callback: ...lazy/nvim-dap-virtual-text/lua/nvim-dap-virtual-text.lua:208: bad argument #1 to 'pairs' (table expected, got nil) 
 
 ### Keybinds
+- [?] ctrl+delete remove full word in nvim 
+- [?] ctrl+delete remove full word in term
 - [ ] viq does not allways work 
-- [x] go back and fourth between file 
-- [ ] %s///g  -> implement me (CRLF line endings) 
-- [ ] ctrl+delete remove full word in nvim 
-- [ ] ctrl+delete remove full word in term
-- [ ] focus url bar in brave 
+- [~] C-y focus url bar in brave 
 - [ ] Git log + file search from the log 
 - [ ] Delete last word
 - [ ] git push with insta commit keybind  
 - [ ] vault autosync
+- [ ] alt+enter should spawn terminal if none exists, if not should minimize and or full screen it 
+- [ ] alt+h alt+l should conditionally check if there's a pane on left if not
+should execute the glaze command
 
 ### Terminal
 - [ ] When in terminal ctrl+c must send the char to terminal 
@@ -71,6 +79,7 @@ tags: []
 - [ ] Lazygit change copy path mapping
 - [ ] Lazygit automap to file with nvim
 - [ ] xdg-open -> brave
+- [ ] fix nvim terminal text cutoff
 
 ### Moonlander
 - [ ] j+v should bring me to nvim config automatically
@@ -81,10 +90,8 @@ tags: []
 - [ ] Fix zsh yaml script text glitch 
 
 ### Manual Package Patches
-->/home/jferrara/.local/share/nvim/lazy/typescript-tools.nvim/lua/typescript-tools/protocol/module_mapper.lua line 41
-->/home/jferrara/.local/share/nvim/lazy/obsidian.nvim/lua/obsidian/util.lua line 775
-->/home/jferrara/.local/share/nvim/lazy/snacks.nvim/lua/snacks/picker/config/layouts.lua -> removed borders from ivy_split + vscode
-->/home/jferrara/.local/share/nvim/lazy/nvim-origami/lua/origami/features/foldtext.lua -> comment line 21 and 22
+/home/jferrara/.local/share/nvim/lazy/snacks.nvim/lua/snacks/picker/config/layouts.lua -> removed borders from ivy_split + vscode
+/home/jferrara/.local/share/nvim/lazy/nvim-origami/lua/origami/features/foldtext.lua -> comment line 21 and 22
 
 ## Optimization
 ### Terminal Startup
@@ -114,5 +121,4 @@ tags: []
 	24. w3m.vim 0.32ms
 	25. conform.nvim 0.15ms
 	26. impatient.nvim 0.06ms
-	27. nvim 0.05ms colorscheme catppuccin
-
+	- [x] 27. nvim 0.05ms colorscheme catppuccin
