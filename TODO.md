@@ -6,8 +6,10 @@ tags: []
 
 ## Languages
 ### Markdown
-- [x] Fix markdown heading highlighs
+- [~] Fix markdown heading highlighs:
+	- [ ] It's not actually working, only when harpooning to the file directly
 - [x] Follow markdown url links with brave
+- [ ] markdown smart action sometimes does not work
 - [ ] Better folding keybind ergonomics 
 - [ ] Auto heading folding
 - [ ] Instant markdown heading checkbox add

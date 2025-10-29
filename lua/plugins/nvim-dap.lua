@@ -61,7 +61,7 @@ return {
         cwd = '${fileDirname}',
         name = 'NetCoreDbg: Launch',
         program = function()
-          return require('configs.nvim-dap-dotnet').build_dll_path()
+          return require('helpers.nvim-dap-dotnet').build_dll_path()
         end,
         request = 'launch',
         type = 'coreclr',
