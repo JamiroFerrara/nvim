@@ -224,6 +224,8 @@ return {
     ['<A-k>'] = { '<cmd>lua require("tmux").move_top()<cr>' },
     ['<A-l>'] = { '<cmd>lua require("tmux").move_right()<cr>' },
 
+    ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" }, --FIX: This should just use the snacks version, but need to figure out the window. Also fights with other zen
+
     ['<A-s>'] = { ':vsp<cr>:sleep 50m<cr><C-o>' },
     ['<A-S>'] = { ':sp<cr>:sleep 50m<cr><C-o>' },
     ["'"] = { '$' },
