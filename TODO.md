@@ -82,6 +82,7 @@ should execute the glaze command
 - [ ] Lazygit automap to file with nvim
 - [ ] xdg-open -> brave
 - [ ] fix nvim terminal text cutoff
+- [ ] launch nvim terminal applications from terminal
 
 ### Moonlander
 - [ ] j+v should bring me to nvim config automatically
