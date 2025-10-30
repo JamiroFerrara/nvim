@@ -96,6 +96,7 @@ function _G.markdown_foldexpr()
 end
 
 M.set_markdown_folding = function()
+  vim.opt.foldtext = "" -- keep syntax highlighting
   vim.opt_local.foldmethod = "expr"
   vim.opt_local.foldexpr = "v:lua.markdown_foldexpr()"
   vim.opt_local.foldlevel = 99

@@ -69,8 +69,8 @@ tags: []
 - [ ] git push with insta commit keybind  
 - [ ] vault autosync
 - [ ] alt+enter should spawn terminal if none exists, if not should minimize and or full screen it 
-- [ ] alt+h alt+l should conditionally check if there's a pane on left if not
-should execute the glaze command
+- [ ] alt+h alt+l should conditionally check if there's a pane on left if not should execute the glaze command
+- [ ] alt+o in insert mode terminal
 
 ### Terminal
 - [ ] When in terminal ctrl+c must send the char to terminal 

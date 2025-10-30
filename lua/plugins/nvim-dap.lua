@@ -66,7 +66,12 @@ return {
         request = 'launch',
         type = 'coreclr',
         env = {
-          ASPNETCORE_ENVIRONMENT = "development", -- Matches your `launchSettings.json`
+          ASPNETCORE_ENVIRONMENT = function()
+            return "PROD"
+          end,
+          ASPNETCORE_URLS = function()
+            return "http://localhost:8000"
+          end,
         },
       },
     }

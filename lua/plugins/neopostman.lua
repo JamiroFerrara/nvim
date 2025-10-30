@@ -11,7 +11,8 @@ return {
       "NeoMake",
       "Neogithub",
       "NeoNotifications",
-      "Neopostman"
+      "Neopostman",
+      "ChromeNetwork"
     },
     dependencies = { 'MunifTanjim/nui.nvim' },
     config = function()
