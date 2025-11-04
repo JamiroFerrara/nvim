@@ -380,7 +380,6 @@ return {
     ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
     ['<Esc>'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     ['kj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
-    ['jj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
 
     ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h")<cr>' },
     ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v")<cr>' },

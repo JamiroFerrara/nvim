@@ -86,9 +86,13 @@ tags: []
 
 ### Moonlander
 - [ ] j+v should bring me to nvim config automatically
-- [ ] Add fucking tilde
+- [ ] j+c should bring me to tmux calendar + taskwarrior
 - [ ] k layer does not seem to be mapped to anything
+- [ ] Add fucking tilde
 
+### Taskwarrior
+- [ ] Dependent tasks arent showed toghether 
+- [ ] Google calendar integration
 ### Yml scripts
 - [ ] Fix zsh yaml script text glitch 
 
