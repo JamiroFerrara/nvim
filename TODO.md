@@ -5,6 +5,10 @@ tags: []
 ---
 
 ## Languages
+### Org
+- [ ] Checkboxes
+- [ ] Folding
+- [ ] Agenda backspace go back
 ### Markdown
 - [~] Fix markdown heading highlighs:
 	- [ ] It's not actually working, only when harpooning to the file directly
@@ -18,6 +22,7 @@ tags: []
 - [ ] Search markdown headings with marksman
 - [ ] Jump between markdown headings in lazyvim
 - [ ] when i press o on markdown header it goes to line beneath
+- [ ] Keep the rendering when switching buffers
 - [>] Replace obsidian with marksman:
 	- [ ] Heading search
 
@@ -30,6 +35,8 @@ tags: []
 - [x] junegunn/vim-easy-align 
 - [ ] ysmb-wtsg/in-and-out.nvim 
 - [ ] Markdown preview
+- [ ] tabout
+- [ ] treesj
 - [ ] https://github.com/lfilho/note2cal.nvim
 ### Plugins Edit
 - [ ] himalaya setup using oAuth2.0 -> https://docs.rs/crate/himalaya/latest 
