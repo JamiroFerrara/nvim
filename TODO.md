@@ -9,6 +9,22 @@ tags: []
 - [ ] Checkboxes
 - [ ] Folding
 - [ ] Agenda backspace go back
+- [ ] unable to update STIWIE calendar events
+- [ ] tables
+- [ ] TODO - DONE state switch
+- [ ] Custom TODO keywords + highlights
+- [ ] Calendar sync only TODO items
+- [ ] Calendar events start folded
+- [ ] Unable to go back to agenda from file if entered from there
+- [ ] archive (leader<o$>) is a little unergonomic
+- [ ] agenda buffer, refresh on enter
+- [ ] org captures
+- [ ] async gcal sync
+- [ ] autocompletion
+- [ ] link follow
+- [ ] Fold all has 3 modes
+- [ ] Fold all has message (make silent)
+- [ ] when running org markdown breaks
 ### Markdown
 - [~] Fix markdown heading highlighs:
 	- [ ] It's not actually working, only when harpooning to the file directly
