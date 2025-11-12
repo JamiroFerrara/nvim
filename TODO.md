@@ -10,6 +10,7 @@ tags: []
 - [ ] Folding
 - [ ] Agenda backspace go back
 - [ ] unable to update STIWIE calendar events
+- [ ] calendar events with same name don't work
 - [ ] tables
 - [ ] TODO - DONE state switch
 - [ ] Custom TODO keywords + highlights

@@ -10,10 +10,28 @@ return {
       -- ft = { 'org' },
       config = function()
         require('orgmode').setup({
+          win_split_mode = "horizontal",
+          -- org_startup_folded = "showeverything",
+          org_deadline_warning_days = 7,
+          org_cycle_separator_lines = 0,
+          org_indent_mode = true,
+          org_blank_before_new_entry = {
+            heading = false,
+            plain_list_item = false,
+          },
+          org_agenda_span = "month",
+          -- FIX: Doesn't work with "t" mapping
+          -- org_todo_keywords = { 'TODO', 'NEXT', 'DONE', 'PENDING' },
+          -- org_todo_keyword_faces = {
+          --   WAITING = ':foreground blue :weight bold',
+          --   DELEGATED = ':background #FFFFFF :slant italic :underline on',
+          --   TODO = ':background #000000 :foreground red', -- overrides builtin color for `TODO` keyword
+          -- },
           mappings = {
             org_return_uses_meta_return = true,
             global = {},
             org = {
+              --FIX: org_open_at_point = "<CR>",
               org_toggle_checkbox = "<CR>",
               org_global_cycle = "<leader>or",
               -- org_cycle = '<CR>' -- Header folding
@@ -25,10 +43,10 @@ return {
               org_agenda_priority = "<leader>p",
               org_agenda_priority_up = '+',
               org_agenda_priority_down = '-',
-              org_agenda_archive = '<BS>',
+              org_agenda_archive = 'd',
               org_agenda_schedule = '<leader>s',
               org_agenda_add_note = '<leader>n',
-              org_agenda_filter = 'f',
+              org_agenda_filter = '/',
               org_agenda_preview = 'L',
               org_agenda_show_help = '?',
             },
@@ -40,6 +58,76 @@ return {
               org_note_finalize = '<A-e>'
             },
           },
+          org_capture_templates = {
+            -- FIX:
+            j = {
+              description = 'Daily',
+              template = '\n*** %<%Y-%m-%d> %<%A>\n**** %U\n\n%?',
+              target = '~/org/daily/%<%Y-%m>.org'
+            },
+            t = {
+              description = 'Todo',
+              subtemplates = {
+                w = {
+                  description = 'work',
+                  target = '~/org/todo.org',
+                  headline = 'work',
+                  template = [[
+* TODO %^{Title} :work:
+  DEADLINE: %^{Due Date}t
+]],
+                },
+                p = {
+                  description = 'personal',
+                  target = '~/org/todo.org',
+                  headline = 'personal',
+                  template = [[
+* TODO %^{Title} :personal:
+  DEADLINE: %^{Due Date}t
+]],
+                },
+                f = {
+                  description = 'finance',
+                  target = '~/org/todo.org',
+                  headline = 'finance',
+                  template = [[
+* TODO %^{Title} :finance:
+                  ]],
+                },
+                m = {
+                  description = 'music',
+                  target = '~/org/todo.org',
+                  headline = 'music',
+                  template = [[
+* TODO %^{Title} :music:
+                  ]],
+                }
+              }
+            },
+            e = {
+              description = 'Event',
+              subtemplates = {
+                w = {
+                  description = 'work',
+                  template = [[
+** TODO %^{Title} :work:
+  SCHEDULED: %^{SCHEDULED Date and Time}T
+]],
+                  target = '~/org/calendar.org',
+                  headline = 'work'
+                },
+                p = {
+                  description = 'personal',
+                  template = [[
+** TODO %^{Title} :personal:
+  SCHEDULED: %^{SCHEDULED Date and Time}T
+]],
+                  target = '~/org/calendar.org',
+                  headline = 'personal'
+                },
+              },
+            },
+          },
           org_agenda_files = '~/org/**/*',
           org_default_notes_file = '~/org/index.org',
           org_agenda_custom_commands = {
@@ -47,11 +135,17 @@ return {
             w = {
               description = 'Work View', -- Description shown in the prompt for the shortcut
               types = {
+                -- {
+                --   type = 'tags_todo',                       -- Type can be agenda | tags | tags_todo
+                --   match = '+PRIORITY="A"+work',             --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                --   org_agenda_overriding_header = 'High priority',
+                --   org_agenda_todo_ignore_deadlines = 'far', -- Ignore all deadlines that are too far in future (over org_deadline_warning_days). Possible values: all | near | far | past | future
+                -- },
                 {
-                  type = 'tags_todo',                       -- Type can be agenda | tags | tags_todo
-                  match = '+PRIORITY="A"+work',             --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
-                  org_agenda_overriding_header = 'High priority',
-                  org_agenda_todo_ignore_deadlines = 'far', -- Ignore all deadlines that are too far in future (over org_deadline_warning_days). Possible values: all | near | far | past | future
+                  type = 'tags',
+                  match = '+work', --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'Unscheduled',
+                  org_agenda_todo_ignore_scheduled = 'all',
                 },
                 {
                   type                              = 'agenda',
@@ -62,12 +156,6 @@ return {
                   org_agenda_remove_tags            = false,  -- Do not show tags only for this view
                   org_agenda_todo_ignore_scheduled  = 'past', --FIX: Not working
                   org_agenda_skip_scheduled_if_done = false,
-                },
-                {
-                  type = 'tags',
-                  match = '+work', --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
-                  org_agenda_overriding_header = 'Unscheduled',
-                  org_agenda_todo_ignore_scheduled = 'all',
                 },
               }
             },
@@ -118,6 +206,7 @@ return {
       "akinsho/org-bullets.nvim",
       opts = {},
     },
+    -- FIX: Slow as shit
     {
       "eprislac/org-gcal-sync",
       dependencies = {
@@ -129,11 +218,12 @@ return {
         vim.api.nvim_set_keymap("n", "<leader>od", "<cmd>OrgGcalDashboard<cr>", { noremap = true, silent = true })
         require("org-gcal-sync").setup({
           org_dirs = {
-            "~/org/events",
-            -- "~/org/gigs",
+            "~/org/gcal",
+            -- "~/org/calendar.org",
           },
           enable_backlinks = true, -- requires org-roam
-          auto_sync_on_save = false,
+          auto_sync_on_save = true,
+          background_sync_interval = 600000,
 
           -- Advanced features (optional)
           calendars = { "stiwiemayday@gmail.com", "3652dec984e222ff2640452ef7ddffd4b6f56f6f5c0b7b485d255b3eb91677c3@group.calendar.google.com" }, -- Add more calendars: { "primary", "work@company.com" }

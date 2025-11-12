@@ -69,8 +69,8 @@ vim.opt.undofile = true
 vim.opt.smoothscroll = true
 
 vim.o.fillchars = "fold: ";
-vim.o.foldmethod = "expr";
-vim.o.foldexpr = "v:lua.vim.treesitter.foldexpr()";
+-- vim.o.foldmethod = "expr";
+-- vim.o.foldexpr = "v:lua.vim.treesitter.foldexpr()";
 vim.opt.foldcolumn = '0'
 vim.opt.foldlevel = 99
 vim.opt.foldnestmax = 1

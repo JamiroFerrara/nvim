@@ -251,11 +251,12 @@ return {
     ['s'] = { '/' },
     ['Q'] = { '@' },
 
+    ['<C-u>'] = { '<esc>', desc = 'Exit insert mode' },
     -- ['<leader><leader>'] = { '@' },
     ['X'] = { 's' },
     ['<leader>se'] = { '<cmd>lua require("luasnip.loaders").edit_snippet_files()<cr><cr>")' },
     ['<leader>ip'] = { '<cmd>IconPickerNormal<cr>' },
-    
+
     --NOTE: old quit, in terminal i'm faking it ['<leader>q'] = { '<C-\\><C-n>:q<cr>' },
     ['<leader>q'] = { '<cmd>write<cr><cmd>term<cr>' },
     ['<A-q>'] = { '<cmd>write<cr><cmd>term<cr>' },
@@ -380,6 +381,7 @@ return {
     ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
     ['<Esc>'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     ['kj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
+    ['<C-u>'] = { '<C-\\><C-n><cmd>lua vim.defer_fn(function() vim.api.nvim_input("<leader>") end, 150)<CR>', desc = 'Exit terminal mode, wait, and trigger leader' },
 
     ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h")<cr>' },
     ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v")<cr>' },
@@ -472,6 +474,7 @@ return {
     ['jj'] = { '<esc>', desc = 'Exit insert mode' },
     ['JJ'] = { '<esc>', desc = 'Exit insert mode' },
     ['kj'] = { '<esc>', desc = 'Exit insert mode' },
+    ['<C-u>'] = { '<esc>', desc = 'Exit insert mode' },
     ['KJ'] = { '<esc>', desc = 'Exit insert mode' },
     ['jJ'] = { '<esc><cmd>w!<cr>', desc = 'Save and exit insert mode' },
     ['jp'] = { '<esc>:q!<cr>', desc = 'Quit without saving' },
@@ -503,4 +506,3 @@ return {
     ['<C-Del>'] = { '<C-w>', desc = 'Delete word' },
   }
 }
-

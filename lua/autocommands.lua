@@ -89,6 +89,11 @@ vim.api.nvim_create_autocmd("FileType", {
   callback = require('helpers.markdown').set_markdown_folding,
 })
 
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "org",
+  callback = require('helpers.org').set_org_folding,
+})
+
 -- FIX: This runs each time a buffer viewed, should do just once
 -- vim.api.nvim_create_autocmd({ 'BufWinEnter' }, {
 --   pattern = { '*.md' },
