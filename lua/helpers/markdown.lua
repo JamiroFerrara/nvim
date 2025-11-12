@@ -96,6 +96,12 @@ function _G.markdown_foldexpr()
 end
 
 M.set_markdown_folding = function()
+  vim.api.nvim_set_keymap('n', '<leader>or', "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(3)<cr>", { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<leader>oe', "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(4)<cr>", { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<leader>ow', "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(5)<cr>", { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<leader>oa', "zR", { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<leader>oo', "zR", { noremap = true, silent = true })
+
   vim.opt.foldtext = "" -- keep syntax highlighting
   vim.opt_local.foldmethod = "expr"
   vim.opt_local.foldexpr = "v:lua.markdown_foldexpr()"

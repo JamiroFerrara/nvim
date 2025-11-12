@@ -10,16 +10,16 @@ return {
       -- ft = { 'org' },
       config = function()
         require('orgmode').setup({
+          org_hide_leading_stars = false, -- optional
+          org_indent_mode = true,
           win_split_mode = "horizontal",
-          -- org_startup_folded = "showeverything",
           org_deadline_warning_days = 7,
           org_cycle_separator_lines = 0,
-          org_indent_mode = true,
           org_blank_before_new_entry = {
             heading = false,
             plain_list_item = false,
           },
-          org_agenda_span = "month",
+          org_agenda_span = "week",
           -- FIX: Doesn't work with "t" mapping
           -- org_todo_keywords = { 'TODO', 'NEXT', 'DONE', 'PENDING' },
           -- org_todo_keyword_faces = {
@@ -31,11 +31,7 @@ return {
             org_return_uses_meta_return = true,
             global = {},
             org = {
-              --FIX: org_open_at_point = "<CR>",
-              org_toggle_checkbox = "<CR>",
-              org_global_cycle = "<leader>or",
-              -- org_cycle = '<CR>' -- Header folding
-              -- org_toggle_heading = "",
+              org_refile = "<leader>oR",
             },
             agenda = {
               org_agenda_switch_to = "<Tab>",
@@ -74,7 +70,6 @@ return {
                   headline = 'work',
                   template = [[
 * TODO %^{Title} :work:
-  DEADLINE: %^{Due Date}t
 ]],
                 },
                 p = {
@@ -83,7 +78,6 @@ return {
                   headline = 'personal',
                   template = [[
 * TODO %^{Title} :personal:
-  DEADLINE: %^{Due Date}t
 ]],
                 },
                 f = {
@@ -198,46 +192,41 @@ return {
       end,
     },
     {
-      "lukas-reineke/headlines.nvim",
-      dependencies = "nvim-treesitter/nvim-treesitter",
-      config = true, -- or `opts = {}`
-    },
-    {
       "akinsho/org-bullets.nvim",
       opts = {},
     },
     -- FIX: Slow as shit
-    {
-      "eprislac/org-gcal-sync",
-      dependencies = {
-        "nvim-lua/plenary.nvim",
-        "nvim-orgmode/orgmode",
-        "jmbuhr/org-roam.nvim" -- optional
-      },
-      config = function()
-        vim.api.nvim_set_keymap("n", "<leader>od", "<cmd>OrgGcalDashboard<cr>", { noremap = true, silent = true })
-        require("org-gcal-sync").setup({
-          org_dirs = {
-            "~/org/gcal",
-            -- "~/org/calendar.org",
-          },
-          enable_backlinks = true, -- requires org-roam
-          auto_sync_on_save = true,
-          background_sync_interval = 600000,
-
-          -- Advanced features (optional)
-          calendars = { "stiwiemayday@gmail.com", "3652dec984e222ff2640452ef7ddffd4b6f56f6f5c0b7b485d255b3eb91677c3@group.calendar.google.com" }, -- Add more calendars: { "primary", "work@company.com" }
-          sync_recurring_events = true,
-          conflict_resolution = "newest",                                                                                                         -- "ask", "local", "remote", or "newest"
-          show_sync_status = true,
-          -- per_directory_calendars = {
-          --   ["~/org/events"] = "stiwiemayday@gmail.com",
-          --   ["~/org/gigs"] = "3652dec984e222ff2640452ef7ddffd4b6f56f6f5c0b7b485d255b3eb91677c3@group.calendar.google.com"
-          -- },
-          -- webhook_port = 8080,
-        })
-      end,
-    }
+    -- {
+    --   "eprislac/org-gcal-sync",
+    --   dependencies = {
+    --     "nvim-lua/plenary.nvim",
+    --     "nvim-orgmode/orgmode",
+    --     "jmbuhr/org-roam.nvim" -- optional
+    --   },
+    --   config = function()
+    --     vim.api.nvim_set_keymap("n", "<leader>od", "<cmd>OrgGcalDashboard<cr>", { noremap = true, silent = true })
+    --     require("org-gcal-sync").setup({
+    --       org_dirs = {
+    --         "~/org/gcal",
+    --         -- "~/org/calendar.org",
+    --       },
+    --       enable_backlinks = true, -- requires org-roam
+    --       auto_sync_on_save = false,
+    --       background_sync_interval = 600000,
+    --
+    --       -- Advanced features (optional)
+    --       calendars = { "stiwiemayday@gmail.com", "3652dec984e222ff2640452ef7ddffd4b6f56f6f5c0b7b485d255b3eb91677c3@group.calendar.google.com" }, -- Add more calendars: { "primary", "work@company.com" }
+    --       sync_recurring_events = true,
+    --       conflict_resolution = "newest",                                                                                                         -- "ask", "local", "remote", or "newest"
+    --       show_sync_status = true,
+    --       -- per_directory_calendars = {
+    --       --   ["~/org/events"] = "stiwiemayday@gmail.com",
+    --       --   ["~/org/gigs"] = "3652dec984e222ff2640452ef7ddffd4b6f56f6f5c0b7b485d255b3eb91677c3@group.calendar.google.com"
+    --       -- },
+    --       -- webhook_port = 8080,
+    --     })
+    --   end,
+    -- }
   },
   config = function()
     require("org-roam").setup({
