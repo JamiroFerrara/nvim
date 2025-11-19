@@ -55,11 +55,17 @@ return {
 
     ['vap'] = { 'vip' },
 
-    -- Obsidian Commands
-    ['<leader>ob'] = { '<cmd>ObsidianBacklinks<cr>' },
-    ['<leader>ot'] = { '<cmd>ObsidianToday<cr>' },
-    ['<leader>oT'] = { '<cmd>ObsidianTomorrow<cr>' },
-    ['<leader>oy'] = { '<cmd>ObsidianYesterday<cr>' },
+    --TODO: Obsidian Commands
+    --Theese are the obsidian related commands, but with org mode now need to
+    --figure out what to actually do with them.
+    -- ['<leader>ob'] = { '<cmd>ObsidianBacklinks<cr>' },
+    -- ['<leader>ot'] = { '<cmd>ObsidianToday<cr>' },
+    -- ['<leader>oT'] = { '<cmd>ObsidianTomorrow<cr>' },
+    -- ['<leader>oy'] = { '<cmd>ObsidianYesterday<cr>' },
+
+    -- Org commands 
+    ['<leader>ot'] = { '<cmd>lua require("helpers.org-menu"):_open_todo_client_submenu()<cr>' },
+    ['<leader>oa'] = { '<cmd>lua require("helpers.org-menu"):open_custom_menu()<cr>' },
 
     -- TMUX Commands
     ['<leader>th'] = {
@@ -182,8 +188,8 @@ return {
     ['<leader>or'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(3)<cr>" },
     ['<leader>oe'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(4)<cr>" },
     ['<leader>ow'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(5)<cr>" },
-    ['<leader>oa'] = { "zR" },
-    ['<leader>oo'] = { "zR" },
+    -- ['<leader>oa'] = { "zR" },
+    -- ['<leader>oo'] = { "zR" },
 
     ['<C-z>'] = { '<cmd>lua Snacks.zen.zen()<cr>' },
 
@@ -258,9 +264,11 @@ return {
     ['<leader>ip'] = { '<cmd>IconPickerNormal<cr>' },
 
     --NOTE: old quit, in terminal i'm faking it ['<leader>q'] = { '<C-\\><C-n>:q<cr>' },
+    --FIX: If more than one window open it should close the window if not do the terminal trick
     ['<leader>q'] = { '<cmd>write<cr><cmd>term<cr>' },
+    ['q'] = { '<cmd>write<cr><cmd>term<cr>' },
     ['<A-q>'] = { '<cmd>write<cr><cmd>term<cr>' },
-    ['<C-q>'] = { '<cmd>write<cr><cmd>term<cr>' },
+    ['<C-q>'] = { 'q' },
 
     ['<M-w>'] = { '<cmd>q<cr>' },
 

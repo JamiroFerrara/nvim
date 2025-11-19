@@ -39,8 +39,8 @@ M.set_org_folding = function()
     { noremap = true, silent = true })
   vim.api.nvim_set_keymap('n', '<leader>ow', "zR<cmd>lua require('helpers.org').fold_headings_of_level(4)<cr>",
     { noremap = true, silent = true })
-  vim.api.nvim_set_keymap('n', '<leader>oa', "zR", { noremap = true, silent = true })
-  vim.api.nvim_set_keymap('n', '<leader>oo', "zR", { noremap = true, silent = true })
+  -- vim.api.nvim_set_keymap('n', '<leader>oa', "zR", { noremap = true, silent = true })
+  -- vim.api.nvim_set_keymap('n', '<leader>oo', "zR", { noremap = true, silent = true })
 
   vim.opt.foldtext = "" -- keep syntax highlighting
   vim.opt_local.foldmethod = "expr"

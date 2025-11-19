@@ -13,6 +13,7 @@ return {
           org_hide_leading_stars = false, -- optional
           org_indent_mode = true,
           win_split_mode = "horizontal",
+          org_use_property_inheritance = true,
           org_deadline_warning_days = 7,
           org_cycle_separator_lines = 0,
           org_blank_before_new_entry = {
@@ -20,23 +21,35 @@ return {
             plain_list_item = false,
           },
           org_agenda_span = "week",
-          -- FIX: Doesn't work with "t" mapping
-          -- org_todo_keywords = { 'TODO', 'NEXT', 'DONE', 'PENDING' },
-          -- org_todo_keyword_faces = {
-          --   WAITING = ':foreground blue :weight bold',
-          --   DELEGATED = ':background #FFFFFF :slant italic :underline on',
-          --   TODO = ':background #000000 :foreground red', -- overrides builtin color for `TODO` keyword
-          -- },
+          org_todo_keywords = { 'TODO', 'NEXT', 'PEND', 'TEST', 'WARN', 'DONE' },
+          org_todo_keyword_faces = {
+            NEXT = ':foreground #89b4fa',
+            PEND = ':foreground #eed49f',
+            WARN = ':foreground #f5a97f',
+            TEST = ':foreground #94e2d5',
+          },
+          ui = {
+            agenda = {
+              preview_window = {
+                wrap = false, -- This option is set by default
+                border = 'single'
+              }
+            }
+          },
           mappings = {
             org_return_uses_meta_return = true,
-            global = {},
+            global = {
+              org_agenda = "<leader>oA",
+            },
             org = {
               org_refile = "<leader>oR",
+              org_export = "<leader>oE",
+              org_set_tags_command = "T"
             },
             agenda = {
               org_agenda_switch_to = "<Tab>",
               org_agenda_goto = "<CR>",
-              org_agenda_priority = "<leader>p",
+              org_agenda_priority = "p",
               org_agenda_priority_up = '+',
               org_agenda_priority_down = '-',
               org_agenda_archive = 'd',
@@ -45,6 +58,9 @@ return {
               org_agenda_filter = '/',
               org_agenda_preview = 'L',
               org_agenda_show_help = '?',
+              org_agenda_later = "<C-f>",
+              org_agenda_set_tags = "T",
+              org_agenda_goto_date = '<leader>d',
             },
             capture = {
               org_capture_finalize = '<A-e>',
@@ -125,58 +141,88 @@ return {
           org_agenda_files = '~/org/**/*',
           org_default_notes_file = '~/org/index.org',
           org_agenda_custom_commands = {
-            -- "c" is the shortcut that will be used in the prompt
-            w = {
-              description = 'Work View', -- Description shown in the prompt for the shortcut
+            a = {
+              description = 'All', -- Description shown in the prompt for the shortcut
               types = {
-                -- {
-                --   type = 'tags_todo',                       -- Type can be agenda | tags | tags_todo
-                --   match = '+PRIORITY="A"+work',             --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
-                --   org_agenda_overriding_header = 'High priority',
-                --   org_agenda_todo_ignore_deadlines = 'far', -- Ignore all deadlines that are too far in future (over org_deadline_warning_days). Possible values: all | near | far | past | future
-                -- },
                 {
-                  type = 'tags',
-                  match = '+work', --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
-                  org_agenda_overriding_header = 'Unscheduled',
-                  org_agenda_todo_ignore_scheduled = 'all',
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+NEXT',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'NEXT',
                 },
                 {
-                  type                              = 'agenda',
-                  org_agenda_tag_filter_preset      = 'work', --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
-                  org_agenda_overriding_header      = 'Scheduled',
-                  org_agenda_span                   = 'week', -- 'week' is default, so it's not necessary here, just an example
-                  org_agenda_start_on_weekday       = 1,      -- Start on Monday
-                  org_agenda_remove_tags            = false,  -- Do not show tags only for this view
-                  org_agenda_todo_ignore_scheduled  = 'past', --FIX: Not working
-                  org_agenda_skip_scheduled_if_done = false,
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+TODO',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'TODO',
+                },
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+WARN',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'WARNING',
+                },
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+PEND',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'PENDING',
+                },
+              }
+            },
+            n = {
+              description = 'Next', -- Description shown in the prompt for the shortcut
+              types = {
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+NEXT',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'NEXT',
+                },
+              }
+            },
+            T = {
+              description = 'Testing', -- Description shown in the prompt for the shortcut
+              types = {
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+TEST',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'TEST',
+                },
+              }
+            },
+            t = {
+              description = 'Todo', -- Description shown in the prompt for the shortcut
+              types = {
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+TODO',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'TODO',
                 },
               }
             },
             p = {
-              description = 'Personal View', -- Description shown in the prompt for the shortcut
+              description = 'Pending', -- Description shown in the prompt for the shortcut
               types = {
                 {
-                  type = 'tags_todo',                       -- Type can be agenda | tags | tags_todo
-                  match = '+PRIORITY="A"+personal',         --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
-                  org_agenda_overriding_header = 'High priority',
-                  org_agenda_todo_ignore_deadlines = 'far', -- Ignore all deadlines that are too far in future (over org_deadline_warning_days). Possible values: all | near | far | past | future
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+PEND',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'PENDING',
                 },
+              }
+            },
+            w = {
+              description = 'Warning', -- Description shown in the prompt for the shortcut
+              types = {
                 {
-                  type                              = 'agenda',
-                  org_agenda_tag_filter_preset      = 'personal', --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
-                  org_agenda_overriding_header      = 'Scheduled',
-                  org_agenda_span                   = 'week',     -- 'week' is default, so it's not necessary here, just an example
-                  org_agenda_start_on_weekday       = 1,          -- Start on Monday
-                  org_agenda_remove_tags            = false,      -- Do not show tags only for this view
-                  org_agenda_todo_ignore_scheduled  = 'past',     --FIX: Not working
-                  org_agenda_skip_scheduled_if_done = false,
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+WARN',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'WARNING',
                 },
+              }
+            },
+            d = {
+              description = 'Done', -- Description shown in the prompt for the shortcut
+              types = {
                 {
-                  type = 'tags',
-                  match = '+personal', --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
-                  org_agenda_overriding_header = 'Unscheduled',
-                  org_agenda_todo_ignore_scheduled = 'all',
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+DONE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'WARNING',
                 },
               }
             },
@@ -193,7 +239,21 @@ return {
     },
     {
       "akinsho/org-bullets.nvim",
-      opts = {},
+      config = function()
+        require("org-bullets").setup({
+          symbols = {
+            headlines = { '● ', '󰎦 ', '󰎩 ', '󰎬 ', '󰎮 ', '󰎰 ' },
+            checkboxes = {
+              -- error = { "x", "@error" },
+              -- pending = { "", "@constant" },
+              -- warning = { "!", "@comment.warning.gitcommit" },
+              -- question = { "?", "@comment.warning.gitcommit" },
+              done = { "✓", "@org.keyword.done" },
+              todo = { " ", "@org.keyword.todo" },
+            },
+          }
+        })
+      end
     },
     -- FIX: Slow as shit
     -- {

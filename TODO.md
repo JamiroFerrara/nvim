@@ -123,6 +123,7 @@ tags: []
 ### Manual Package Patches
 /home/jferrara/.local/share/nvim/lazy/snacks.nvim/lua/snacks/picker/config/layouts.lua -> removed borders from ivy_split + vscode
 /home/jferrara/.local/share/nvim/lazy/nvim-origami/lua/origami/features/foldtext.lua -> comment line 21 and 22
+/home/jferrara/.local/share/nvim/lazy/orgmode/lua/orgmode/org/mappings.lua -> removed "Note taken on" string on line 856 
 
 ## Optimization
 ### Terminal Startup
