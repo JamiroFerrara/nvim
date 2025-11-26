@@ -8,6 +8,12 @@ local Menu = require('orgmode.ui.menu')
 local AgendaTypes = require('orgmode.agenda.types')
 local Agenda = require('orgmode').instance().agenda
 
+Agenda.projects = {
+  { name = 'dtm',      key = 'd', },
+  { name = 'allitude', key = 'a', },
+  { name = 'ing',      key = 'i', },
+}
+
 -- Open the custom menu
 function Agenda:open_custom_menu()
   local menu = self:_build_custom_menu()
@@ -29,24 +35,6 @@ function Agenda:_build_custom_menu()
       return self:agenda()
     end,
   })
-
-  -- Project TODO submenu
-  -- menu:add_option({
-  --   label = 'Todo',
-  --   key = 't',
-  --   action = function()
-  --     self:_open_todo_client_submenu()
-  --   end,
-  -- })
-
-
-  -- menu:add_option({
-  --   label = 'Match',
-  --   key = 'm',
-  --   action = function()
-  --     return self:tags()
-  --   end,
-  -- })
 
   -- Quit option
   menu:add_option({
@@ -74,7 +62,13 @@ function Agenda:_open_todo_project_submenu(name)
     end
   end
 
-  -- self:todos({ filter = project.name })
+  -- menu:add_option({
+  --   label = 'Match',
+  --   key = 'm',
+  --   action = function()
+  --     return self:tags()
+  --   end,
+  -- })
 
   menu:add_option({
     label = 'Back',
@@ -89,18 +83,13 @@ end
 ---@private
 function Agenda:_open_todo_client_submenu()
   -- Explicit project definitions with custom keys
-  local projects = {
-    { name = 'dtm',      key = 'd', },
-    { name = 'allitude', key = 'a', },
-    { name = 'ing',      key = 'i', },
-  }
 
   local menu = Menu:new({
     title = 'Client TODOs',
     prompt = 'Select a client',
   })
 
-  for _, project in ipairs(projects) do
+  for _, project in ipairs(Agenda.projects) do
     menu:add_option({
       label = project.name,
       key = project.key,
@@ -133,16 +122,19 @@ function Agenda:_build__custom_commands(name)
         span = opts.org_agenda_span,
         start_day = opts.org_agenda_start_day,
         start_on_weekday = opts.org_agenda_start_on_weekday,
+        todo_only = false, -- Fix not working
       },
       tags = {
         match_query = name .. opts.match,
         todo_ignore_scheduled = opts.org_agenda_todo_ignore_scheduled,
         todo_ignore_deadlines = opts.org_agenda_todo_ignore_deadlines,
+        todo_only = false, -- Fix not working
       },
       tags_todo = {
         match_query = name .. opts.match,
         todo_ignore_scheduled = opts.org_agenda_todo_ignore_scheduled,
         todo_ignore_deadlines = opts.org_agenda_todo_ignore_deadlines,
+        todo_only = false, -- Fix not working
       },
     }
 

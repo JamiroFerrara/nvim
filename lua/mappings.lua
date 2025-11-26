@@ -266,10 +266,7 @@ return {
     --NOTE: old quit, in terminal i'm faking it ['<leader>q'] = { '<C-\\><C-n>:q<cr>' },
     --FIX: If more than one window open it should close the window if not do the terminal trick
     ['<leader>q'] = { '<cmd>write<cr><cmd>term<cr>' },
-    ['q'] = { '<cmd>write<cr><cmd>term<cr>' },
     ['<A-q>'] = { '<cmd>write<cr><cmd>term<cr>' },
-    ['<C-q>'] = { 'q' },
-
     ['<M-w>'] = { '<cmd>q<cr>' },
 
     ['<leader>w'] = { '<cmd>only<cr><cmd>lua os.execute("tmux resize-pane -Z")<cr>' },

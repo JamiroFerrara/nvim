@@ -44,15 +44,18 @@ return {
             org = {
               org_refile = "<leader>oR",
               org_export = "<leader>oE",
-              org_set_tags_command = "T"
+              org_set_tags_command = "T",
+              org_archive_subtree = '<leader>d'
             },
             agenda = {
+              org_agenda_quit = "<C-w>",
               org_agenda_switch_to = "<Tab>",
               org_agenda_goto = "<CR>",
               org_agenda_priority = "p",
               org_agenda_priority_up = '+',
               org_agenda_priority_down = '-',
-              org_agenda_archive = 'd',
+              -- org_agenda_archive = 'd',
+              org_agenda_toggle_archive_tag = 'd',
               org_agenda_schedule = '<leader>s',
               org_agenda_add_note = '<leader>n',
               org_agenda_filter = '/',
@@ -72,11 +75,11 @@ return {
           },
           org_capture_templates = {
             -- FIX:
-            j = {
-              description = 'Daily',
-              template = '\n*** %<%Y-%m-%d> %<%A>\n**** %U\n\n%?',
-              target = '~/org/daily/%<%Y-%m>.org'
-            },
+            -- j = {
+            --   description = 'Daily',
+            --   template = '\n*** %<%Y-%m-%d> %<%A>\n**** %U\n\n%?',
+            --   target = '~/org/daily/%<%Y-%m>.org'
+            -- },
             t = {
               description = 'Todo',
               subtemplates = {
@@ -135,6 +138,15 @@ return {
                   target = '~/org/calendar.org',
                   headline = 'personal'
                 },
+                m = {
+                  description = 'music',
+                  template = [[
+** TODO %^{Title} :personal:
+  SCHEDULED: %^{SCHEDULED Date and Time}T
+]],
+                  target = '~/org/calendar.org',
+                  headline = 'music'
+                },
               },
             },
           },
@@ -146,23 +158,58 @@ return {
               types = {
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
-                  match = '/!+NEXT',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  match = '/!+NEXT-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'NEXT',
                 },
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
-                  match = '/!+TODO',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  match = '/!+TODO-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'TODO',
                 },
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
-                  match = '/!+WARN',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  match = '/!+WARN-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'WARNING',
                 },
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
-                  match = '/!+PEND',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  match = '/!+PEND-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'PENDING',
+                },
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+DONE-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'DONE',
+                },
+              }
+            },
+            A = {
+              description = 'Archive', -- Description shown in the prompt for the shortcut
+              types = {
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+NEXT+ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'NEXT',
+                },
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+TODO+ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'TODO',
+                },
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+WARN+ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'WARNING',
+                },
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+PEND+ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'PENDING',
+                },
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+DONE+ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'DONE',
                 },
               }
             },
@@ -171,7 +218,7 @@ return {
               types = {
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
-                  match = '/!+NEXT',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  match = '/!+NEXT-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'NEXT',
                 },
               }
@@ -181,7 +228,7 @@ return {
               types = {
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
-                  match = '/!+TEST',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  match = '/!+TEST-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'TEST',
                 },
               }
@@ -191,7 +238,7 @@ return {
               types = {
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
-                  match = '/!+TODO',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  match = '/!+TODO-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'TODO',
                 },
               }
@@ -201,7 +248,7 @@ return {
               types = {
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
-                  match = '/!+PEND',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  match = '/!+PEND-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'PENDING',
                 },
               }
@@ -211,7 +258,7 @@ return {
               types = {
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
-                  match = '/!+WARN',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  match = '/!+WARN-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'WARNING',
                 },
               }
@@ -222,7 +269,7 @@ return {
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
                   match = '/!+DONE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
-                  org_agenda_overriding_header = 'WARNING',
+                  org_agenda_overriding_header = 'DONE',
                 },
               }
             },
