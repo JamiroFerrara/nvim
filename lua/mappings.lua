@@ -506,7 +506,9 @@ return {
 
     ['<C-Del>'] = { '<C-w>', desc = 'Delete word' },
     ['<C-BS>'] = { '<C-w>', desc = 'Delete word' },
-    ['<C-w>'] = { '<cmd>q<cr>', desc = 'Delete word' },
+
+    ['<C-w>'] = { '<cmd>q<cr>' },
+    ['<M-w>'] = { '<cmd>q<cr>' },
   },
 
   -- Command mode
