@@ -3,9 +3,10 @@ return {
   -- event = 'VeryLazy',
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
   main = 'render-markdown',
-  ft = 'markdown',
+  ft = { 'markdown', 'Avante', 'copilot-chat', 'opencode_output' },
   opts = {
-    -- anti_conceal = { enabled = false },
+    anti_conceal = { enabled = false },
+    file_types = { 'markdown', 'opencode_output' },
     heading = {
       -- Turn on / off heading icon & background rendering
       enabled = true,
@@ -150,15 +151,15 @@ return {
       cell = 'padded',
       -- Gets placed in delimiter row for each column, position is based on alignmnet
       alignment_indicator = '━',
-        -- Characters used to replace table border
-        -- Correspond to top(3), delimiter(3), bottom(3), vertical, & horizontal
-        -- stylua: ignore
-        border = {
-            '┌', '┬', '┐',
-            '├', '┼', '┤',
-            '└', '┴', '┘',
-            '│', '─',
-        },
+      -- Characters used to replace table border
+      -- Correspond to top(3), delimiter(3), bottom(3), vertical, & horizontal
+      -- stylua: ignore
+      border = {
+        '┌', '┬', '┐',
+        '├', '┼', '┤',
+        '└', '┴', '┘',
+        '│', '─',
+      },
       -- Highlight for table heading, delimiter, and the line above
       head = 'RenderMarkdownTableHead',
       -- Highlight for everything else, main table rows and the line below
@@ -204,7 +205,7 @@ return {
       highlight = 'RenderMarkdownSign',
     },
   },
-  name = 'render-markdown', -- Only needed if you have another plugin named markdown.nvim
+  name = 'render-markdown',                                                      -- Only needed if you have another plugin named markdown.nvim
   dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.nvim' }, -- if you use the mini.nvim suite
   -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.icons' }, -- if you use standalone mini plugins
   -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons

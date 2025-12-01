@@ -21,6 +21,7 @@ return {
         },
 	cerebras = {
 	  endpoint = "https://api.cerebras.ai/v1/chat/completions",
+	  secret = "csk-p99wtxk93em9n8d5t5hrcncyv9h6nhj4h885wnd9ykk3khcc",
 	},
       },
       agents = {

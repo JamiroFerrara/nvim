@@ -178,6 +178,11 @@ return {
                 },
                 {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+TEST-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'TEST',
+                },
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
                   match = '/!+DONE-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'DONE',
                 },
@@ -240,6 +245,16 @@ return {
                   type = 'tags_todo', -- Type can be agenda | tags | tags_todo
                   match = '/!+TODO-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'TODO',
+                },
+              }
+            },
+            T = {
+              description = 'Todo', -- Description shown in the prompt for the shortcut
+              types = {
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+TEST-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'TEST',
                 },
               }
             },

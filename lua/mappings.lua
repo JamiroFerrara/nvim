@@ -130,10 +130,12 @@ return {
     ['va8'] = { 'va(' },
 
     -- Navigation
-    -- ['<leader>ai'] = { '<cmd>ChatGPT<CR>' },
-    ['<leader>ai'] = { '<cmd>GpChatNew vsplit<CR>' },
+    -- ['<leader>ai'] = { '<cmd>GpChatNew vsplit<CR>' },
+    -- ['<leader>aI'] = { '<cmd>GpChatNew<CR>' },
+
+    ['<leader>ai'] = { '<cmd>Opencode<CR>' },
     ['<leader>aI'] = { '<cmd>GpChatNew<CR>' },
-    -- ['<leader>aI'] = { '<cmd>ChatGPTActAs<CR>' },
+
     ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>' },
     ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>' },
     ['<leader>at'] = { '<cmd>lua require("user.helpers").cs2ts()<CR>' },
@@ -504,6 +506,7 @@ return {
 
     ['<C-Del>'] = { '<C-w>', desc = 'Delete word' },
     ['<C-BS>'] = { '<C-w>', desc = 'Delete word' },
+    ['<C-w>'] = { '<cmd>q<cr>', desc = 'Delete word' },
   },
 
   -- Command mode
