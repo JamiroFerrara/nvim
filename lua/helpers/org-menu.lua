@@ -12,6 +12,7 @@ Agenda.projects = {
   { name = 'dtm',      key = 'd', },
   { name = 'allitude', key = 'a', },
   { name = 'ing',      key = 'i', },
+  { name = 'italfinance',      key = 't', },
 }
 
 -- Open the custom menu

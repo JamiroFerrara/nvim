@@ -226,6 +226,11 @@ return {
                   match = '/!+NEXT-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
                   org_agenda_overriding_header = 'NEXT',
                 },
+                {
+                  type = 'tags_todo', -- Type can be agenda | tags | tags_todo
+                  match = '/!+TODO-ARCHIVE',  --Same as providing a "Match:" for tags view <leader>oa + m, See: https://orgmode.org/manual/Matching-tags-and-properties.html
+                  org_agenda_overriding_header = 'TODO',
+                },
               }
             },
             T = {

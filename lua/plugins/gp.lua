@@ -1,6 +1,6 @@
 return {
   'robitx/gp.nvim',
-  -- event = 'VeryLazy',
+  event = 'VeryLazy',
   cmd = {
     'GpChatNew',
     'GpChatToggle'

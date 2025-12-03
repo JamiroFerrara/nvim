@@ -134,7 +134,7 @@ return {
     -- ['<leader>aI'] = { '<cmd>GpChatNew<CR>' },
 
     ['<leader>ai'] = { '<cmd>Opencode<CR>' },
-    ['<leader>aI'] = { '<cmd>GpChatNew<CR>' },
+    ['<leader>aa'] = { '<cmd>GpChatNew vsplit<CR>' },
 
     ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>' },
     ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>' },

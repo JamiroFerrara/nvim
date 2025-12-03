@@ -2,7 +2,8 @@ return {
   "sudo-tee/opencode.nvim",
   enabled = not _G.NVIM_TERMINAL_ONLY,
   -- enabled = false,
-  command = "Opencode",
+  cmd = {'Opencode'},
+  event = 'VeryLazy',
   config = function()
     require("opencode").setup({
       preferred_picker = 'snacks',    -- 'telescope', 'fzf', 'mini.pick', 'snacks', 'select', if nil, it will use the best available picker. Note mini.pick does not support multiple selections
@@ -14,7 +15,7 @@ return {
         editor = {
           ['<leader>ag'] = { 'toggle' },                    -- Open opencode. Close if opened
           ['<leader>ai'] = { 'open_input' },                -- Opens and focuses on input window on insert mode
-          ['<leader>aI'] = { 'open_input_new_session' },    -- Opens and focuses on input window on insert mode. Creates a new session
+          ['<leader>AI'] = { 'open_input_new_session' },    -- Opens and focuses on input window on insert mode. Creates a new session
           ['<leader>ao'] = { 'open_output' },               -- Opens and focuses on output window
           ['<leader>at'] = { 'toggle_focus' },              -- Toggle focus between opencode and last window
           ['<leader>aT'] = { 'timeline' },                  -- Display timeline picker to navigate/undo/redo/fork messages
