@@ -94,6 +94,16 @@ vim.api.nvim_create_autocmd("FileType", {
   callback = require('helpers.org').set_org_folding,
 })
 
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = "*",
+  callback = function()
+    if vim.bo.filetype == "orgagenda" then
+      vim.wo.winfixheight = true
+      vim.wo.winfixwidth  = true
+    end
+  end,
+})
+
 -- FIX: This runs each time a buffer viewed, should do just once
 -- vim.api.nvim_create_autocmd({ 'BufWinEnter' }, {
 --   pattern = { '*.md' },

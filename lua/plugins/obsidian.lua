@@ -40,7 +40,7 @@ return {
           disable_frontmatter = true,
           note_path_func = function(spec)
             -- This is equivalent to the default behavior.
-            local path = '/home/jferrara/vault/' .. tostring(spec.id)
+            local path = '~/vault/' .. tostring(spec.id)
             return path .. '.md'
           end,
         },
