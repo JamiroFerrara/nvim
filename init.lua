@@ -78,18 +78,18 @@ vim.o.foldenable = true
 
 -- TODO: Move to separate file
 vim.opt.laststatus = vim.opt.clipboard:append 'unnamedplus' -- use system clipboard as default register
-vim.g.clipboard = {
-  name = 'xclip-wsl',
-  copy = {
-    ['+'] = { 'xclip', '-quiet', '-i', '-selection', 'clipboard' },
-    ['*'] = { 'xclip', '-quiet', '-i', '-selection', 'primary' },
-  },
-  paste = {
-    ['+'] = { 'sh', '-c', 'xclip -o -selection clipboard | sed "s/\\r$//"' },
-    ['*'] = { 'sh', '-c', 'xclip -o -selection primary | sed "s/\\r$//"' },
-  },
-  cache_enabled = 1,
-}
+-- vim.g.clipboard = {
+--   name = 'xclip-wsl',
+--   copy = {
+--     ['+'] = { 'xclip', '-quiet', '-i', '-selection', 'clipboard' },
+--     ['*'] = { 'xclip', '-quiet', '-i', '-selection', 'primary' },
+--   },
+--   paste = {
+--     ['+'] = { 'sh', '-c', 'xclip -o -selection clipboard | sed "s/\\r$//"' },
+--     ['*'] = { 'sh', '-c', 'xclip -o -selection primary | sed "s/\\r$//"' },
+--   },
+--   cache_enabled = 1,
+-- }
 
 -- LineNr jumplist mappings for 'k' and 'j'
 vim.api.nvim_command [[nnoremap <expr> k (v:count > 1 ? "m'" . v:count : '') . 'k']]

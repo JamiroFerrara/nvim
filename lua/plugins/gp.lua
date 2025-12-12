@@ -6,9 +6,9 @@ return {
     'GpChatToggle'
   },
   config = function()
-    local handle = io.popen '/home/jferrara/.scripts/cgptapikey.sh'
-    local open_ai_key = handle:read('*a'):gsub('%s+', '')
-    handle:close()
+    -- local handle = io.popen '/home/jferrara/.scripts/cgptapikey.sh'
+    -- local open_ai_key = handle:read('*a'):gsub('%s+', '')
+    -- handle:close()
 
     require('gp').setup {
       chat_shortcut_respond = { modes = { 'n', 'i', 'v', 'x' }, shortcut = '<M-e>' },

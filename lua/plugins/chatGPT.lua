@@ -13,7 +13,7 @@ return {
     'github/copilot.vim',
   },
   opts = {
-    api_key_cmd = '/home/jferrara/.scripts/cgptapikey.sh',
+    -- api_key_cmd = '/home/jferrara/.scripts/cgptapikey.sh',
     yank_register = '+',
     edit_with_instructions = {
       diff = false,
