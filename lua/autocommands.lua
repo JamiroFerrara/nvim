@@ -104,6 +104,47 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
+-------------------------------------------------
+-- [XLSX - CSV]
+-------------------------------------------------
+
+-- Autocommand for *.xlsx files
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = { "*.xlsx" },
+  callback = function(info)
+    -- avoid recursion if we already opened a temp CSV
+    if vim.bo[info.buf].filetype == "csv" then return end
+    -- Avoid recursion
+    if vim.b.xlsx_converted then return end
+
+    local path = info.file
+    local csv_data = {}
+    local result = vim.system({ "x2c", path }, {
+      stdout = function(err, data)
+        if data then table.insert(csv_data, data) end
+      end,
+      stderr = false
+    }):wait()
+
+    if result.code ~= 0 then
+      vim.notify("Failed to convert XLSX to CSV", vim.log.levels.ERROR)
+      return
+    end
+
+    local csv_text = table.concat(csv_data, "")
+    local lines = vim.split(csv_text, "\n", { plain = true })
+
+    -- Clear the current buffer and set the CSV content
+    vim.bo.modifiable = true
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+    vim.bo.filetype = "csv"
+    vim.b.xlsx_converted = true
+
+    -- Enable csvview
+    vim.cmd("CsvViewEnable")
+  end,
+})
+
 -- FIX: This runs each time a buffer viewed, should do just once
 -- vim.api.nvim_create_autocmd({ 'BufWinEnter' }, {
 --   pattern = { '*.md' },

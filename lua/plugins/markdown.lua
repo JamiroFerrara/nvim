@@ -5,7 +5,7 @@ return {
   main = 'render-markdown',
   ft = { 'markdown', 'Avante', 'copilot-chat', 'opencode_output' },
   opts = {
-    anti_conceal = { enabled = false },
+    anti_conceal = { enabled = true },
     file_types = { 'markdown', 'opencode_output' },
     heading = {
       -- Turn on / off heading icon & background rendering
