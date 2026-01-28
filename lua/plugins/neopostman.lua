@@ -25,7 +25,7 @@ return {
       -- vim.keymap.set('n', '<C-g>', '<cmd>Neogrep<cr>', { noremap = true, silent = true })
       -- vim.keymap.set('t', '<C-g>', '<cmd>Neogrep<cr>', { noremap = true, silent = true })
       -- vim.keymap.set('n', '<leader>fc', '<cmd>NeogrepWord<cr>', { noremap = true, silent = true })
-      vim.keymap.set('n', '<C-n>', '<cmd>NeogrepWord<cr>', { noremap = true, silent = true })
+      -- vim.keymap.set('n', '<C-n>', '<cmd>NeogrepWord<cr>', { noremap = true, silent = true })
       vim.keymap.set('n', '<leader>fW', '<cmd>NeogrepBuffer<cr>', { noremap = true, silent = true })
       -- vim.keymap.set('n', '<C-f>', '<cmd>NeogrepBuffer<cr>', { noremap = true, silent = true })
 

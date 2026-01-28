@@ -6,7 +6,8 @@ vim.g.maplocalleader = ' '
 -- TODO: Move me
 vim.api.nvim_set_keymap('n', '<C-w>d', '<Nop>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<C-w><C-d>', '<Nop>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<C-w>', '<cmd>lua require("harpoon.ui").nav_file(2)<cr>', { noremap = true, silent = true, nowait = true })
+vim.api.nvim_set_keymap('n', '<C-w>', '<cmd>lua require("harpoon.ui").nav_file(2)<cr>',
+  { noremap = true, silent = true, nowait = true })
 
 -- General Settings
 vim.g.have_nerd_font = true
@@ -115,12 +116,51 @@ require 'loaders.mappings'
 require 'autocommands'
 require 'highlights'
 
+local specs = { { import = 'terminal_plugins' } }
+if not _G.NVIM_TERMINAL_ONLY then 
+  table.insert(specs, { import = 'plugins' })
+end
+
 require('lazy').setup({
-  spec = {
-    import = 'plugins',
-  },
+  spec = specs,
   performance = {
     cache = { enabled = true },
     reset_packpath = true,
+    rtp = {
+      disabled_plugins = {
+        "2html_plugin",
+        "bugreport",
+        "compiler",
+        "ftplugin",
+        "getscript",
+        "getscriptPlugin",
+        "gzip",
+        "logipat",
+        "matchit",
+        "netrw",
+        "netrwFileHandlers",
+        "netrwPlugin",
+        "netrwSettings",
+        "optwin",
+        "rplugin",
+        "rrhelper",
+        "spellfile_plugin",
+        "synmenu",
+        "syntax",
+        "tar",
+        "tarPlugin",
+        "tohtml",
+        "tutor",
+        "vimball",
+        "vimballPlugin",
+        -- "zip",
+        -- "zipPlugin",
+        "man",
+        "matchparen",
+        "osc52",
+        "shada",
+        "spellfile",
+      },
+    },
   },
 }, require('ui').lazy_ui)

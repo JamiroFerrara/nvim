@@ -3,6 +3,12 @@ return {
   'nvim-lualine/lualine.nvim',
   dependencies = { 'nvim-tree/nvim-web-devicons' },
   enabled = true,
+  event = {
+    "BufReadPost",
+    "BufNewFile",
+    "BufWritePre"
+  },
+  priority = 999,
   config = function()
     -- Eviline config for lualine
     -- Author: shadmansaleh
