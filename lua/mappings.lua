@@ -41,6 +41,7 @@ return {
     ['<leader>md'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make down; tmux select-pane -U")<CR>', desc = 'Make publish' },
     ['<leader>mr'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make run; tmux select-pane -U")<CR>', desc = 'Make run' },
     ['<leader>mb'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make build; tmux select-pane -U")<CR>', desc = 'Make build' },
+    ['<A-b>'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make build; tmux select-pane -U")<CR>', desc = 'Make build' },
     ['<leader>mt'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make test; tmux select-pane -U")<CR>', desc = 'Make test' },
     ['<leader>ml'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make local; tmux select-pane -U")<CR>', desc = 'Make local' },
     ['<leader>ms'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make start; tmux select-pane -U")<CR>', desc = 'Make start' },
@@ -228,9 +229,9 @@ return {
     ['<C-h>'] = { '<cmd>lua require("helpers.tmux").move_top()<cr>' },
 
     ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
-    ['<A-h>'] = { '<cmd>lua require("tmux").move_left()<cr>' },
-    ['<A-k>'] = { '<cmd>lua require("tmux").move_top()<cr>' },
-    ['<A-l>'] = { '<cmd>lua require("tmux").move_right()<cr>' },
+    ['<A-h>'] = { '<cmd>lua require("helpers.tmux").move_left()<cr>' },
+    ['<A-k>'] = { '<cmd>lua require("helpers.tmux").move_top()<cr>' },
+    ['<A-l>'] = { '<cmd>lua require("helpers.tmux").move_right()<cr>' },
 
     ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" }, --FIX: This should just use the snacks version, but need to figure out the window. Also fights with other zen
 

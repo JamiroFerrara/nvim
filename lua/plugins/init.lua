@@ -4,7 +4,7 @@ return {
   { 'catppuccin/nvim', event = 'VeryLazy' },
 
   -- Improvements
-  { 'lewis6991/impatient.nvim' },
+  { 'lewis6991/impatient.nvim', config = function() require('impatient') end },
   { 'max397574/better-escape.nvim', event = 'InsertEnter'},
   { 'ThePrimeagen/harpoon', event = 'VeryLazy', enabled = not _G.NVIM_TERMINAL_ONLY, },
   { 'haya14busa/is.vim', event = 'InsertEnter', enabled = not _G.NVIM_TERMINAL_ONLY, },
