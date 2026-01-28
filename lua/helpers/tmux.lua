@@ -14,7 +14,7 @@ function M.move_top()
   local is_open = require('helpers.telescope').is_telescope_open()
   if is_open then
   else
-    require('tmux').move_bottom();
+    require('tmux').move_top();
   end
 end
 
@@ -23,7 +23,7 @@ function M.move_left()
   local is_open = require('helpers.telescope').is_telescope_open()
   if is_open then
   else
-    require('tmux').move_bottom();
+    require('tmux').move_left();
   end
 end
 
@@ -32,7 +32,7 @@ function M.move_right()
   local is_open = require('helpers.telescope').is_telescope_open()
   if is_open then
   else
-    require('tmux').move_bottom();
+    require('tmux').move_right();
   end
 end
 
