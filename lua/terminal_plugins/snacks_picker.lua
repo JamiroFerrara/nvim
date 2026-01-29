@@ -332,13 +332,13 @@ return {
     --   desc = 'File Explorer',
     -- },
     -- find
-    {
-      '<leader>fb',
-      function()
-        Snacks.picker.buffers()
-      end,
-      desc = 'Buffers',
-    },
+    -- {
+    --   '<leader>fb',
+    --   function()
+    --     Snacks.picker.buffers()
+    --   end,
+    --   desc = 'Buffers',
+    -- },
     -- {
     --   '<leader>fc',
     --   function()

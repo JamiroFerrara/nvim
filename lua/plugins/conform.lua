@@ -1,16 +1,6 @@
 local config = { -- Autoformat
   'stevearc/conform.nvim',
   event = 'VeryLazy', -- TODO:
-  keys = {
-    {
-      '<leader>fb',
-      function()
-        require('conform').format { async = true, lsp_fallback = true }
-      end,
-      mode = '',
-      desc = '[F]ormat buffer',
-    },
-  },
   -- //FIX: Ignore certain filetypes, slow lsp causes isses
   -- opts = {
   --   notify_on_error = false,

@@ -332,13 +332,13 @@ return {
     --   desc = 'File Explorer',
     -- },
     -- find
-    {
-      '<leader>fb',
-      function()
-        Snacks.picker.buffers()
-      end,
-      desc = 'Buffers',
-    },
+    -- {
+    --   '<leader>fb',
+    --   function()
+    --     Snacks.picker.buffers()
+    --   end,
+    --   desc = 'Buffers',
+    -- },
     -- {
     --   '<leader>fc',
     --   function()
@@ -346,24 +346,24 @@ return {
     --   end,
     --   desc = 'Find Config File',
     -- },
-    {
-      '<leader><space>',
-      function()
-        Snacks.picker.files { layout = 'ivy_split', matcher = { frecency = true } }
-      end,
-      desc = 'Find Files',
-    },
+    -- {
+    --   '<leader><space>',
+    --   function()
+    --     Snacks.picker.files { layout = 'ivy_split', matcher = { frecency = true } }
+    --   end,
+    --   desc = 'Find Files',
+    -- },
+    -- {
+    --   '<C-p>',
+    --   function()
+    --     Snacks.picker.files { layout = 'ivy_split', matcher = { frecency = true } }
+    --   end,
+    --   desc = 'Find Files',
+    -- },
     {
       '<leader>ff',
       function()
         Snacks.picker.files { layout = 'ivy', matcher = { frecency = true } }
-      end,
-      desc = 'Find Files',
-    },
-    {
-      '<C-p>',
-      function()
-        Snacks.picker.files { layout = 'ivy_split', matcher = { frecency = true } }
       end,
       desc = 'Find Files',
     },

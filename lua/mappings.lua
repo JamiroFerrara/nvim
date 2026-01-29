@@ -9,6 +9,8 @@ return {
     ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
     ['<leader>cn'] = { '<cmd>ChromeNetwork<cr>', desc = 'Open Chrome Network plugin' },
 
+    ['<leader>fb'] = { '<cmd>lua require("conform").format { async = true, lsp_fallback = true }<cr>', desc = 'Open Chrome Network plugin' },
+
     ['<C-r>'] = { "<cmd>silent !tmux split-window -v -p 50 'source ~/.zshrc && run_script'<CR>", desc = "Open split, source .zshrc, and run the script" },
 
     ['<leader>ii'] = { '<cmd>lua require("nvim-toggler").toggle()<cr>', desc = 'Neopostman' },
