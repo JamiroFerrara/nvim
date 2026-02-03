@@ -1,3 +1,4 @@
+-- TODO: Load on telescope command
 return {
     "nvim-telescope/telescope.nvim",
     event = "VeryLazy",

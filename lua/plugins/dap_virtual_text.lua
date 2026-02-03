@@ -1,3 +1,4 @@
+-- TODO: Load on debug start
 return {
   'theHamsta/nvim-dap-virtual-text',
   event = 'VeryLazy',

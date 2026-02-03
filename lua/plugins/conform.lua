@@ -1,3 +1,4 @@
+-- TODO: Register custom command to load on command
 local config = { -- Autoformat
   'stevearc/conform.nvim',
   event = 'VeryLazy', -- TODO:

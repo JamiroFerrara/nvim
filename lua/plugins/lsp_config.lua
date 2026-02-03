@@ -2,8 +2,9 @@ return { -- LSP Configuration & Plugins
   'neovim/nvim-lspconfig',
   commit = 'dddd094',
   enabled = not _G.NVIM_TERMINAL_ONLY,
-  event = { 'BufReadPost', 'BufNewFile' },
+  event = { 'BufReadPre', 'BufNewFile' },
   cmd = { 'LspInfo', 'LspInstall', 'LspUninstall' },
+  lazy = true,
   dependencies = {
     -- Automatically install LSPs and related tools to stdpath for Neovim
     { 'williamboman/mason.nvim', config = true }, -- NOTE: Must be loaded before dependants

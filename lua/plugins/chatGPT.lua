@@ -8,6 +8,7 @@ return {
     "ChatGPTCompleteCode",
     "ChatGPTEditWithInstructions",
   },
+  lazy = true,
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
   dependencies = {
     'github/copilot.vim',

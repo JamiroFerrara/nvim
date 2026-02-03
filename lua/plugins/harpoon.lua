@@ -1,3 +1,4 @@
+-- TODO: Lazy load this better
 return {
   'ThePrimeagen/harpoon',
   event = 'VeryLazy',

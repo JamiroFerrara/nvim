@@ -1,3 +1,4 @@
+-- TODO: Load on command
 return {
   'nguyenvukhang/nvim-toggler',
   enabled = not _G.NVIM_TERMINAL_ONLY,

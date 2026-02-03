@@ -1,3 +1,4 @@
+-- TODO: Load on flash command
 return {
   'folke/flash.nvim',
   event = 'VeryLazy',
