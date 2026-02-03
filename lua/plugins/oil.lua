@@ -1,7 +1,7 @@
 return {
   'stevearc/oil.nvim',
   -- event = 'VeryLazy',
-  cmd = "Oil",
+  cmd = 'Oil',
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
   opts = {
     -- Oil will take over directory buffers (e.g. `vim .` or `:e src/`)
@@ -66,7 +66,30 @@ return {
       ['<C-s>'] = 'actions.select_vsplit',
       ['<C-h>'] = 'actions.select_split',
       ['<C-t>'] = 'actions.select_tab',
-      ['<C-p>'] = 'actions.preview',
+      ['<C-p>'] = {
+        callback = function()
+          -- Store the current window ID to ensure we target the right window
+          local target_win = vim.api.nvim_get_current_win()
+          Snacks.picker.zoxide {
+            confirm = function(picker, item)
+              if item and item.file and vim.fn.isdirectory(item.file) == 1 then
+                local fs = require 'oil.fs'
+                local oil_url = 'oil://' .. fs.os_to_posix_path(item.file)
+                -- Close picker first, then edit in target window
+                picker:close()
+                vim.schedule(function()
+                  -- Ensure we're in the correct window
+                  if vim.api.nvim_win_is_valid(target_win) then
+                    vim.api.nvim_set_current_win(target_win)
+                  end
+                  vim.cmd.edit(oil_url)
+                end)
+              end
+            end,
+          }
+        end,
+        desc = 'Open directory with zoxide',
+      },
       ['<C-c>'] = 'actions.close',
       ['<C-l>'] = 'actions.refresh',
       ['-'] = 'actions.parent',

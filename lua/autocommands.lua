@@ -50,14 +50,22 @@ vim.api.nvim_create_autocmd('TermOpen', {
     vim.wo.signcolumn = 'no'
     vim.opt_local.modifiable = true
     vim.opt_local.readonly = false
-    vim.api.nvim_buf_set_keymap(0, 'n', '<Tab>', '<cmd>Oil<CR>',
-      { noremap = true, silent = true, desc = 'Enter Oil if in terminal normal mode' })
+    vim.api.nvim_buf_set_keymap(0, 'n', '<Tab>', '<cmd>Oil<CR>', { noremap = true, silent = true, desc = 'Enter Oil if in terminal normal mode' })
   end,
 })
 
-vim.api.nvim_create_autocmd("FocusGained", {
-  pattern = "term://*",
-  command = "startinsert"
+vim.api.nvim_create_autocmd('FocusGained', {
+  pattern = 'term://*',
+  command = 'startinsert',
+})
+
+vim.api.nvim_create_autocmd('BufEnter', {
+  pattern = 'term://*',
+  callback = function()
+    if vim.bo.buftype == 'terminal' then
+      vim.cmd 'startinsert'
+    end
+  end,
 })
 
 vim.api.nvim_create_autocmd('TermClose', {
@@ -74,32 +82,32 @@ vim.api.nvim_create_autocmd('TermClose', {
 vim.api.nvim_create_autocmd('BufWritePre', {
   pattern = '*.md',
   callback = function()
-    vim.cmd([[
+    vim.cmd [[
       silent! TableModeEnable
       silent! TableModeRealign
       silent! TableEvalFormulaLine
       silent! TableModeDisable
-    ]])
+    ]]
   end,
 })
 
 -- Use autocommand to apply only to markdown files
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "markdown",
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'markdown',
   callback = require('helpers.markdown').set_markdown_folding,
 })
 
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "org",
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'org',
   callback = require('helpers.org').set_org_folding,
 })
 
-vim.api.nvim_create_autocmd("BufEnter", {
-  pattern = "*",
+vim.api.nvim_create_autocmd('BufEnter', {
+  pattern = '*',
   callback = function()
-    if vim.bo.filetype == "orgagenda" then
+    if vim.bo.filetype == 'orgagenda' then
       vim.wo.winfixheight = true
-      vim.wo.winfixwidth  = true
+      vim.wo.winfixwidth = true
     end
   end,
 })
@@ -109,39 +117,47 @@ vim.api.nvim_create_autocmd("BufEnter", {
 -------------------------------------------------
 
 -- Autocommand for *.xlsx files
-vim.api.nvim_create_autocmd("BufEnter", {
-  pattern = { "*.xlsx" },
+vim.api.nvim_create_autocmd('BufEnter', {
+  pattern = { '*.xlsx' },
   callback = function(info)
     -- avoid recursion if we already opened a temp CSV
-    if vim.bo[info.buf].filetype == "csv" then return end
+    if vim.bo[info.buf].filetype == 'csv' then
+      return
+    end
     -- Avoid recursion
-    if vim.b.xlsx_converted then return end
-
-    local path = info.file
-    local csv_data = {}
-    local result = vim.system({ "x2c", path }, {
-      stdout = function(err, data)
-        if data then table.insert(csv_data, data) end
-      end,
-      stderr = false
-    }):wait()
-
-    if result.code ~= 0 then
-      vim.notify("Failed to convert XLSX to CSV", vim.log.levels.ERROR)
+    if vim.b.xlsx_converted then
       return
     end
 
-    local csv_text = table.concat(csv_data, "")
-    local lines = vim.split(csv_text, "\n", { plain = true })
+    local path = info.file
+    local csv_data = {}
+    local result = vim
+      .system({ 'x2c', path }, {
+        stdout = function(err, data)
+          if data then
+            table.insert(csv_data, data)
+          end
+        end,
+        stderr = false,
+      })
+      :wait()
+
+    if result.code ~= 0 then
+      vim.notify('Failed to convert XLSX to CSV', vim.log.levels.ERROR)
+      return
+    end
+
+    local csv_text = table.concat(csv_data, '')
+    local lines = vim.split(csv_text, '\n', { plain = true })
 
     -- Clear the current buffer and set the CSV content
     vim.bo.modifiable = true
     vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
-    vim.bo.filetype = "csv"
+    vim.bo.filetype = 'csv'
     vim.b.xlsx_converted = true
 
     -- Enable csvview
-    vim.cmd("CsvViewEnable")
+    vim.cmd 'CsvViewEnable'
   end,
 })
 
