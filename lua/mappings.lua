@@ -13,7 +13,11 @@ return {
 
     ['<C-r>'] = { "<cmd>silent !tmux split-window -v -p 50 'source ~/.zshrc && run_script'<CR>", desc = "Open split, source .zshrc, and run the script" },
 
-    ['<leader>ii'] = { '<cmd>lua require("nvim-toggler").toggle()<cr>', desc = 'Neopostman' },
+    ["<leader>ii"] =
+      function()
+        require("nvim-toggler").toggle()
+        pcall(vim.api.nvim_command, "doautocmd User event_toggler")
+      end,
 
     -- Basic Indentation
     ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Shift right' },
@@ -66,7 +70,7 @@ return {
     -- ['<leader>oT'] = { '<cmd>ObsidianTomorrow<cr>' },
     -- ['<leader>oy'] = { '<cmd>ObsidianYesterday<cr>' },
 
-    -- Org commands 
+    -- Org commands
     ['<leader>ot'] = { '<cmd>lua require("helpers.org-menu"):_open_todo_client_submenu()<cr>' },
     ['<leader>oa'] = { '<cmd>lua require("helpers.org-menu"):open_custom_menu()<cr>' },
 
@@ -310,6 +314,8 @@ return {
 
   -- Terminal Mode
   t = {
+    ['<M-o>'] = '<C-\\><C-n><C-o>',
+    ['<M-i>'] = '<C-\\><C-n><C-i>',
     ['è'] = { 'p', desc = 'Print' },
 
     --TODO: Refactor me out as this is a duplicate of the below

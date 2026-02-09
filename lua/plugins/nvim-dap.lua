@@ -197,14 +197,14 @@ return {
     vim.keymap.set('n', '<Leader>df', function() require('dap.ext.fuzzy_hover').fuzzy_hover() end,
       { desc = "DAP: Fuzzy Hover" })
     vim.keymap.set('n', '<F7>', dapui.toggle, { desc = 'Debug: See last session result.' })
-    vim.fn.sign_define('DapBreakpoint', { text = dap_ui.DapBreakpoint, texthl = 'DapLogPoint', linehl = '', numhl = '' })
+    vim.fn.sign_define('DapBreakpoint', { text = dap_ui.DapBreakpoint, texthl = 'DapLogPoint', linehl = '', numhl = '', priority = 50 })
     vim.fn.sign_define('DapBreakpointCondition',
-      { text = dap_ui.DapBreakpointCondition, texthl = 'DapBreakpointCondition', linehl = '', numhl = '' })
+      { text = dap_ui.DapBreakpointCondition, texthl = 'DapBreakpointCondition', linehl = '', numhl = '', priority = 50 })
     vim.fn.sign_define('DapBreakpointRejected',
-      { text = dap_ui.DapBreakpointRejected, texthl = 'DapBreakpointRejected', linehl = '', numhl = '' })
-    vim.fn.sign_define('DapLogPoint', { text = dap_ui.DapLogPoint, texthl = 'DapLogPoint', linehl = '', numhl = '' })
+      { text = dap_ui.DapBreakpointRejected, texthl = 'DapBreakpointRejected', linehl = '', numhl = '', priority = 50 })
+    vim.fn.sign_define('DapLogPoint', { text = dap_ui.DapLogPoint, texthl = 'DapLogPoint', linehl = '', numhl = '', priority = 50 })
     vim.fn.sign_define('DapStopped',
-      { text = dap_ui.DapStopped, texthl = 'DapBreakpointCondition', linehl = '', numhl = '' })
+      { text = dap_ui.DapStopped, texthl = 'DapBreakpointCondition', linehl = '', numhl = '', priority = 50 })
     vim.keymap.set('n', '<leader>dc', function()
       dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
     end, { desc = 'Debug: Set Breakpoint' })

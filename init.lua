@@ -6,8 +6,7 @@ vim.g.maplocalleader = ' '
 -- TODO: Move me
 vim.api.nvim_set_keymap('n', '<C-w>d', '<Nop>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<C-w><C-d>', '<Nop>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<C-w>', '<cmd>lua require("harpoon.ui").nav_file(2)<cr>',
-  { noremap = true, silent = true, nowait = true })
+vim.api.nvim_set_keymap('n', '<C-w>', '<cmd>lua require("harpoon.ui").nav_file(2)<cr>', { noremap = true, silent = true, nowait = true })
 
 -- General Settings
 vim.g.have_nerd_font = true

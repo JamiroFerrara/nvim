@@ -1,7 +1,7 @@
--- TODO: Load on command
 return {
   'nguyenvukhang/nvim-toggler',
-  enabled = not _G.NVIM_TERMINAL_ONLY,
+  lazy = true,
+  event = 'User event_toggler',
   config = function()
     -- init.lua
     require('nvim-toggler').setup {
