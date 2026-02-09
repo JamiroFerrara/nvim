@@ -9,15 +9,20 @@ return {
     ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
     ['<leader>cn'] = { '<cmd>ChromeNetwork<cr>', desc = 'Open Chrome Network plugin' },
 
-    ['<leader>fb'] = { '<cmd>lua require("conform").format { async = true, lsp_fallback = true }<cr>', desc = 'Format buffer' },
-
     ['<C-r>'] = { "<cmd>silent !tmux split-window -v -p 50 'source ~/.zshrc && run_script'<CR>", desc = "Open split, source .zshrc, and run the script" },
 
+    -- inline function for formatting
+    ["<leader>fb"] =
+        function()
+          pcall(vim.api.nvim_command, "doautocmd User event_conform")
+          require("conform").format { async = true, lsp_fallback = true }
+        end,
+
     ["<leader>ii"] =
-      function()
-        require("nvim-toggler").toggle()
-        pcall(vim.api.nvim_command, "doautocmd User event_toggler")
-      end,
+        function()
+          pcall(vim.api.nvim_command, "doautocmd User event_toggler")
+          require("nvim-toggler").toggle()
+        end,
 
     -- Basic Indentation
     ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Shift right' },
@@ -221,7 +226,6 @@ return {
     ['<leader>la'] = { '<cmd>Lspsaga code_action<cr>' },
     ['<leader>lD'] = { '<cmd>Lspsaga show_buf_diagnostics<cr>' },
 
-    -- ['<A-e>'] = { "<cmd>w<cr><cmd>lua require('conform').format { async = true, lsp_fallback = true }<CR>" },
     ['<A-e>'] = { '<cmd>w<cr>' },
     ['<leader>hr'] = { "<cmd>lua require('user/react-helpers').commands()<cr>" },
     ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },

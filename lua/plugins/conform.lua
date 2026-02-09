@@ -1,7 +1,6 @@
--- TODO: Register custom command to load on command
 local config = { -- Autoformat
   'stevearc/conform.nvim',
-  event = 'VeryLazy', -- TODO:
+  event = 'User event_conform',
   -- //FIX: Ignore certain filetypes, slow lsp causes isses
   -- opts = {
   --   notify_on_error = false,
