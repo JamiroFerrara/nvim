@@ -6,6 +6,7 @@ return {
     "BufNewFile",
     "BufWritePre"
   },
+  lazy = true,
   build = (function()
     -- Build Step is needed for regex support in snippets.
     -- This step is not supported in many windows environments.

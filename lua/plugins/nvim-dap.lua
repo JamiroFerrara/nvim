@@ -67,7 +67,7 @@ return {
         type = 'coreclr',
         env = {
           ASPNETCORE_ENVIRONMENT = function()
-            return "PROD"
+            return "DEVE"
           end,
           ASPNETCORE_URLS = function()
             return "http://localhost:8000"

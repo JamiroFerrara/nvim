@@ -2,10 +2,9 @@ return {
   'hrsh7th/nvim-cmp',
   enabled = true,
   event = {
-    'BufReadPost',
-    'BufNewFile',
-    'BufWritePre',
+    'InsertEnter',
   },
+  lazy = true,
   opts = function(_, opts)
     -- {{{ opts function begins and overrides LazyVim default behavior.
 

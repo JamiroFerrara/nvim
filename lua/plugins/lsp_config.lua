@@ -2,8 +2,7 @@ return { -- LSP Configuration & Plugins
   'neovim/nvim-lspconfig',
   commit = 'dddd094',
   enabled = not _G.NVIM_TERMINAL_ONLY,
-  event = { 'BufReadPre', 'BufNewFile' },
-  cmd = { 'LspInfo', 'LspInstall', 'LspUninstall' },
+  event = { 'BufReadPost', 'BufNewFile' },
   lazy = true,
   dependencies = {
     -- Automatically install LSPs and related tools to stdpath for Neovim

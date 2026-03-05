@@ -303,6 +303,10 @@ return {
       vim.fn.chansend(vim.b.terminal_job_id, 'chmod +x ' .. word .. '\n')
       vim.cmd.startinsert()
     end,
+    ['<M-b>'] = function()
+      vim.fn.chansend(vim.b.terminal_job_id, 'make build' .. '\n')
+      vim.cmd.startinsert()
+    end,
     ['<cr>'] = function()
       local word = vim.fn.expand '<cWORD>'
       vim.notify('Entering -> ' .. word, vim.log.levels.INFO)
@@ -321,6 +325,10 @@ return {
     ['<M-o>'] = '<C-\\><C-n><C-o>',
     ['<M-i>'] = '<C-\\><C-n><C-i>',
     ['è'] = { 'p', desc = 'Print' },
+    ['<M-b>'] = function()
+      vim.fn.chansend(vim.b.terminal_job_id, 'make build' .. '\n')
+      vim.cmd.startinsert()
+    end,
 
     --TODO: Refactor me out as this is a duplicate of the below
     --BUG: This works only once when terminal is open. It needs to be able to

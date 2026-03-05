@@ -6,7 +6,8 @@ return {
   ---@type Flash.Config
   opts = {
     -- labels = "abcdefghijklmnopqrstuvwxyz",
-    labels = 'asdfghjklqwertyuiopzxcvbnm',
+    -- labels = 'asdfghjklqwertyuiopzxcvbnm',
+    labels = 'asdfqweruiophjkl',
     search = {
       -- search/jump in all windows
       multi_window = true,
