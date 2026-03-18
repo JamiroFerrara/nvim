@@ -31,14 +31,10 @@ function _G.org_foldexpr()
 end
 
 M.set_org_folding = function()
-  vim.api.nvim_set_keymap('n', '<cr>', "<cmd>lua require('helpers.org').smart_action()<cr>",
-    { noremap = true, silent = true })
-  vim.api.nvim_set_keymap('n', '<leader>or', "zR<cmd>lua require('helpers.org').fold_headings_of_level(2)<cr>",
-    { noremap = true, silent = true })
-  vim.api.nvim_set_keymap('n', '<leader>oe', "zR<cmd>lua require('helpers.org').fold_headings_of_level(3)<cr>",
-    { noremap = true, silent = true })
-  vim.api.nvim_set_keymap('n', '<leader>ow', "zR<cmd>lua require('helpers.org').fold_headings_of_level(4)<cr>",
-    { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<cr>', "<cmd>lua require('helpers.org').smart_action()<cr>", { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<leader>or', "zR<cmd>lua require('helpers.org').fold_headings_of_level(2)<cr>", { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<leader>oe', "zR<cmd>lua require('helpers.org').fold_headings_of_level(3)<cr>", { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<leader>ow', "zR<cmd>lua require('helpers.org').fold_headings_of_level(4)<cr>", { noremap = true, silent = true })
   -- vim.api.nvim_set_keymap('n', '<leader>oa', "zR", { noremap = true, silent = true })
   -- vim.api.nvim_set_keymap('n', '<leader>oo', "zR", { noremap = true, silent = true })
 

@@ -6,18 +6,30 @@ return { -- LSP Configuration & Plugins
   lazy = true,
   dependencies = {
     -- Automatically install LSPs and related tools to stdpath for Neovim
-    { 'williamboman/mason.nvim', config = true }, -- NOTE: Must be loaded before dependants
-    { 'williamboman/mason-lspconfig.nvim', commit = 'f995805' },
+    { 'williamboman/mason.nvim',                   config = true }, -- NOTE: Must be loaded before dependants
+    { 'williamboman/mason-lspconfig.nvim',         commit = 'f995805' },
     { 'WhoIsSethDaniel/mason-tool-installer.nvim', commit = 'e3656b4d' },
 
     -- Useful status updates for LSP.
     -- NOTE: `opts = {}` is the same as calling `require('fidget').setup({})`
-    { 'j-hui/fidget.nvim', opts = {} },
+    { 'j-hui/fidget.nvim',                         opts = {} },
 
     -- `neodev` configures Lua LSP for your Neovim config, runtime and plugins
     -- used for completion, annotations and signatures of Neovim apis
-    { 'folke/neodev.nvim', opts = {} },
-    -- { 'nvim-java/nvim-java', event = 'VeryLazy' }, -- Setup nvim-java
+    { 'folke/neodev.nvim',                         opts = {} },
+    {
+      'nvim-java/nvim-java',
+      config = function()
+        vim.env.JAVA_HOME = os.getenv('HOME') .. '/.local/share/nvim/site/nvim-java/packages/openjdk/25/jdk-25'
+        vim.env.PATH = vim.env.JAVA_HOME .. '/bin:' .. vim.env.PATH
+        require('java').setup({
+          jdk = {
+            auto_install = false
+          },
+        })
+        vim.lsp.enable('jdtls')
+      end,
+    }, -- Setup nvim-java
     -- {
     --   'mfussenegger/nvim-jdtls',
     --   event = 'VeryLazy',
@@ -25,7 +37,6 @@ return { -- LSP Configuration & Plugins
     --     require('java').setup()
     --   end,
     -- }, -- Setup nvim-java
-
     {
       'pmizio/typescript-tools.nvim',
       dependencies = { 'nvim-lua/plenary.nvim', 'neovim/nvim-lspconfig' },
@@ -66,7 +77,7 @@ return { -- LSP Configuration & Plugins
     --  - Symbol Search
     --  - and more!
 
-    require('lspconfig').jdtls.setup {}
+    -- require('lspconfig').jdtls.setup {} -- Handled by nvim-java
 
     vim.fn.sign_define('DiagnosticSignError', { text = '', texthl = 'DiagnosticSignError' })
     vim.fn.sign_define('DiagnosticSignWarn', { text = '', texthl = 'DiagnosticSignWarn' })
