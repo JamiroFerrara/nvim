@@ -353,13 +353,14 @@ return {
       end,
       desc = 'Find Files',
     },
-    {
-      '<C-p>',
-      function()
-        Snacks.picker.files { layout = 'ivy_split', matcher = { frecency = true } }
-      end,
-      desc = 'Find Files',
-    },
+    -- {
+    --   '<C-p>',
+    --   function()
+    --     local frecency = require('telescope').extensions.frecency
+    --     frecency.frecency(GET_IVY())
+    --   end,
+    --   desc = 'Find Files (Frecency)',
+    -- },
     {
       '<leader>ff',
       function()

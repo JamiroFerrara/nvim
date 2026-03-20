@@ -7,6 +7,7 @@ function GET_IVY(opts)
   -- opts.search_dirs = frecency.query { workspace = "CWD" }
 
   local theme_opts = {
+    winblend = 0,
     theme = 'ivy_preview',
     preview = false,
 
@@ -22,17 +23,12 @@ function GET_IVY(opts)
       vertical = {
         mirror = false,
       },
-      width = 1000,
-      height = 1000,
+      width = 1200,
+      height = 1200,
       preview_cutoff = 1,
     },
 
     border = true,
-    borderchars = {
-      prompt = { ' ', ' ', '', ' ', ' ', ' ', '', '' },
-      results = { '', ' ', ' ', ' ', '', '', ' ', ' ' },
-      preview = { '', ' ', '', '', '', '', '', '' },
-    },
   }
 
   return vim.tbl_deep_extend('force', theme_opts, opts)
@@ -77,7 +73,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
     },
 
     -- Useful for getting pretty icons, but requires a Nerd Font.
-    { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+    { 'nvim-tree/nvim-web-devicons',            enabled = vim.g.have_nerd_font },
   },
   config = function()
     -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -115,6 +111,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
         },
       },
       defaults = {
+        winblend = 0,
         border = false,
         borderchars = {
           prompt = { ' ', ' ', '', ' ', ' ', ' ', '', '' },
@@ -139,6 +136,11 @@ return { -- Fuzzy Finder (files, lsp, etc)
         },
         extensions = {
           fzf = {},
+          frecency = {
+            auto_validate = false,
+            matcher = "fuzzy",
+            path_display = { "filename_first" },
+          },
           advanced_git_search = {
             -- fugitive or diffview
             diff_plugin = 'fugitive',
@@ -187,7 +189,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
     vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
     vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
     vim.keymap.set('n', '<leader><leader>', builtin.find_files, { desc = '[S]earch [F]iles' })
-    vim.keymap.set('n', '<C-p>', builtin.find_files, { desc = '[S]earch [F]iles' })
+    -- vim.keymap.set('n', '<C-p>', builtin.find_files, { desc = '[S]earch [F]iles' })
     -- vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
     -- vim.keymap.set('n', '<leader>fc', builtin.grep_string, { desc = '[S]earch current [W]ord' })
     vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
