@@ -26,7 +26,6 @@ return {
 
     -- Basic Indentation
     ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Shift right' },
-    ['#'] = { '<cmd>Telescope commands<cr>', desc = 'Shift right' },
     ['>'] = { '>>', desc = 'Shift right' },
     ['<'] = { '<<', desc = 'Shift left' },
     ['à'] = { '0', desc = 'Letter a with grave accent' },
@@ -59,11 +58,11 @@ return {
     ['<leader>mw'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make watch; tmux select-pane -U")<CR><cmd>DapContinue<cr>', desc = 'Make watch and continue', },
     ['<leader>yy'] = { 'GVggy<cmd>q!<CR>', desc = 'Yank all and quit' },
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
-    ['<leader>aa'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
+    ['<leader>at'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
     ['mt'] = { '<cmd>e TODO.md<cr>', desc = 'Toggle Aerial' },
 
-    ['<leader>fw'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
-    ['<C-g>'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
+    ['<leader>fw'] = function() Snacks.picker.grep { layout = 'ivy_split' } end ,
+    ['<C-g>'] = function() Snacks.picker.grep { layout = 'ivy_split' } end ,
 
     ['vap'] = { 'vip' },
 
@@ -207,13 +206,11 @@ return {
 
     ['<C-z>'] = { '<cmd>lua Snacks.zen.zen()<cr>' },
 
-    ['<leader>ft'] = { '<cmd>TodoTelescope<cr>' },
     ['<leader>lc'] = {
       "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
     },
 
     ['gd'] = { '<cmd>Lspsaga goto_definition<cr>' },
-    -- ['gr'] = { '<cmd>lua require("telescope.builtin").lsp_implementations<cr>' },
     ['gR'] = { '<cmd>Lspsaga finder<cr>' },
     ['<leader>lE'] = { '<cmd>Lspsaga diagnostic_jump_prev<cr>' },
     ['<leader>le'] = { '<cmd>Lspsaga diagnostic_jump_next<cr>' },
@@ -283,7 +280,6 @@ return {
     ['<M-w>'] = { '<cmd>q<cr>' },
 
     ['<leader>w'] = { '<cmd>only<cr><cmd>lua os.execute("tmux resize-pane -Z")<cr>' },
-    -- ['<A-w>'] = { '<cmd>q<cr><cmd>Telescope quickfix<cr>' },
 
     ['H'] = { '^' },
     ['L'] = { '$' },
@@ -348,7 +344,6 @@ return {
         print('Copied to clipboard:', cwd)
 
         -- Open picker with that cwd
-        -- vim.cmd("Telescope frecency workspace=CWD");
         Snacks.picker.files {
           layout = 'ivy_split',
           matcher = { frecency = true },
@@ -381,19 +376,16 @@ return {
         vim.fn.setreg('+', cwd)
         print('Copied to clipboard:', cwd)
 
-        require('telescope.builtin').live_grep(GET_IVY())
-        -- Snacks.picker.grep {
-        --   layout = 'ivy_split',
-        --   need_search = false,
-        --   limit = 30,
-        --   matcher = { fuzzy = false, sort_empty = false },
-        --   cwd = cwd,
-        --   on_show = function()
-        --     vim.schedule(function()
-        --       vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, false, true), 'n', false)
-        --     end)
-        --   end,
-        -- }
+        -- require('telescope.builtin').live_grep(GET_IVY())
+        Snacks.picker.grep {
+          layout = 'ivy_split',
+          cwd = cwd,
+          on_show = function()
+            vim.schedule(function()
+              vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, false, true), 'n', false)
+            end)
+          end,
+        }
       else
         print 'Failed to read terminal cwd.'
       end
