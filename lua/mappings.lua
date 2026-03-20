@@ -61,8 +61,8 @@ return {
     ['<leader>at'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
     ['mt'] = { '<cmd>e TODO.md<cr>', desc = 'Toggle Aerial' },
 
-    ['<leader>fw'] = function() Snacks.picker.grep { layout = 'ivy_split' } end ,
-    ['<C-g>'] = function() Snacks.picker.grep { layout = 'ivy_split' } end ,
+    ['<leader>fw'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
+    ['<C-g>'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
 
     ['vap'] = { 'vip' },
 
