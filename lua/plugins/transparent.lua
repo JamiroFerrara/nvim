@@ -6,6 +6,8 @@ return {
       'NvimTreeNormal', -- NvimTree
       'NeoTreeNormal', -- NvimTree
       'NeoTreeNormalNC', -- NvimTree
+      'TelescopeTitle', -- NvimTree
+      'TelescopeBorder', -- NvimTree
     },
   },
 }
