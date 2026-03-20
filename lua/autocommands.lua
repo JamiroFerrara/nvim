@@ -97,9 +97,15 @@ vim.api.nvim_create_autocmd('FileType', {
   callback = require('helpers.markdown').set_markdown_folding,
 })
 
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'org',
-  callback = require('helpers.org').set_org_folding,
+vim.api.nvim_create_autocmd('BufWinEnter', {
+  pattern = '*.org',
+  callback = function()
+    if vim.bo.filetype == 'org' then
+      vim.defer_fn(function()
+        require('helpers.org').set_org_folding()
+      end, 10)
+    end
+  end,
 })
 
 vim.api.nvim_create_autocmd('BufEnter', {
