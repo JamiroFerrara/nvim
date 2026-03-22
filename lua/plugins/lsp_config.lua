@@ -40,6 +40,7 @@ return { -- LSP Configuration & Plugins
     -- {
     --   'pmizio/typescript-tools.nvim',
     --   dependencies = { 'nvim-lua/plenary.nvim', 'neovim/nvim-lspconfig' },
+    --   ft = {'ts', 'js'},
     --   opts = {},
     --   config = function()
     --     require('typescript-tools').setup {
@@ -77,7 +78,20 @@ return { -- LSP Configuration & Plugins
     --  - Symbol Search
     --  - and more!
 
-    -- require('lspconfig').jdtls.setup {} -- Handled by nvim-java
+    vim.lsp.config("ts_go_ls", {
+        -- FIX: Mabye move the compiled ts_go in nvim-share
+        cmd = { vim.loop.os_homedir() .. "/dotfiles/nvim/lsp/tsgo/tsgo", "--lsp", "-stdio" },
+        filetypes = {
+            "javascript",
+            "javascriptreact",
+            "javascript.jsx",
+            "typescript",
+            "typescriptreact",
+            "typescript.tsx",
+        },
+        root_markers = { "tsconfig.json", "jsconfig.json", "package.json", ".git" },
+    })
+    vim.lsp.enable("ts_go_ls")
 
     vim.fn.sign_define('DiagnosticSignError', { text = '', texthl = 'DiagnosticSignError' })
     vim.fn.sign_define('DiagnosticSignWarn', { text = '', texthl = 'DiagnosticSignWarn' })
