@@ -25,8 +25,7 @@ function _G.org_foldexpr()
   local heading = line:match '^(%*+)%s'
   if heading then
     local level = #heading
-    local result = '>' .. level
-    return result
+    return '>' .. level
   end
   return '='
 end
@@ -39,9 +38,8 @@ M.set_org_folding = function()
   -- vim.api.nvim_set_keymap('n', '<leader>oa', "zR", { noremap = true, silent = true })
   -- vim.api.nvim_set_keymap('n', '<leader>oo', "zR", { noremap = true, silent = true })
 
-  vim.opt.foldtext = '' -- keep syntax highlighting
   vim.opt_local.foldmethod = 'expr'
-  vim.opt_local.foldexpr = 'luaeval("org_foldexpr()")'
+  vim.opt_local.foldexpr = 'v:lua._G.org_foldexpr()'
   vim.opt_local.foldlevel = 99
 end
 
