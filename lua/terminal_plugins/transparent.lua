@@ -8,6 +8,7 @@ return {
       'NeoTreeNormalNC', -- NvimTree
       'TelescopeTitle', -- NvimTree
       'TelescopeBorder', -- NvimTree
+      'FloatBorder', -- NvimTree
     },
   },
 }

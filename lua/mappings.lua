@@ -61,6 +61,8 @@ return {
     ['<leader>at'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
     ['mt'] = { '<cmd>e TODO.md<cr>', desc = 'Toggle Aerial' },
 
+    ['<leader>x'] = { '<cmd>.!sh<CR>', desc = 'Execute line under cursor' },
+
     ['<leader>fw'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
     ['<C-g>'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
 
@@ -325,6 +327,11 @@ return {
       vim.fn.chansend(vim.b.terminal_job_id, 'make build' .. '\n')
       vim.cmd.startinsert()
     end,
+    -- FIX: Not working
+    -- ['<C-m>'] = function()
+    --   vim.fn.chansend(vim.b.terminal_job_id, 'make' .. '\n')
+    --   vim.cmd.startinsert()
+    -- end,
 
     --TODO: Refactor me out as this is a duplicate of the below
     --BUG: This works only once when terminal is open. It needs to be able to

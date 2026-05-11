@@ -81,7 +81,7 @@ return {
         type = 'php',
         request = 'launch',
         name = 'Listen for XDebug',
-        log = true, -- Append or override existing values
+        log = false,
         port = 9003,
         localSourceRoot = '${workspaceFolder}',
         pathMappings = {
@@ -93,15 +93,15 @@ return {
           max_depth = 4,
           extended_properties = 1,
         },
-        breakpoints = vim.tbl_deep_extend('force', {
-          exception = {
-            ['*'] = false,
-          },
-        }, {
-          exception = {
-            CustomException = true,
-          },
-        }),
+        -- breakpoints = vim.tbl_deep_extend('force', {
+        --   exception = {
+        --     ['*'] = false,
+        --   },
+        -- }, {
+        --   exception = {
+        --     CustomException = true,
+        --   },
+        -- }),
       },
     })
 
@@ -193,6 +193,14 @@ return {
     vim.keymap.set('n', '<F3>', dap.step_out, { desc = 'Debug: Step Out' })
     vim.keymap.set('n', '<leader>db', dap.toggle_breakpoint, { desc = 'Debug: Toggle Breakpoint' })
     vim.keymap.set('n', '<leader>du', "<cmd>lua require('dapui').toggle()<cr>", { desc = 'Debug: Toggle Breakpoint' })
+    vim.keymap.set('n', '<leader>dw', function()
+      local workingDir = vim.fn.getcwd()
+      vim.cmd('e ' .. workingDir .. '/DAP\\ Watches')
+    end)
+    vim.keymap.set('n', '<leader>ds', function()
+      local workingDir = vim.fn.getcwd()
+      vim.cmd('e ' .. workingDir .. '/DAP\\ Scopes')
+    end)
     vim.keymap.set('n', '<leader>dh', widgets.hover, { desc = 'Debug: Toggle Breakpoint' })
     vim.keymap.set('n', '<Leader>df', function() require('dap.ext.fuzzy_hover').fuzzy_hover() end,
       { desc = "DAP: Fuzzy Hover" })
