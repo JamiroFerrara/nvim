@@ -4,7 +4,18 @@ return {
   lazy = true,
   cmd = {
     'GpChatNew',
-    'GpChatToggle'
+    'GpChatToggle',
+    'GpImplement',
+    'GpConvert',
+    'GpCustomCmd',
+    'GpOrganize',
+    'GpOptimize',
+    'GpComplete',
+    'GpTranslate',
+    'GpSummarize',
+    'GpFixBugs',
+    'GpExplain',
+    'GpReadability',
   },
   config = function()
     local handle = io.popen '/home/jferrara/.scripts/cgptapikey.sh'
@@ -98,43 +109,104 @@ return {
 			)
 		end,
 
-		-- your own functions can go here, see README for more examples like
-		-- :GpExplain, :GpUnitTests.., :GpTranslator etc.
+		-- GpCustomCmd asks for an instruction and runs it on the selection
+		CustomCmd = function(gp, params)
+			local template = "Having following from {{filename}}:\n\n"
+				.. "```{{filetype}}\n{{selection}}\n```\n\n"
+				.. "{{command}}"
+				.. "\n\nRespond exclusively with the result."
 
-		-- -- example of making :%GpChatNew a dedicated command which
-		-- -- opens new chat with the entire current buffer as a context
-		-- BufferChatNew = function(gp, _)
-		-- 	-- call GpChatNew command in range mode on whole buffer
-		-- 	vim.api.nvim_command("%" .. gp.config.cmd_prefix .. "ChatNew")
-		-- end,
+			local agent = gp.get_command_agent()
+			gp.logger.info("Implementing selection with agent: " .. agent.name)
 
-		-- -- example of adding command which opens new chat dedicated for translation
-		-- Translator = function(gp, params)
-		-- 	local chat_system_prompt = "You are a Translator, please translate between English and Chinese."
-		-- 	gp.cmd.ChatNew(params, chat_system_prompt)
-		--
-		-- 	-- -- you can also create a chat with a specific fixed agent like this:
-		-- 	-- local agent = gp.get_chat_agent("ChatGPT4o")
-		-- 	-- gp.cmd.ChatNew(params, chat_system_prompt, agent)
-		-- end,
+			gp.Prompt(
+				params,
+				gp.Target.rewrite,
+				agent,
+				template,
+				"What do you want to do?", -- command will run directly without any prompting for user input
+				nil -- no predefined instructions (e.g. speech-to-text from Whisper)
+			)
+		end,
 
-		-- -- example of adding command which writes unit tests for the selected code
-		-- UnitTests = function(gp, params)
-		-- 	local template = "I have the following code from {{filename}}:\n\n"
-		-- 		.. "```{{filetype}}\n{{selection}}\n```\n\n"
-		-- 		.. "Please respond by writing table driven unit tests for the code above."
-		-- 	local agent = gp.get_command_agent()
-		-- 	gp.Prompt(params, gp.Target.enew, agent, template)
-		-- end,
+		-- GpOrganize restructures selected code for clarity and consistency
+		Organize = function(gp, params)
+			local agent = gp.get_command_agent()
+			local template = "Having following from {{filename}}:\n\n"
+				.. "```{{filetype}}\n{{selection}}\n```\n\n"
+				.. "Please reorganize this code to be well-structured and clean."
+				.. "\n\nRespond exclusively with the reorganized code."
+			gp.Prompt(params, gp.Target.rewrite, agent, template, nil, nil)
+		end,
 
-		-- -- example of adding command which explains the selected code
-		-- Explain = function(gp, params)
-		-- 	local template = "I have the following code from {{filename}}:\n\n"
-		-- 		.. "```{{filetype}}\n{{selection}}\n```\n\n"
-		-- 		.. "Please respond by explaining the code above."
-		-- 	local agent = gp.get_chat_agent()
-		-- 	gp.Prompt(params, gp.Target.popup, agent, template)
-		-- end,
+		-- GpOptimize improves selected code for performance and readability
+		Optimize = function(gp, params)
+			local agent = gp.get_command_agent()
+			local template = "Having following from {{filename}}:\n\n"
+				.. "```{{filetype}}\n{{selection}}\n```\n\n"
+				.. "Please optimize this code for better performance and readability."
+				.. "\n\nRespond exclusively with the optimized code."
+			gp.Prompt(params, gp.Target.rewrite, agent, template, nil, nil)
+		end,
+
+		-- GpComplete fills in code based on comments/TODOs in the selection
+		Complete = function(gp, params)
+			local agent = gp.get_command_agent()
+			local template = "Having following from {{filename}}:\n\n"
+				.. "```{{filetype}}\n{{selection}}\n```\n\n"
+				.. "Please complete this code based on contained comments, TODOs, and context."
+				.. "\n\nRespond exclusively with the completed code."
+			gp.Prompt(params, gp.Target.rewrite, agent, template, nil, nil)
+		end,
+
+		-- GpTranslate asks for the target language, then rewrites the selection
+		Translate = function(gp, params)
+			local target = vim.fn.input('Translate to: ')
+			if target == '' then return end
+			local agent = gp.get_command_agent()
+			local template = "Having following from {{filename}}:\n\n"
+				.. "```{{filetype}}\n{{selection}}\n```\n\n"
+				.. "Please translate this to " .. target .. "."
+				.. "\n\nRespond exclusively with the translated output."
+			gp.Prompt(params, gp.Target.rewrite, agent, template, nil, nil)
+		end,
+
+		-- GpSummarize outputs a summary in a new buffer
+		Summarize = function(gp, params)
+			local agent = gp.get_command_agent()
+			local template = "Having following from {{filename}}:\n\n"
+				.. "```{{filetype}}\n{{selection}}\n```\n\n"
+				.. "Please provide a concise summary of the above."
+			gp.Prompt(params, gp.Target.enew, agent, template, nil, nil)
+		end,
+
+		-- GpFixBugs finds and fixes issues in the selected code
+		FixBugs = function(gp, params)
+			local agent = gp.get_command_agent()
+			local template = "Having following from {{filename}}:\n\n"
+				.. "```{{filetype}}\n{{selection}}\n```\n\n"
+				.. "Please fix any bugs or issues in this code."
+				.. "\n\nRespond exclusively with the fixed code."
+			gp.Prompt(params, gp.Target.rewrite, agent, template, nil, nil)
+		end,
+
+		-- GpExplain shows a popup explaining the selected code
+		Explain = function(gp, params)
+			local agent = gp.get_command_agent()
+			local template = "Having following from {{filename}}:\n\n"
+				.. "```{{filetype}}\n{{selection}}\n```\n\n"
+				.. "Please explain what this code does, including any important details."
+			gp.Prompt(params, gp.Target.popup, agent, template, nil, nil)
+		end,
+
+		-- GpReadability shows a popup with readability analysis and suggestions
+		Readability = function(gp, params)
+			local agent = gp.get_command_agent()
+			local template = "Having following from {{filename}}:\n\n"
+				.. "```{{filetype}}\n{{selection}}\n```\n\n"
+				.. "Please analyze the readability of this code and suggest improvements."
+			gp.Prompt(params, gp.Target.popup, agent, template, nil, nil)
+		end,
 	},
 
     }

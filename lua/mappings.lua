@@ -39,8 +39,8 @@ return {
     -- Leader Shortcuts
     ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
 
-    ['<leader>e'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
-    ['<C-e>'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
+    -- ['<leader>e'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
+    -- ['<C-e>'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
 
     ['<leader>gg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
     ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
@@ -217,7 +217,7 @@ return {
     ['<leader>lE'] = { '<cmd>Lspsaga diagnostic_jump_prev<cr>' },
     ['<leader>le'] = { '<cmd>Lspsaga diagnostic_jump_next<cr>' },
     ['<leader>lr'] = { '<cmd>Lspsaga rename<cr>' },
-    ['<leader>lR'] = { '<cmd>Lsp<cr>' },
+    ['<leader>lR'] = { '<cmd>LspRestart<cr>' },
     ['<leader>ll'] = { '<cmd>Lspsaga hover_doc<cr>' },
     ['<leader>lo'] = { '<cmd>Lspsaga outline<cr>' },
     ['<leader>ls'] = { '<cmd>Lspsaga outline<cr>' },
@@ -451,27 +451,15 @@ return {
     -- NOTE: [ Ai ]
     ['<leader>ai'] = { 'y<cmd>GpChatNew vsplit<CR>Gp' },
 
-    ['<leader>ao'] = { '<cmd>ChatGPTRun organize_code<CR>', desc = 'Organize code' },
-    ['<leader>aO'] = { '<cmd>ChatGPTRun optimize_code<CR>', desc = 'Optimize code' },
-    ['<leader>ac'] = { '<cmd>ChatGPTRun complete_code<CR>', desc = 'Complete code' },
-    ['<leader>at'] = { '<cmd>ChatGPTRun translate<CR>', desc = 'Translate code' },
-    ['<leader>as'] = { '<cmd>ChatGPTRun summerize<CR>', desc = 'Summerize code' },
-    ['<leader>af'] = { '<cmd>ChatGPTRun fix_bugs<CR>', desc = 'Fix bugs' },
-    ['<leader>ae'] = { '<cmd>ChatGPTRun explain_code<CR>', desc = 'Explain code' },
-    ['<leader>ar'] = { '<cmd>ChatGPTRun code_readability_analysis<CR>', desc = 'Analyze code readability' },
-
-    -- NOTE: [ Ai Conversions ]
-    ['<leader>aCt'] = { '<cmd>ChatGPTRun convert_typescript<CR>', desc = 'Convert to TypeScript' },
-    ['<leader>aCb'] = { '<cmd>ChatGPTRun convert_bash<CR>', desc = 'Convert to Bash' },
-    ['<leader>aCc'] = { '<cmd>ChatGPTRun convert_cs<CR>', desc = 'Convert to C#' },
-    ['<leader>aCp'] = { '<cmd>ChatGPTRun convert_php<CR>', desc = 'Convert to PHP' },
-    ['<leader>aCl'] = { '<cmd>ChatGPTRun convert_lua<CR>', desc = 'Convert to Lua' },
-
-    ['<leader>qc'] = { ':!quicktype --features just-types -l csharp<CR>', desc = 'Run quicktype for C#' },
-    ['<leader>av'] = { 'y<cmd>lua require("user.helpers").visualModeAi()<CR>', desc = 'Visual mode AI' },
-
-    ['<leader>al'] = { '<cmd>lua require "align".align_to_char(1, true)<cr>', desc = 'Align to character' },
-    ['<leader>aw'] = { '<cmd>lua require "align".align_to_string(false, true, true)<cr>', desc = 'Align to string' },
+    ['<leader>ao'] = { ':GpOrganize<CR>', desc = 'Organize code' },
+    ['<leader>aO'] = { ':GpOptimize<CR>', desc = 'Optimize code' },
+    ['<leader>ac'] = { ':GpComplete<CR>', desc = 'Complete code' },
+    ['<leader>as'] = { ':GpSummarize<CR>', desc = 'Summarize code' },
+    ['<leader>af'] = { ':GpFixBugs<CR>', desc = 'Fix bugs' },
+    ['<leader>ae'] = { ':GpExplain<CR>', desc = 'Explain code' },
+    ['<leader>ar'] = { ':GpReadability<CR>', desc = 'Analyze code readability' },
+    ['<leader>ax'] = { ':GpConvert<CR>', desc = 'Convert selection (prompts for target)' },
+    ['<leader>a.'] = { ':GpCustomCmd<CR>', desc = 'Execute custom command on selection' },
 
     ['<leader>c'] = { "<esc><cmd>lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<cr>", desc = 'Toggle comment' },
 
@@ -534,5 +522,5 @@ return {
   -- Command mode
   c = {
     ['<C-Del>'] = { '<C-w>', desc = 'Delete word' },
-  }
+  },
 }

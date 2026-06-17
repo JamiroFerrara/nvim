@@ -8,7 +8,7 @@ return {
     -- your configuration comes here
     -- or leave it empty to use the default settings
     -- refer to the configuration section below
-    explorer = { enabled = true },
+    explorer = { enabled = false },
     quickfile = { enabled = true },
     bigfile = { enabled = true },
     indent = { enabled = true },

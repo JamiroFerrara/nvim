@@ -84,7 +84,7 @@ return {
         desc = 'Open directory with zoxide',
       },
       ['<C-c>'] = 'actions.close',
-      ['<C-l>'] = 'actions.refresh',
+      ['<C-r>'] = 'actions.refresh',
       ['-'] = 'actions.parent',
       ['_'] = 'actions.open_cwd',
       ['`'] = 'actions.cd',

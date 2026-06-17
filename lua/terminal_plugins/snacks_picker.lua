@@ -353,20 +353,20 @@ return {
       end,
       desc = 'Find Files',
     },
-    {
-      '<leader>ff',
-      function()
-        Snacks.picker.files { layout = 'ivy', matcher = { frecency = true } }
-      end,
-      desc = 'Find Files',
-    },
-    {
-      '<C-p>',
-      function()
-        Snacks.picker.files { layout = 'ivy_split', matcher = { frecency = true } }
-      end,
-      desc = 'Find Files',
-    },
+    -- {
+    --   '<leader>ff',
+    --   function()
+    --     Snacks.picker.files { layout = 'ivy', matcher = { frecency = true } }
+    --   end,
+    --   desc = 'Find Files',
+    -- },
+    -- {
+    --   '<C-p>',
+    --   function()
+    --     Snacks.picker.files { layout = 'ivy_split', matcher = { frecency = true } }
+    --   end,
+    --   desc = 'Find Files',
+    -- },
     -- {
     --   '<leader>fw',
     --   function()
@@ -420,7 +420,7 @@ return {
     {
       '<leader>gs',
       function()
-        Snacks.picker.git_status { layout = 'ivy' }
+        Snacks.picker.git_status { layout = 'sidebar' }
       end,
       desc = 'Git Status',
     },
