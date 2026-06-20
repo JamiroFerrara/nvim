@@ -108,13 +108,13 @@ return {
       -- Turn on / off checkbox state rendering
       enabled = true,
       unchecked = {
-        -- icon = '- ',
-        icon = '- [ ]',
+        icon = '- ',
+        -- icon = '- [ ]',
         highlight = 'ObsidianTodo',
       },
       checked = {
-        -- icon = '- ',
-        icon = '- [✓]',
+        icon = '- ',
+        -- icon = '- [✓]',
         highlight = 'ObsidianDone',
       },
       custom = {
