@@ -76,25 +76,23 @@ vim.o.foldenable = true
 
 -- TODO: Move to separate file
 vim.opt.laststatus = vim.opt.clipboard:append 'unnamedplus' -- use system clipboard as default register
+
+-- WSL2 clipboard via win32yank (requires win32yank.exe in PATH or /mnt/c/ path)
 vim.g.clipboard = {
-  name = 'xclip-wsl',
+  name = 'win32yank-wsl',
   copy = {
-    ['+'] = { 'xclip', '-quiet', '-i', '-selection', 'clipboard' },
-    ['*'] = { 'xclip', '-quiet', '-i', '-selection', 'primary' },
+    ['+'] = { '/home/jferrara/.local/bin/win32yank.exe', '-i', '--crlf' },
+    ['*'] = { '/home/jferrara/.local/bin/win32yank.exe', '-i', '--crlf' },
   },
   paste = {
-    ['+'] = { 'sh', '-c', 'xclip -o -selection clipboard | sed "s/\\r$//"' },
-    ['*'] = { 'sh', '-c', 'xclip -o -selection primary | sed "s/\\r$//"' },
+    ['+'] = { '/home/jferrara/.local/bin/win32yank.exe', '-o', '--lf' },
+    ['*'] = { '/home/jferrara/.local/bin/win32yank.exe', '-o', '--lf' },
   },
   cache_enabled = 1,
 }
 
 -- LineNr jumplist mappings for 'k' and 'j'
 vim.api.nvim_command [[nnoremap <expr> k (v:count > 1 ? "m'" . v:count : '') . 'k']]
-vim.api.nvim_command [[nnoremap <expr> j (v:count > 1 ? "m'" . v:count : '') . 'j']]
-
-vim.cmd [[tnoremap <C-z> pwd\|xclip -selection clipboard<CR><C-\><C-n>:cd <C-r>+<CR>i]]
-
 -- Check if Neovim was launched with the +terminal argument
 local argv = vim.v.argv or {}
 local function launched_with_terminal()
