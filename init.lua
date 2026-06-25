@@ -108,6 +108,9 @@ _G.NVIM_TERMINAL_ONLY = launched_with_terminal()
 
 require 'loaders.lazy'
 require 'loaders.mappings'
+-- Navigate by display line (respects wrap); noremap to avoid gitsigns' gj/gk intercepting
+vim.keymap.set('n', 'j', 'gj', { noremap = true, desc = 'Move cursor down (display line)' })
+vim.keymap.set('n', 'k', 'gk', { noremap = true, desc = 'Move cursor up (display line)' })
 require 'autocommands'
 require 'highlights'
 
