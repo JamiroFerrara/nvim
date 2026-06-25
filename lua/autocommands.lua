@@ -23,11 +23,11 @@ vim.api.nvim_create_autocmd('BufWinEnter', {
 })
 
 -- Trigger lsp foldig when connected
-vim.api.nvim_create_autocmd("LspAttach", {
+vim.api.nvim_create_autocmd('LspAttach', {
   callback = function(args)
     local bufnr = args.buf
     local ft = vim.api.nvim_buf_get_option(bufnr, 'filetype')
-    if ft == "cs" then
+    if ft == 'cs' then
       vim.defer_fn(function()
         require('helpers.csharp').set_csharp_folding()
       end, 10)
@@ -63,8 +63,22 @@ vim.api.nvim_create_autocmd('TermOpen', {
     vim.wo.signcolumn = 'no'
     vim.opt_local.modifiable = true
     vim.opt_local.readonly = false
-    vim.api.nvim_buf_set_keymap(0, 'n', '<Tab>', '<cmd>Oil<CR>',
-      { noremap = true, silent = true, desc = 'Enter Oil if in terminal normal mode' })
+    vim.api.nvim_buf_set_keymap(0, 'n', '<Tab>', '', {
+      noremap = true,
+      silent = true,
+      desc = 'Open Oil at terminal cwd',
+      callback = function()
+        local tmpfile = '/tmp/nvim_term_cwd'
+        vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
+        vim.wait(80)
+        local cwd = vim.fn.readfile(tmpfile)[1]
+        if cwd and cwd ~= '' then
+          vim.cmd('Oil ' .. vim.fn.fnameescape(cwd))
+        else
+          vim.cmd 'Oil'
+        end
+      end,
+    })
   end,
 })
 
@@ -152,15 +166,15 @@ vim.api.nvim_create_autocmd('BufEnter', {
     local path = info.file
     local csv_data = {}
     local result = vim
-        .system({ 'x2c', path }, {
-          stdout = function(err, data)
-            if data then
-              table.insert(csv_data, data)
-            end
-          end,
-          stderr = false,
-        })
-        :wait()
+      .system({ 'x2c', path }, {
+        stdout = function(err, data)
+          if data then
+            table.insert(csv_data, data)
+          end
+        end,
+        stderr = false,
+      })
+      :wait()
 
     if result.code ~= 0 then
       vim.notify('Failed to convert XLSX to CSV', vim.log.levels.ERROR)
