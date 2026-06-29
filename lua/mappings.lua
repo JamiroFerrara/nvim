@@ -293,10 +293,7 @@ return {
       vim.cmd.startinsert()
     end,
     ['<cr>'] = function()
-      local word = vim.fn.expand '<cWORD>'
-      vim.notify('Entering -> ' .. word, vim.log.levels.INFO)
-      vim.fn.chansend(vim.b.terminal_job_id, 'cd ' .. word .. '\n')
-      vim.cmd.startinsert()
+      require('helpers.term_path').handle_enter()
     end,
     ['<bs>'] = function()
       vim.notify('Going back!', vim.log.levels.INFO)
@@ -314,12 +311,6 @@ return {
       vim.fn.chansend(vim.b.terminal_job_id, 'make build' .. '\n')
       vim.cmd.startinsert()
     end,
-    -- FIX: Not working
-    -- ['<C-m>'] = function()
-    --   vim.fn.chansend(vim.b.terminal_job_id, 'make' .. '\n')
-    --   vim.cmd.startinsert()
-    -- end,
-
     --TODO: Refactor me out as this is a duplicate of the below
     --BUG: This works only once when terminal is open. It needs to be able to
     --reliably get the current working directory of the terminal session

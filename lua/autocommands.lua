@@ -95,6 +95,8 @@ vim.api.nvim_create_autocmd('TermOpen', {
         end
       end,
     })
+    -- Highlight clickable paths (stack traces, compiler errors, etc.)
+    require('helpers.term_path').apply_highlights()
   end,
 })
 
