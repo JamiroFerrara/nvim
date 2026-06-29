@@ -142,10 +142,6 @@ return {
     ['da8'] = { 'da(' },
     ['va8'] = { 'va(' },
 
-    -- Navigation
-    -- ['<leader>ai'] = { '<cmd>GpChatNew vsplit<CR>' },
-    -- ['<leader>aI'] = { '<cmd>GpChatNew<CR>' },
-
     ['<leader>ai'] = { '<cmd>Opencode<CR>' },
     ['<leader>aa'] = { '<cmd>GpChatNew vsplit<CR>' },
 
@@ -167,15 +163,6 @@ return {
     ['{'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
     ['}'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
     ['+'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
-
-    -- ['<C-q>'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
-    --NOTE:  2 done in init.lua (nowait argument)
-    -- ['<C-e>'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
-    -- ['<C-r>'] = { '<cmd>lua require("harpoon.ui").nav_file(4)<cr>' },
-    -- ['<C-y>'] = { '<cmd>lua require("harpoon.ui").nav_file(5)<cr>' },
-    -- ['<C-u>'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
-    -- ['<C-i>'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
-    -- ['<C-o>'] = { '<cmd>lua require("harpoon.ui").nav_file(8)<cr>' },
 
     -- Other
     ['|'] = { '1' },

@@ -12,7 +12,7 @@ return {
       show_scores = false,
     },
     keymaps = {
-      close = 'kj',
+      close = { 'kj', '<Esc>' },
       select = '<CR>',
       select_split = '<C-s>',
       select_vsplit = '<C-v>',
@@ -37,7 +37,7 @@ return {
       preview_size = 0.5,
       flex = { size = 130, wrap = 'top' },
       show_scrollbar = true,
-      show_full_path = true, -- Set to true to show full paths instead of filename + directory
+      show_full_path = true,                   -- Set to true to show full paths instead of filename + directory
       path_shorten_strategy = 'middle_number', -- 'middle_number' | 'middle' | 'end'
       anchor = 'center',
     },
