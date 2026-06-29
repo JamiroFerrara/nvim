@@ -19,10 +19,12 @@ function M.collect_line(linenr)
   while i > 1 do
     local prev = vim.fn.getline(i - 1)
     local cur  = vim.fn.getline(i)
-    -- Only join wrapped lines: prev line ends mid-word (no trailing space)
-    -- AND current line starts mid-word (no leading space).  This prevents
-    -- concatenating independent stack-trace entries into one blob.
-    if prev:gsub('%s+$', ''):match('%S$') and cur:match('^%S') then
+    -- Only join terminal-wrapped lines: prev must be near the window width
+    -- (it was wrapped because it hit the column boundary), end mid-word,
+    -- AND current line starts mid-word.  Short lines never join.
+    if #prev >= vim.o.columns - 5
+        and prev:gsub('%s+$', ''):match('%S$')
+        and cur:match('^%S') then
       table.insert(lines, 1, prev)
       i = i - 1
     else
@@ -62,7 +64,9 @@ function M.parse_line(line)
   for _, p in ipairs(patterns) do
     local path, lineno = line:match(p[1])
     if path then
-      if (path:match('/') or path:match('^~')) and not path:match('://') then
+      if (path:match('/') or path:match('^~'))
+          and not path:match('://')
+          and not path:match('%.nvim$') then
         if p[2] then
           return path, tonumber(lineno)
         else
@@ -76,7 +80,7 @@ end
 
 -- Base Vim regex patterns for highlighting.
 -- File paths: /path/file.ext optionally followed by :N, :line N, or (N).
-local BASE_PATH = [[\v(\s|^)\zs(\/|\~)\S+\.\w+(:\d+|\:line\s+\d+|\(\d+\))?\ze(\s|$|\)|\]|,|;)]]
+local BASE_PATH = [[\v(\s|^)\zs(\/|\~)\S+\.(nvim)@!\w+(:\d+|\:line\s+\d+|\(\d+\))?\ze(\s|$|\)|\]|,|;)]]
 -- URLs: https?://... until whitespace or common delimiters.
 local BASE_URL  = [=[\v(\s|^)\zshttps?://[^[:space:])\]]+\ze(\s|$|\)|\]|,|;)]=]
 

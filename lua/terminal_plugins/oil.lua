@@ -1,8 +1,6 @@
 return {
   'stevearc/oil.nvim',
-  -- event = 'VeryLazy',
-  cmd = 'Oil',
-  lazy = true,
+  lazy = false,
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
   opts = {
     -- Oil will take over directory buffers (e.g. `vim .` or `:e src/`)
