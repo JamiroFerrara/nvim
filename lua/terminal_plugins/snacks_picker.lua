@@ -441,7 +441,7 @@ return {
     {
       '<leader>gf',
       function()
-        Snacks.picker.git_log_file { layout = 'ivy' }
+        Snacks.picker.git_log_file { layout = 'sidebar' }
       end,
       desc = 'Git Log File',
     },

@@ -67,7 +67,7 @@ return {
       combo_boost_score_multiplier = 100,
     },
   },
-  lazy = false, -- the plugin lazy-initialises itself
+  -- lazy = false, -- now lazy-loaded via keys
   keys = {
     { "<C-p>", function() require('fff').find_files() end, desc = 'FFFind files' },
     -- { "<C-g>", function() require('fff').live_grep() end,  desc = 'LiFFFe grep' },

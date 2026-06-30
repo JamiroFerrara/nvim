@@ -14,7 +14,7 @@ return {
     'nvim-mini/mini.pick', -- optional
     'folke/snacks.nvim', -- optional
   },
-  -- cmd = "Neogit",
+  cmd = 'Neogit',
   config = function()
     require('neogit').setup {
       -- Use Treesitter to apply syntax highlighting to diff hunks

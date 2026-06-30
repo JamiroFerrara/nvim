@@ -6,6 +6,30 @@ return {
   'mfussenegger/nvim-dap',
   enabled = not _G.NVIM_TERMINAL_ONLY,
   lazy = true,
+  keys = {
+    { '<F5>',     function() require('dap').continue() end,             desc = 'Debug: Start/Continue' },
+    { '<C-d>',    function() require('dap').continue() end,             desc = 'Debug: Start/Continue' },
+    { '@',        function() require('dap').continue() end,             desc = 'Debug: Start/Continue' },
+    { '<F10>',    function() require('dap').step_over() end,            desc = 'Debug: Step Over' },
+    { ']',        function() require('dap').step_over() end,            desc = 'Debug: Step Over' },
+    { '<F11>',    function() require('dap').step_into() end,            desc = 'Debug: Step Into' },
+    { '[',        function() require('dap').step_into() end,            desc = 'Debug: Step Into' },
+    { '<F3>',     function() require('dap').step_out() end,             desc = 'Debug: Step Out' },
+    { '<leader>db', function() require('dap').toggle_breakpoint() end,  desc = 'Debug: Toggle Breakpoint' },
+    { '<leader>dc', function() require('dap').set_breakpoint(vim.fn.input 'Breakpoint condition: ') end, desc = 'Debug: Conditional Breakpoint' },
+    { '<leader>du', '<cmd>lua require("dapui").toggle()<cr>',           desc = 'Debug: Toggle UI' },
+    { '<leader>dh', function() require('dap.ui.widgets').hover() end,   desc = 'Debug: Hover' },
+    { '<leader>df', function() require('dap.ext.fuzzy_hover').fuzzy_hover() end, desc = 'Debug: Fuzzy Hover' },
+    { '<F7>',     function() require('dapui').toggle() end,             desc = 'Debug: Toggle UI' },
+    { '<leader>dw', function()
+      local workingDir = vim.fn.getcwd()
+      vim.cmd('e ' .. workingDir .. '/DAP\\ Watches')
+    end, desc = 'Debug: Open Watches' },
+    { '<leader>ds', function()
+      local workingDir = vim.fn.getcwd()
+      vim.cmd('e ' .. workingDir .. '/DAP\\ Scopes')
+    end, desc = 'Debug: Open Scopes' },
+  },
   -- NOTE: And you can specify dependencies as well
   dependencies = {
     'rcarriga/nvim-dap-ui',
@@ -17,7 +41,6 @@ return {
   config = function()
     local dap = require 'dap'
     local dapui = require 'dapui'
-    local widgets = require 'dap.ui.widgets'
 
     require('mason-nvim-dap').setup {
       -- You can provide additional configuration to the handlers,
@@ -182,29 +205,6 @@ return {
 
 
 
-    vim.keymap.set('n', '<F5>', dap.continue, { desc = 'Debug: Start/Continue' })
-    -- vim.keymap.set('n', '<leader>dd', dap.continue, { desc = 'Debug: Start/Continue' })
-    vim.keymap.set('n', '<C-d>', dap.continue, { desc = 'Debug: Start/Continue' })
-    vim.keymap.set('n', '@', dap.continue, { desc = 'Debug: Start/Continue' })
-    vim.keymap.set('n', '<F10>', dap.step_over, { desc = 'Debug: Step Over' })
-    vim.keymap.set('n', ']', dap.step_over, { desc = 'Debug: Step Over' })
-    vim.keymap.set('n', '<F11>', dap.step_into, { desc = 'Debug: Step Into' })
-    vim.keymap.set('n', '[', dap.step_into, { desc = 'Debug: Step Into' })
-    vim.keymap.set('n', '<F3>', dap.step_out, { desc = 'Debug: Step Out' })
-    vim.keymap.set('n', '<leader>db', dap.toggle_breakpoint, { desc = 'Debug: Toggle Breakpoint' })
-    vim.keymap.set('n', '<leader>du', "<cmd>lua require('dapui').toggle()<cr>", { desc = 'Debug: Toggle Breakpoint' })
-    vim.keymap.set('n', '<leader>dw', function()
-      local workingDir = vim.fn.getcwd()
-      vim.cmd('e ' .. workingDir .. '/DAP\\ Watches')
-    end)
-    vim.keymap.set('n', '<leader>ds', function()
-      local workingDir = vim.fn.getcwd()
-      vim.cmd('e ' .. workingDir .. '/DAP\\ Scopes')
-    end)
-    vim.keymap.set('n', '<leader>dh', widgets.hover, { desc = 'Debug: Toggle Breakpoint' })
-    vim.keymap.set('n', '<Leader>df', function() require('dap.ext.fuzzy_hover').fuzzy_hover() end,
-      { desc = "DAP: Fuzzy Hover" })
-    vim.keymap.set('n', '<F7>', dapui.toggle, { desc = 'Debug: See last session result.' })
     vim.fn.sign_define('DapBreakpoint', { text = dap_ui.DapBreakpoint, texthl = 'DapLogPoint', linehl = '', numhl = '', priority = 50 })
     vim.fn.sign_define('DapBreakpointCondition',
       { text = dap_ui.DapBreakpointCondition, texthl = 'DapBreakpointCondition', linehl = '', numhl = '', priority = 50 })
@@ -213,9 +213,8 @@ return {
     vim.fn.sign_define('DapLogPoint', { text = dap_ui.DapLogPoint, texthl = 'DapLogPoint', linehl = '', numhl = '', priority = 50 })
     vim.fn.sign_define('DapStopped',
       { text = dap_ui.DapStopped, texthl = 'DapBreakpointCondition', linehl = '', numhl = '', priority = 50 })
-    vim.keymap.set('n', '<leader>dc', function()
-      dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
-    end, { desc = 'Debug: Set Breakpoint' })
+    dap.listeners.before.event_terminated['dapui_config'] = dapui.close
+    dap.listeners.before.event_exited['dapui_config'] = dapui.close
     -- dap.listeners.after.event_stopped['dapui_config'] = function(session, body)
     --   os.execute '/usr/local/bin/node.exe "C:\\Users\\JFerrara\\Programs\\focus\\focus.js"'
     -- end

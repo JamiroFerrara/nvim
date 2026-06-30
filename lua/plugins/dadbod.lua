@@ -1,7 +1,7 @@
 return {
   'tpope/vim-dadbod',
-  -- event = 'VeryLazy', --NOTE: Keep this since otherwise breaks -c "DBUI"
-  commit = "f52bafb9",
+  cmd = { 'DBUI', 'DBUIToggle', 'DBUIFindBuffer', 'DBUIRenameBuffer' },
+  event = 'VeryLazy',
   enabled = not _G.NVIM_TERMINAL_ONLY,
   dependencies = {
     'kristijanhusak/vim-dadbod-ui',

@@ -17,19 +17,6 @@ return { -- LSP Configuration & Plugins
     -- `neodev` configures Lua LSP for your Neovim config, runtime and plugins
     -- used for completion, annotations and signatures of Neovim apis
     { 'folke/neodev.nvim',                         opts = {} },
-    {
-      'nvim-java/nvim-java',
-      config = function()
-        vim.env.JAVA_HOME = os.getenv('HOME') .. '/.local/share/nvim/site/nvim-java/packages/openjdk/25/jdk-25'
-        vim.env.PATH = vim.env.JAVA_HOME .. '/bin:' .. vim.env.PATH
-        require('java').setup({
-          jdk = {
-            auto_install = false
-          },
-        })
-        vim.lsp.enable('jdtls')
-      end,
-    }, -- Setup nvim-java
     -- {
     --   'mfussenegger/nvim-jdtls',
     --   event = 'VeryLazy',
@@ -231,7 +218,12 @@ return { -- LSP Configuration & Plugins
     vim.list_extend(ensure_installed, {
       'stylua', -- Used to format Lua code
     })
-    require('mason-tool-installer').setup { ensure_installed = ensure_installed }
+    require('mason-tool-installer').setup {
+      ensure_installed = ensure_installed,
+      integrations = {
+        ['mason-nvim-dap'] = false, -- saves 134ms of loading debug adapter configs on first file open
+      },
+    }
 
     require('mason-lspconfig').setup {
       handlers = {

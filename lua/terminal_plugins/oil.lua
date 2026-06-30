@@ -1,7 +1,8 @@
 return {
   'stevearc/oil.nvim',
-  lazy = false,
+  -- lazy = false,
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
+  cmd = {'Oil'},
   opts = {
     -- Oil will take over directory buffers (e.g. `vim .` or `:e src/`)
     -- Set to false if you still want to use netrw.
@@ -199,8 +200,26 @@ return {
   },
   dependencies = { 'nvim-tree/nvim-web-devicons' },
   keys = {
+    -- TODO: Extract a function for both of theese
     {
       '<Tab>',
+      function()
+        if vim.bo.buftype == 'terminal' and vim.b.terminal_job_id then
+          local tmpfile = '/tmp/nvim_term_cwd'
+          vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
+          vim.wait(80)
+          local cwd = vim.fn.readfile(tmpfile)[1]
+          if cwd and cwd ~= '' then
+            vim.cmd('Oil ' .. vim.fn.fnameescape(cwd))
+            return
+          end
+        end
+        vim.cmd 'Oil'
+      end,
+      desc = 'NeoTree reveal (terminal cwd aware)',
+    },
+    {
+      '<C-e>',
       function()
         if vim.bo.buftype == 'terminal' and vim.b.terminal_job_id then
           local tmpfile = '/tmp/nvim_term_cwd'

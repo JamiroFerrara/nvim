@@ -179,7 +179,7 @@ function M.handle_enter()
 
   if vim.uv.fs_stat(expanded) then
     -- File or directory → open in nvim (dir goes through oil/netrw)
-    vim.cmd.edit(expanded)
+    vim.cmd('Oil ' .. expanded)
   else
     -- Not a valid path → cd in the terminal
     vim.fn.chansend(vim.b.terminal_job_id, 'cd ' .. expanded .. '\n')
