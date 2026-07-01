@@ -42,7 +42,6 @@ return {
     -- ['<leader>e'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
     -- ['<C-e>'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
 
-    ['<leader>gg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
     ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
     ['<leader>dB'] = { '<cmd>DBUI<cr>', desc = 'Open DAP UI' },
     ['<leader>c'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },

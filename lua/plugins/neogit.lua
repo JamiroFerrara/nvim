@@ -418,6 +418,7 @@ return {
   end,
   keys = {
     { '<leader>gg', '<cmd>Neogit<cr>', desc = 'Show Neogit UI' },
+    { '<M-g>', '<cmd>Neogit<cr>', desc = 'Show Neogit UI' },
     { '<leader>gl', '<cmd>Neogit log<cr>', desc = 'Neogit log' },
   },
 }
