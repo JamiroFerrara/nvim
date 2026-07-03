@@ -1,6 +1,7 @@
 return {
   "basola21/PDFview",
-  lazy = false,
+  cmd = "PDFview",
+  event = "VeryLazy",
   dependencies = { "nvim-telescope/telescope.nvim" },
   config = function()
     -- Increase page size: default 50 → 120 lines per page

@@ -494,6 +494,7 @@ return {
 
     ['<C-w>'] = { '<cmd>q<cr>' },
     ['<M-w>'] = { '<cmd>q<cr>' },
+    ['<C-e>'] = { '<cmd>Oil<cr>', desc = 'Oil from insert mode' },
   },
 
   -- Command mode
