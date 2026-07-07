@@ -63,14 +63,14 @@ return { -- Fuzzy Finder (files, lsp, etc)
       end,
     },
     { 'nvim-telescope/telescope-ui-select.nvim' },
-    {
-      'nvim-telescope/telescope-frecency.nvim',
-      -- install the latest stable version
-      version = '^0.10.0',
-      config = function()
-        require('telescope').load_extension 'frecency'
-      end,
-    },
+    -- {
+    --   'nvim-telescope/telescope-frecency.nvim',
+    --   -- install the latest stable version
+    --   version = '^0.10.0',
+    --   config = function()
+    --     require('telescope').load_extension 'frecency'
+    --   end,
+    -- },
     {
       'isak102/telescope-git-file-history.nvim',
       dependencies = {

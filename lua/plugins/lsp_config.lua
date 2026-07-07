@@ -6,17 +6,17 @@ return { -- LSP Configuration & Plugins
   lazy = true,
   dependencies = {
     -- Automatically install LSPs and related tools to stdpath for Neovim
-    { 'williamboman/mason.nvim',                   config = true }, -- NOTE: Must be loaded before dependants
-    { 'williamboman/mason-lspconfig.nvim',         commit = 'f995805' },
+    { 'williamboman/mason.nvim', config = true }, -- NOTE: Must be loaded before dependants
+    { 'williamboman/mason-lspconfig.nvim', commit = 'f995805' },
     { 'WhoIsSethDaniel/mason-tool-installer.nvim', commit = 'e3656b4d' },
 
     -- Useful status updates for LSP.
     -- NOTE: `opts = {}` is the same as calling `require('fidget').setup({})`
-    { 'j-hui/fidget.nvim',                         opts = {} },
+    { 'j-hui/fidget.nvim', opts = {} },
 
     -- `neodev` configures Lua LSP for your Neovim config, runtime and plugins
     -- used for completion, annotations and signatures of Neovim apis
-    { 'folke/neodev.nvim',                         opts = {} },
+    { 'folke/neodev.nvim', opts = {} },
     -- {
     --   'mfussenegger/nvim-jdtls',
     --   event = 'VeryLazy',
@@ -45,6 +45,21 @@ return { -- LSP Configuration & Plugins
     --   end,
     -- },
   },
+  init = function()
+    vim.lsp.config('ts_go_ls', {
+      cmd = { vim.loop.os_homedir() .. '/dotfiles/nvim/lsp/tsgo/tsgo', '--lsp', '-stdio' },
+      filetypes = {
+        'javascript',
+        'javascriptreact',
+        'javascript.jsx',
+        'typescript',
+        'typescriptreact',
+        'typescript.tsx',
+      },
+      root_markers = { 'tsconfig.json', 'jsconfig.json', 'package.json', '.git' },
+    })
+    vim.lsp.enable 'ts_go_ls'
+  end,
   config = function()
     -- Brief aside: **What is LSP?**
     --
@@ -64,21 +79,6 @@ return { -- LSP Configuration & Plugins
     --  - Autocompletion
     --  - Symbol Search
     --  - and more!
-
-    vim.lsp.config("ts_go_ls", {
-        -- FIX: Mabye move the compiled ts_go in nvim-share
-        cmd = { vim.loop.os_homedir() .. "/dotfiles/nvim/lsp/tsgo/tsgo", "--lsp", "-stdio" },
-        filetypes = {
-            "javascript",
-            "javascriptreact",
-            "javascript.jsx",
-            "typescript",
-            "typescriptreact",
-            "typescript.tsx",
-        },
-        root_markers = { "tsconfig.json", "jsconfig.json", "package.json", ".git" },
-    })
-    vim.lsp.enable("ts_go_ls")
 
     vim.fn.sign_define('DiagnosticSignError', { text = '', texthl = 'DiagnosticSignError' })
     vim.fn.sign_define('DiagnosticSignWarn', { text = '', texthl = 'DiagnosticSignWarn' })

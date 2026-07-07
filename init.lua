@@ -66,7 +66,7 @@ vim.opt.mouse = 'a'
 vim.opt.undofile = true
 vim.opt.smoothscroll = true
 
-vim.o.fillchars = "fold: ";
+vim.o.fillchars = 'fold: '
 -- vim.o.foldmethod = "expr";
 -- vim.o.foldexpr = "v:lua.vim.treesitter.foldexpr()";
 vim.opt.foldcolumn = '0'
@@ -115,7 +115,7 @@ require 'autocommands'
 require 'highlights'
 
 local specs = { { import = 'terminal_plugins' } }
-if not _G.NVIM_TERMINAL_ONLY then 
+if not _G.NVIM_TERMINAL_ONLY then
   table.insert(specs, { import = 'plugins' })
 end
 
@@ -126,38 +126,38 @@ require('lazy').setup({
     reset_packpath = true,
     rtp = {
       disabled_plugins = {
-        "2html_plugin",
-        "bugreport",
-        "compiler",
-        "ftplugin",
-        "getscript",
-        "getscriptPlugin",
-        "gzip",
-        "logipat",
-        "matchit",
-        "netrw",
-        "netrwFileHandlers",
-        "netrwPlugin",
-        "netrwSettings",
-        "optwin",
-        "rplugin",
-        "rrhelper",
-        "spellfile_plugin",
-        "synmenu",
-        "syntax",
-        "tar",
-        "tarPlugin",
-        "tohtml",
-        "tutor",
-        "vimball",
-        "vimballPlugin",
+        '2html_plugin',
+        'bugreport',
+        'compiler',
+        'ftplugin',
+        'getscript',
+        'getscriptPlugin',
+        'gzip',
+        'logipat',
+        'matchit',
+        'netrw',
+        'netrwFileHandlers',
+        'netrwPlugin',
+        'netrwSettings',
+        'optwin',
+        'rplugin',
+        'rrhelper',
+        'spellfile_plugin',
+        'synmenu',
+        'syntax',
+        'tar',
+        'tarPlugin',
+        'tohtml',
+        'tutor',
+        'vimball',
+        'vimballPlugin',
         -- "zip",
         -- "zipPlugin",
-        "man",
-        "matchparen",
-        "osc52",
-        "shada",
-        "spellfile",
+        'man',
+        'matchparen',
+        'osc52',
+        'shada',
+        'spellfile',
       },
     },
   },
