@@ -311,38 +311,61 @@ return {
       vim.cmd.startinsert()
     end,
     --TODO: Refactor me out as this is a duplicate of the below
-    --BUG: This works only once when terminal is open. It needs to be able to
-    --reliably get the current working directory of the terminal session
     ['<C-p>'] = function()
       local tmpfile = '/tmp/nvim_term_cwd'
       vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
       vim.wait(80)
 
       local cwd = vim.fn.readfile(tmpfile)[1]
-      if cwd then
-        -- Change Neovim's working directory
-        vim.cmd('lcd ' .. vim.fn.fnameescape(cwd))
+      if not cwd then print 'Failed to read terminal cwd.'; return end
 
-        -- Copy to clipboard
-        vim.fn.setreg('+', cwd)
-        print('Copied to clipboard:', cwd)
+      local picker_ui = require('fff.picker_ui')
+      local orig_select = picker_ui.select
+      local orig_close = picker_ui.close
+      local term_win = vim.api.nvim_get_current_win()
 
-        -- Open picker with that cwd
-        Snacks.picker.files {
-          layout = 'ivy_split',
-          matcher = { frecency = true },
-          cwd = cwd,
-          on_show = function()
-            vim.schedule(function()
-              vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, false, true), 'n', false)
-            end)
-          end,
-        }
-      else
-        print 'Failed to read terminal cwd.'
+      picker_ui.select = function(action)
+        picker_ui.select = orig_select
+        picker_ui.close = orig_close
+
+        if not picker_ui.state.active then return orig_select(action) end
+        local items = picker_ui.state.filtered_items
+        if #items == 0 or picker_ui.state.cursor > #items then return orig_select(action) end
+        local item = items[picker_ui.state.cursor]
+        if not item then return orig_select(action) end
+
+        action = action or 'edit'
+        if action ~= 'edit' then return orig_select(action) end
+
+        local abs_path = vim.fs.normalize(cwd .. '/' .. item.relative_path)
+        if not abs_path then return orig_select(action) end
+
+        vim.cmd('stopinsert')
+        picker_ui.close()
+
+        if _G.NVIM_TERMINAL_ONLY then
+          -- Terminal-only: replace tmux pane with a fresh nvim instance
+          os.execute('tmux respawn-pane -k -c ' .. vim.fn.shellescape(cwd) .. ' nvim ' .. vim.fn.shellescape(abs_path))
+        else
+          -- Full nvim: replace the terminal buffer in its own window
+          pcall(vim.api.nvim_set_current_win, term_win)
+          vim.cmd('e! ' .. vim.fn.fnameescape(abs_path))
+        end
       end
-    end,
 
+      picker_ui.close = function(...)
+        picker_ui.select = orig_select
+        picker_ui.close = orig_close
+        return orig_close(...)
+      end
+
+      require('fff').find_files { cwd = cwd }
+
+      -- Ensure insert mode in fff's input prompt
+      vim.schedule(function()
+        pcall(vim.cmd, 'startinsert!')
+      end)
+    end,
     --TODO: Refactor me out as this is a duplicate of the above
     --BUG: This works only once when terminal is open. It needs to be able to
     --reliably get the current working directory of the terminal session
