@@ -358,6 +358,10 @@ return {
         picker_ui.close = orig_close
         return orig_close(...)
       end
+      -- Force-load nvim-treesitter so fff's preview gets treesitter highlighting
+      -- (in terminal-only mode no file has been opened yet, so lazy loading on
+      -- BufReadPost/BufNewFile hasn't fired)
+      pcall(require, 'nvim-treesitter')
 
       require('fff').find_files { cwd = cwd }
 
@@ -366,38 +370,62 @@ return {
         pcall(vim.cmd, 'startinsert!')
       end)
     end,
-    --TODO: Refactor me out as this is a duplicate of the above
-    --BUG: This works only once when terminal is open. It needs to be able to
-    --reliably get the current working directory of the terminal session
     ['<C-g>'] = function()
       local tmpfile = '/tmp/nvim_term_cwd'
       vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
       vim.wait(80)
 
       local cwd = vim.fn.readfile(tmpfile)[1]
-      if cwd then
-        -- Change Neovim's working directory
-        vim.cmd('lcd ' .. vim.fn.fnameescape(cwd))
+      if not cwd then print 'Failed to read terminal cwd.'; return end
 
-        -- Copy to clipboard
-        vim.fn.setreg('+', cwd)
-        print('Copied to clipboard:', cwd)
+      local term_win = vim.api.nvim_get_current_win()
+      local actions = require('telescope.actions')
+      local action_state = require('telescope.actions.state')
 
-        -- require('telescope.builtin').live_grep(GET_IVY())
-        Snacks.picker.grep {
-          layout = 'ivy_split',
-          cwd = cwd,
-          on_show = function()
-            vim.schedule(function()
-              vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, false, true), 'n', false)
-            end)
-          end,
-        }
-      else
-        print 'Failed to read terminal cwd.'
-      end
+      require('telescope.builtin').live_grep {
+        cwd = cwd,
+        winblend = 0,
+        preview = false,
+        sorting_strategy = 'ascending',
+        layout_strategy = 'vertical',
+        layout_config = {
+          vertical = { mirror = false },
+          width = 1200,
+          height = 1200,
+          preview_cutoff = 1,
+        },
+        border = true,
+        attach_mappings = function(_, map)
+          map('i', '<CR>', function()
+            local selection = action_state.get_selected_entry()
+            if not selection then return end
+
+            local abs_path = selection.filename or selection[1]
+            if not abs_path then return end
+            abs_path = vim.fn.fnamemodify(abs_path, ':p')
+
+            local line = selection.lnum
+            local col = selection.col
+
+            actions.close(vim.api.nvim_get_current_buf())
+
+            if _G.NVIM_TERMINAL_ONLY then
+              local cmd = 'tmux respawn-pane -k -c ' .. vim.fn.shellescape(cwd) .. ' nvim '
+              if line then cmd = cmd .. ' +' .. line end
+              os.execute(cmd .. vim.fn.shellescape(abs_path))
+            else
+              pcall(vim.api.nvim_set_current_win, term_win)
+              vim.cmd('e! ' .. vim.fn.fnameescape(abs_path))
+              if line then
+                vim.api.nvim_win_set_cursor(term_win, { line, (col or 1) - 1 })
+                vim.cmd('normal! zz')
+              end
+            end
+          end)
+          return true
+        end,
+      }
     end,
-
     ['<C-^M>'] = { '<NL>', desc = 'New Line' },
     ['<A-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },

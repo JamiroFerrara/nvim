@@ -5,17 +5,16 @@ function M.smart_action()
   local util = require("obsidian").util
   local line = vim.api.nvim_get_current_line()
 
-  -- Fold if the line contains at least one '#'
-  if line:find("^#") then
-    return "za"
-  end
-
   -- Follow link if possible
   if util.cursor_on_markdown_link(nil, nil, true) then
     -- TODO: Change to go to definition
     return "<cmd>ObsidianFollowLink<CR>"
   end
 
+  -- Fold if the line contains at least one '#'
+  if line:find("^#") then
+    return "za"
+  end
   -- Default to toggling checkboxes
   return "<cmd>ObsidianToggleCheckbox<CR>"
 end
