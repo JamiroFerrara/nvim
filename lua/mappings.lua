@@ -50,7 +50,8 @@ return {
     ['<leader>md'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make down; tmux select-pane -U")<CR>', desc = 'Make publish' },
     ['<leader>mr'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make run; tmux select-pane -U")<CR>', desc = 'Make run' },
     ['<leader>mb'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make build; tmux select-pane -U")<CR>', desc = 'Make build' },
-    ['<A-b>'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make build; tmux select-pane -U")<CR>', desc = 'Make build' },
+    ['<A-b>'] = { '<cmd>terminal $SHELL -c "make build; $SHELL"<CR>', desc = 'Make build' },
+    ['<A-y>'] = { '<cmd>terminal $SHELL -c "make start; $SHELL"<CR>', desc = 'Make build' },
     ['<leader>mt'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make test; tmux select-pane -U")<CR>', desc = 'Make test' },
     ['<leader>ml'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make local; tmux select-pane -U")<CR>', desc = 'Make local' },
     ['<leader>ms'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make start; tmux select-pane -U")<CR>', desc = 'Make start' },
@@ -294,11 +295,6 @@ return {
     ['<cr>'] = function()
       require('helpers.term_path').handle_enter()
     end,
-    ['<bs>'] = function()
-      vim.notify('Going back!', vim.log.levels.INFO)
-      vim.fn.chansend(vim.b.terminal_job_id, 'cd .. \n')
-      vim.cmd.startinsert()
-    end,
   },
 
   -- Terminal Mode
@@ -310,6 +306,10 @@ return {
       vim.fn.chansend(vim.b.terminal_job_id, 'make build' .. '\n')
       vim.cmd.startinsert()
     end,
+    ['<M-y>'] = function()
+      vim.fn.chansend(vim.b.terminal_job_id, 'make start' .. '\n')
+      vim.cmd.startinsert()
+    end,
     --TODO: Refactor me out as this is a duplicate of the below
     ['<C-p>'] = function()
       local tmpfile = '/tmp/nvim_term_cwd'
@@ -317,7 +317,9 @@ return {
       vim.wait(80)
 
       local cwd = vim.fn.readfile(tmpfile)[1]
-      if not cwd then print 'Failed to read terminal cwd.'; return end
+      if not cwd then
+        print 'Failed to read terminal cwd.'; return
+      end
 
       local picker_ui = require('fff.picker_ui')
       local orig_select = picker_ui.select
@@ -376,7 +378,9 @@ return {
       vim.wait(80)
 
       local cwd = vim.fn.readfile(tmpfile)[1]
-      if not cwd then print 'Failed to read terminal cwd.'; return end
+      if not cwd then
+        print 'Failed to read terminal cwd.'; return
+      end
 
       local term_win = vim.api.nvim_get_current_win()
       local actions = require('telescope.actions')
