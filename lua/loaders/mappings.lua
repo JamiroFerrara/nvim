@@ -33,8 +33,12 @@ for mode, mode_mappings in pairs(mappings) do
       elseif type(actions) == 'string' then
         vim.keymap.set(mode, key, actions, opts)
       elseif type(actions) == 'table' then
-        local action_string = table.concat(actions, '<bar>')
-        vim.keymap.set(mode, key, action_string, opts)
+        if type(actions[1]) == 'function' then
+          vim.keymap.set(mode, key, actions[1], opts)
+        else
+          local action_string = table.concat(actions, '<bar>')
+          vim.keymap.set(mode, key, action_string, opts)
+        end
       else
         vim.notify(('Unsupported mapping type for %s in mode %s'):format(key, mode), vim.log.levels.WARN)
       end

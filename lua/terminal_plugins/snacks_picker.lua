@@ -172,6 +172,8 @@ return {
             ['j'] = 'list_down',
             ['k'] = 'list_up',
             ['q'] = 'close',
+            ['<S-j>'] = { 'preview_scroll_down', mode = { 'i', 'n' } },
+            ['<S-k>'] = { 'preview_scroll_up', mode = { 'i', 'n' } },
           },
           b = {
             minipairs_disable = true,
@@ -221,6 +223,8 @@ return {
             ['i'] = 'focus_input',
             ['j'] = 'list_down',
             ['k'] = 'list_up',
+            ['<S-j>'] = 'preview_scroll_down',
+            ['<S-k>'] = 'preview_scroll_up',
             ['q'] = 'close',
             ['zb'] = 'list_scroll_bottom',
             ['zt'] = 'list_scroll_top',

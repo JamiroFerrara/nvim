@@ -50,8 +50,9 @@ return {
     ['<leader>md'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make down; tmux select-pane -U")<CR>', desc = 'Make publish' },
     ['<leader>mr'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make run; tmux select-pane -U")<CR>', desc = 'Make run' },
     ['<leader>mb'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make build; tmux select-pane -U")<CR>', desc = 'Make build' },
-    ['<A-b>'] = { '<cmd>terminal $SHELL -c "make build; $SHELL"<CR>', desc = 'Make build' },
-    ['<A-y>'] = { '<cmd>terminal $SHELL -c "make start; $SHELL"<CR>', desc = 'Make build' },
+    ['<A-b>'] = { function() require('helpers.make_term').run_or_focus('build', 'clear && make build') end, desc = 'Make build' },
+    ['<C-y>'] = { function() require('helpers.make_term').run_or_focus('start', 'clear && make start') end, desc = 'Make start' },
+    ['<A-y>'] = { function() require('helpers.make_term').run_or_focus('make', 'clear && source $HOME/.functions && m') end, desc = 'Make start' },
     ['<leader>mt'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make test; tmux select-pane -U")<CR>', desc = 'Make test' },
     ['<leader>ml'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make local; tmux select-pane -U")<CR>', desc = 'Make local' },
     ['<leader>ms'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make start; tmux select-pane -U")<CR>', desc = 'Make start' },
@@ -306,8 +307,12 @@ return {
       vim.fn.chansend(vim.b.terminal_job_id, 'make build' .. '\n')
       vim.cmd.startinsert()
     end,
-    ['<M-y>'] = function()
+    ['<C-y>'] = function()
       vim.fn.chansend(vim.b.terminal_job_id, 'make start' .. '\n')
+      vim.cmd.startinsert()
+    end,
+    ['<M-y>'] = function()
+      vim.fn.chansend(vim.b.terminal_job_id, 'm' .. '\n')
       vim.cmd.startinsert()
     end,
     --TODO: Refactor me out as this is a duplicate of the below
