@@ -410,7 +410,7 @@ return {
     {
       '<leader>gl',
       function()
-        Snacks.picker.git_log { layout = 'ivy' }
+        Snacks.picker.git_log { layout = 'sidebar' }
       end,
       desc = 'Git Log',
     },
