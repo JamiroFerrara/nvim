@@ -2,17 +2,17 @@
 ---@field _build_custom_menu fun(self):OrgMenu
 ---@field open_custom_menu fun(self)
 
-local config = require('orgmode.config')
-local utils = require('orgmode.utils')
-local Menu = require('orgmode.ui.menu')
-local AgendaTypes = require('orgmode.agenda.types')
+local config = require 'orgmode.config'
+local utils = require 'orgmode.utils'
+local Menu = require 'orgmode.ui.menu'
+local AgendaTypes = require 'orgmode.agenda.types'
 local Agenda = require('orgmode').instance().agenda
 
 Agenda.projects = {
-  { name = 'dtm',      key = 'd', },
-  { name = 'allitude', key = 'a', },
-  { name = 'ing',      key = 'i', },
-  { name = 'italfinance',      key = 't', },
+  { name = 'dtm', key = 'd', file = '~/org/projects/deterchimica.org' },
+  { name = 'allitude', key = 'a', file = '~/org/projects/allitude.org' },
+  { name = 'ing', key = 'i', file = '~/org/projects/ing.org' },
+  { name = 'italfinance', key = 't', file = '~/org/projects/italfinance.org' },
 }
 
 -- Open the custom menu
@@ -23,43 +23,43 @@ end
 
 ---@private
 function Agenda:_build_custom_menu()
-  local menu = Menu:new({
+  local menu = Menu:new {
     title = 'My Custom Agenda Menu',
     prompt = 'Press a key for an agenda command',
-  })
+  }
 
   -- Basic agenda commands
-  menu:add_option({
+  menu:add_option {
     label = 'Agenda',
     key = 'a',
     action = function()
       return self:agenda()
     end,
-  })
+  }
 
   -- Quit option
-  menu:add_option({
+  menu:add_option {
     label = 'Quit',
     key = 'q',
-  })
+  }
 
   return menu
 end
 
 function Agenda:_open_todo_project_submenu(name)
-  local menu = Menu:new({
+  local menu = Menu:new {
     title = 'Project TODOs',
     prompt = 'Select a project',
-  })
+  }
 
   local custom_commands = self:_build__custom_commands(name)
   if #custom_commands > 0 then
     for _, command in ipairs(custom_commands) do
-      menu:add_option({
+      menu:add_option {
         label = command.label,
         key = command.key,
         action = command.action,
-      })
+      }
     end
   end
 
@@ -71,13 +71,33 @@ function Agenda:_open_todo_project_submenu(name)
   --   end,
   -- })
 
-  menu:add_option({
+  menu:add_option {
     label = 'Back',
     key = 'b',
     action = function()
       self:open_custom_menu()
     end,
-  })
+  }
+  menu:open()
+end
+
+---Open the project capture menu.
+function Agenda:open_capture_client_submenu()
+  local menu = Menu:new {
+    title = 'Capture TODOs',
+    prompt = 'Select a project',
+  }
+
+  for _, project in ipairs(Agenda.projects) do
+    menu:add_option {
+      label = project.name,
+      key = project.key,
+      action = function()
+        require('helpers.org-capture').capture_with_picker(project.key)
+      end,
+    }
+  end
+
   menu:open()
 end
 
@@ -85,28 +105,28 @@ end
 function Agenda:_open_todo_client_submenu()
   -- Explicit project definitions with custom keys
 
-  local menu = Menu:new({
+  local menu = Menu:new {
     title = 'Client TODOs',
     prompt = 'Select a client',
-  })
+  }
 
   for _, project in ipairs(Agenda.projects) do
-    menu:add_option({
+    menu:add_option {
       label = project.name,
       key = project.key,
       action = function()
         self:_open_todo_project_submenu(project.name)
       end,
-    })
+    }
   end
 
-  menu:add_option({
+  menu:add_option {
     label = 'Back',
     key = 'b',
     action = function()
       self:open_custom_menu()
     end,
-  })
+  }
 
   menu:open()
 end
@@ -173,7 +193,7 @@ function Agenda:_build__custom_commands(name)
         self.views = views
         return self:prepare_and_render():next(function()
           if #self.views > 1 then
-            vim.fn.cursor({ 1, 0 })
+            vim.fn.cursor { 1, 0 }
           end
         end)
       end,

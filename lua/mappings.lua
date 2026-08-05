@@ -9,20 +9,18 @@ return {
     ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
     ['<leader>cn'] = { '<cmd>ChromeNetwork<cr>', desc = 'Open Chrome Network plugin' },
 
-    ['<C-r>'] = { "<cmd>silent !tmux split-window -v -p 50 'source ~/.zshrc && run_script'<CR>", desc = "Open split, source .zshrc, and run the script" },
+    ['<C-r>'] = { "<cmd>silent !tmux split-window -v -p 50 'source ~/.zshrc && run_script'<CR>", desc = 'Open split, source .zshrc, and run the script' },
 
     -- inline function for formatting
-    ["<leader>fb"] =
-        function()
-          pcall(vim.api.nvim_command, "doautocmd User event_conform")
-          require("conform").format { async = true, lsp_fallback = true }
-        end,
+    ['<leader>fb'] = function()
+      pcall(vim.api.nvim_command, 'doautocmd User event_conform')
+      require('conform').format { async = true, lsp_fallback = true }
+    end,
 
-    ["<leader>ii"] =
-        function()
-          pcall(vim.api.nvim_command, "doautocmd User event_toggler")
-          require("nvim-toggler").toggle()
-        end,
+    ['<leader>ii'] = function()
+      pcall(vim.api.nvim_command, 'doautocmd User event_toggler')
+      require('nvim-toggler').toggle()
+    end,
 
     -- Basic Indentation
     ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Shift right' },
@@ -50,13 +48,31 @@ return {
     ['<leader>md'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make down; tmux select-pane -U")<CR>', desc = 'Make publish' },
     ['<leader>mr'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make run; tmux select-pane -U")<CR>', desc = 'Make run' },
     ['<leader>mb'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make build; tmux select-pane -U")<CR>', desc = 'Make build' },
-    ['<A-b>'] = { function() require('helpers.make_term').run_or_focus('build', 'clear && make build') end, desc = 'Make build' },
-    ['<C-y>'] = { function() require('helpers.make_term').run_or_focus('start', 'clear && make start') end, desc = 'Make start' },
-    ['<A-y>'] = { function() require('helpers.make_term').run_or_focus('make', 'clear && source $HOME/.functions && m') end, desc = 'Make start' },
+    ['<A-b>'] = {
+      function()
+        require('helpers.make_term').run_or_focus('build', 'clear && make build')
+      end,
+      desc = 'Make build',
+    },
+    ['<C-y>'] = {
+      function()
+        require('helpers.make_term').run_or_focus('start', 'clear && make start')
+      end,
+      desc = 'Make start',
+    },
+    ['<A-y>'] = {
+      function()
+        require('helpers.make_term').run_or_focus('make', 'clear && source $HOME/.functions && m')
+      end,
+      desc = 'Make start',
+    },
     ['<leader>mt'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make test; tmux select-pane -U")<CR>', desc = 'Make test' },
     ['<leader>ml'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make local; tmux select-pane -U")<CR>', desc = 'Make local' },
     ['<leader>ms'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make start; tmux select-pane -U")<CR>', desc = 'Make start' },
-    ['<leader>mw'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make watch; tmux select-pane -U")<CR><cmd>DapContinue<cr>', desc = 'Make watch and continue', },
+    ['<leader>mw'] = {
+      '<cmd>lua os.execute("tmux split-window -v -p 20 make watch; tmux select-pane -U")<CR><cmd>DapContinue<cr>',
+      desc = 'Make watch and continue',
+    },
     ['<leader>yy'] = { 'GVggy<cmd>q!<CR>', desc = 'Yank all and quit' },
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
     ['<leader>at'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
@@ -78,9 +94,14 @@ return {
     -- ['<leader>oy'] = { '<cmd>ObsidianYesterday<cr>' },
 
     -- Org commands
-    ['<leader>ot'] = { '<cmd>lua require("helpers.org-menu"):_open_todo_client_submenu()<cr>' },
-    ['<leader>oa'] = { '<cmd>lua require("helpers.org-menu"):open_custom_menu()<cr>' },
-
+    ['<leader>ot'] = { '<cmd>lua require("helpers.org-menu"):_open_todo_client_submenu()<cr>', desc = 'Browse project TODOs' },
+    ['<leader>oa'] = { '<cmd>lua require("helpers.org-menu"):open_custom_menu()<cr>', desc = 'Agenda menu' },
+    ['<leader>oT'] = { '<cmd>lua require("helpers.org-capture").open_all_todos()<cr>', desc = 'All project TODOs' },
+    ['<leader>oc'] = { '<cmd>lua require("helpers.org-menu"):open_capture_client_submenu()<cr>', desc = 'Capture project TODO' },
+    ['<leader>ocd'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('d')<cr>", desc = 'Capture DTM TODO' },
+    ['<leader>oca'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('a')<cr>", desc = 'Capture Allitude TODO' },
+    ['<leader>oci'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('i')<cr>", desc = 'Capture ING TODO' },
+    ['<leader>oct'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('t')<cr>", desc = 'Capture Italfinance TODO' },
     -- TMUX Commands
     ['<leader>th'] = {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z\\"")<CR>',
@@ -323,10 +344,11 @@ return {
 
       local cwd = vim.fn.readfile(tmpfile)[1]
       if not cwd then
-        print 'Failed to read terminal cwd.'; return
+        print 'Failed to read terminal cwd.'
+        return
       end
 
-      local picker_ui = require('fff.picker_ui')
+      local picker_ui = require 'fff.picker_ui'
       local orig_select = picker_ui.select
       local orig_close = picker_ui.close
       local term_win = vim.api.nvim_get_current_win()
@@ -335,19 +357,29 @@ return {
         picker_ui.select = orig_select
         picker_ui.close = orig_close
 
-        if not picker_ui.state.active then return orig_select(action) end
+        if not picker_ui.state.active then
+          return orig_select(action)
+        end
         local items = picker_ui.state.filtered_items
-        if #items == 0 or picker_ui.state.cursor > #items then return orig_select(action) end
+        if #items == 0 or picker_ui.state.cursor > #items then
+          return orig_select(action)
+        end
         local item = items[picker_ui.state.cursor]
-        if not item then return orig_select(action) end
+        if not item then
+          return orig_select(action)
+        end
 
         action = action or 'edit'
-        if action ~= 'edit' then return orig_select(action) end
+        if action ~= 'edit' then
+          return orig_select(action)
+        end
 
         local abs_path = vim.fs.normalize(cwd .. '/' .. item.relative_path)
-        if not abs_path then return orig_select(action) end
+        if not abs_path then
+          return orig_select(action)
+        end
 
-        vim.cmd('stopinsert')
+        vim.cmd 'stopinsert'
         picker_ui.close()
 
         if _G.NVIM_TERMINAL_ONLY then
@@ -384,12 +416,13 @@ return {
 
       local cwd = vim.fn.readfile(tmpfile)[1]
       if not cwd then
-        print 'Failed to read terminal cwd.'; return
+        print 'Failed to read terminal cwd.'
+        return
       end
 
       local term_win = vim.api.nvim_get_current_win()
-      local actions = require('telescope.actions')
-      local action_state = require('telescope.actions.state')
+      local actions = require 'telescope.actions'
+      local action_state = require 'telescope.actions.state'
 
       require('telescope.builtin').live_grep {
         cwd = cwd,
@@ -407,10 +440,14 @@ return {
         attach_mappings = function(_, map)
           map('i', '<CR>', function()
             local selection = action_state.get_selected_entry()
-            if not selection then return end
+            if not selection then
+              return
+            end
 
             local abs_path = selection.filename or selection[1]
-            if not abs_path then return end
+            if not abs_path then
+              return
+            end
             abs_path = vim.fn.fnamemodify(abs_path, ':p')
 
             local line = selection.lnum
@@ -420,14 +457,16 @@ return {
 
             if _G.NVIM_TERMINAL_ONLY then
               local cmd = 'tmux respawn-pane -k -c ' .. vim.fn.shellescape(cwd) .. ' nvim '
-              if line then cmd = cmd .. ' +' .. line end
+              if line then
+                cmd = cmd .. ' +' .. line
+              end
               os.execute(cmd .. vim.fn.shellescape(abs_path))
             else
               pcall(vim.api.nvim_set_current_win, term_win)
               vim.cmd('e! ' .. vim.fn.fnameescape(abs_path))
               if line then
                 vim.api.nvim_win_set_cursor(term_win, { line, (col or 1) - 1 })
-                vim.cmd('normal! zz')
+                vim.cmd 'normal! zz'
               end
             end
           end)
@@ -445,7 +484,10 @@ return {
     ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
     ['<Esc>'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
     ['kj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
-    ['<C-u>'] = { '<C-\\><C-n><cmd>lua vim.defer_fn(function() vim.api.nvim_input("<leader>") end, 150)<CR>', desc = 'Exit terminal mode, wait, and trigger leader' },
+    ['<C-u>'] = {
+      '<C-\\><C-n><cmd>lua vim.defer_fn(function() vim.api.nvim_input("<leader>") end, 150)<CR>',
+      desc = 'Exit terminal mode, wait, and trigger leader',
+    },
 
     ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h")<cr>' },
     ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v")<cr>' },
