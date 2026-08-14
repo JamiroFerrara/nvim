@@ -37,7 +37,7 @@ return {
     -- Leader Shortcuts
     ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
 
-    -- ['<leader>e'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
+    ['<leader>e'] = { '<cmd>Neotree<cr>', desc = 'Toggle Neotree' },
     -- ['<C-e>'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
 
     ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
@@ -493,7 +493,7 @@ return {
     ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v")<cr>' },
 
     -- ['<C-f>'] = { '<C-\\><C-N><cmd>lua GlobalSnacksPicker()<cr>' },
-    ['<C-f>'] = { '<C-\\><C-N>/' },
+    -- ['<C-f>'] = { '<C-\\><C-N>/' },
 
     ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
     ['<A-h>'] = { '<cmd>lua require("tmux").move_left()<cr>' },

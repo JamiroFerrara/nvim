@@ -3,7 +3,7 @@
 
 return {
   'nvim-neo-tree/neo-tree.nvim',
-  event = 'VeryLazy',
+  -- event = 'VeryLazy',
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
   version = '*',
   dependencies = {
