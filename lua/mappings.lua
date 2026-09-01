@@ -1,54 +1,143 @@
 return {
   -- Normal Mode
   n = {
-    -- DEV
+    -- Dev
     ['<leader>np'] = { '<cmd>Neopostman<CR>', desc = 'Neopostman' },
-    ['<leader>nc'] = { '<cmd>ChromeNetwork<CR>', desc = 'Neopostman' },
-    ['<leader>lp'] = { '<cmd>Lazy profile<CR>', desc = 'Shift right' },
-    ['<leader>ji'] = { '<cmd>Neojira<cr>' },
-    ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'Shift right' },
-    ['<leader>cn'] = { '<cmd>ChromeNetwork<cr>', desc = 'Open Chrome Network plugin' },
-
+    ['<leader>nc'] = { '<cmd>ChromeNetwork<CR>', desc = 'Chrome Network' },
+    ['<leader>cn'] = { '<cmd>ChromeNetwork<cr>', desc = 'Chrome Network' },
+    ['<leader>lp'] = { '<cmd>Lazy profile<CR>', desc = 'Lazy profile' },
+    ['<leader>ji'] = { '<cmd>Neojira<cr>', desc = 'Neojira' },
+    ['<leader>jq'] = { '<cmd>JqFile<CR>', desc = 'JqFile' },
     ['<C-r>'] = { "<cmd>silent !tmux split-window -v -p 50 'source ~/.zshrc && run_script'<CR>", desc = 'Open split, source .zshrc, and run the script' },
 
-    -- inline function for formatting
+    -- Editor
     ['<leader>fb'] = function()
       pcall(vim.api.nvim_command, 'doautocmd User event_conform')
       require('conform').format { async = true, lsp_fallback = true }
     end,
-
     ['<leader>ii'] = function()
       pcall(vim.api.nvim_command, 'doautocmd User event_toggler')
       require('nvim-toggler').toggle()
     end,
-
-    -- Basic Indentation
-    ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Shift right' },
-    ['>'] = { '>>', desc = 'Shift right' },
-    ['<'] = { '<<', desc = 'Shift left' },
-    ['à'] = { '0', desc = 'Letter a with grave accent' },
-    ['e'] = { 'E' },
-    ['<A-n>'] = { '*', desc = 'Follow' },
-
-    -- Marks
-    ['m'] = { "'", desc = 'Follow' },
-    ['<leader>fml'] = { '<cmd>CellularAutomaton make_it_rain<CR>', desc = 'Follow' },
-
-    -- Leader Shortcuts
-    ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
-
-    ['<leader>e'] = { '<cmd>Neotree<cr>', desc = 'Toggle Neotree' },
-    -- ['<C-e>'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
-
-    ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
-    ['<leader>dB'] = { '<cmd>DBUI<cr>', desc = 'Open DAP UI' },
+    ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Source config' },
     ['<leader>c'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },
     ['cc'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },
-    ['<leader>b'] = { ':b ', desc = 'list buffers' },
+    ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
+    ['<C-z>'] = { '<cmd>lua Snacks.zen.zen()<cr>' },
+    ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" }, --FIX: This should just use the snacks version, but need to figure out the window. Also fights with other zen
+
+    -- Files & Buffers
+    ['<leader>e'] = { '<cmd>Neotree<cr>', desc = 'Toggle Neotree' },
+    -- ['<C-e>'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
+    ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
+    ['<leader>dB'] = { '<cmd>DBUI<cr>', desc = 'Open DBUI' },
+    ['<leader>b'] = { ':b ', desc = 'List buffers' },
+    ['mt'] = { '<cmd>e TODO.md<cr>', desc = 'Open TODO.md' },
+    ['cp'] = { "<cmd>let @+ = expand('%:p')<cr>" },
+    ['<leader>se'] = { '<cmd>lua require("luasnip.loaders").edit_snippet_files()<cr><cr>")' },
+    ['<leader>ip'] = { '<cmd>IconPickerNormal<cr>' },
+    ['<leader>w'] = { '<cmd>only<cr><cmd>lua os.execute("tmux resize-pane -Z")<cr>' },
+    ['<A-e>'] = { '<cmd>w<cr>' },
+    --NOTE: old quit, in terminal i'm faking it ['<leader>q'] = { '<C-\\><C-n>:q<cr>' },
+    --FIX: If more than one window open it should close the window if not do the terminal trick
+    ['<leader>q'] = { '<cmd>write<cr><cmd>term<cr>' },
+    ['<A-q>'] = { '<cmd>write<cr><cmd>term<cr>' },
+    ['<M-w>'] = { '<cmd>q<cr>' },
+
+    -- Search
+    ['<leader>sf'] = { ':%s/\\\\n/\\r/g', desc = 'Search and replace newlines' },
+    ['<leader>fw'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
+    ['<C-g>'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
+    ['<leader>lc'] = {
+      "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
+    },
+    -- ['<C-g>'] = function()
+    --   Snacks.picker.grep { layout = 'ivy_split', need_search = false, limit = 30, matcher = { fuzzy = false, sort_empty = false } }
+    -- end,
+
+    -- Git
+    ['<leader>gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>' },
+    ['<leader>gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>' },
+    ['gj'] = { '<cmd>lua require("gitsigns").nav_hunk("next", { navigation_message = false })<cr>' },
+    ['gk'] = { '<cmd>lua require("gitsigns").nav_hunk("prev", { navigation_message = false })<cr>' },
+    ['<leader>gp'] = { '<cmd>lua require("gitsigns").preview_hunk()<cr>' },
+    ['<leader>gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>' },
+    ['gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>' },
+    ['<leader>gr'] = { '<cmd>lua require("gitsigns").reset_buffer()<cr>' },
+    ['<leader>gs'] = { '<cmd>lua require("gitsigns").stage_hunk()<cr>' },
+    ['<leader>gu'] = { '<cmd>lua require("gitsigns").undo_stage_hunk()<cr>' },
+    ['<leader>gd'] = { '<cmd>lua require("gitsigns").diffthis()<cr>' },
+
+    -- LSP
+    ['gd'] = { '<cmd>Lspsaga goto_definition<cr>' },
+    ['gR'] = { '<cmd>Lspsaga finder<cr>' },
+    ['<leader>lE'] = { '<cmd>Lspsaga diagnostic_jump_prev<cr>' },
+    ['<leader>le'] = { '<cmd>Lspsaga diagnostic_jump_next<cr>' },
+    ['<leader>lr'] = { '<cmd>Lspsaga rename<cr>' },
+    ['<leader>lR'] = { '<cmd>LspRestart<cr>' },
+    ['<leader>ll'] = { '<cmd>Lspsaga hover_doc<cr>' },
+    ['<leader>lo'] = { '<cmd>Lspsaga outline<cr>' },
+    ['<leader>ls'] = { '<cmd>Lspsaga outline<cr>' },
+    ['<leader>ld'] = { '<cmd>Lspsaga show_line_diagnostics<cr>' },
+    ['<leader>la'] = { '<cmd>Lspsaga code_action<cr>' },
+    ['<leader>lD'] = { '<cmd>Lspsaga show_buf_diagnostics<cr>' },
+
+    -- Harpoon
+    ['<leader>m'] = { '<cmd>lua require("harpoon.mark").add_file()<cr>' },
+    ['<leader>M'] = { '<cmd>lua require("harpoon.ui").toggle_quick_menu()<cr>' },
+    ['<leader>1'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
+    ['<leader>2'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
+    ['<leader>3'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
+    ['<leader>4'] = { '<cmd>lua require("harpoon.ui").nav_file(4)<cr>' },
+    ['<leader>5'] = { '<cmd>lua require("harpoon.ui").nav_file(5)<cr>' },
+    ['<leader>6'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
+    ['<leader>7'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
+    ['{'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
+    ['}'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
+    ['+'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
+
+    -- AI
+    ['<leader>ai'] = { '<cmd>Opencode<CR>' },
+    ['<leader>aa'] = { '<cmd>GpChatNew vsplit<CR>' },
+    ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>' },
+    ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>' },
+    ['<leader>at'] = { '<cmd>lua require("user.helpers").cs2ts()<CR>', desc = 'C# to TypeScript' },
+    ['<leader>ac'] = { '<cmd>Copilot<CR>', desc = 'Complete code' },
+    ['<leader>hr'] = { "<cmd>lua require('user/react-helpers').commands()<cr>" },
+    ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },
+    ['<leader>hj'] = { "<cmd>lua require('user/jira-helpers').commands()<cr>" },
+
+    -- Org
+    ['<leader>ot'] = { '<cmd>lua require("helpers.org-menu"):_open_todo_client_submenu()<cr>', desc = 'Browse project TODOs' },
+    ['<leader>oa'] = { '<cmd>lua require("helpers.org-menu"):open_custom_menu()<cr>', desc = 'Agenda menu' },
+    ['<leader>oT'] = { '<cmd>lua require("helpers.org-capture").open_all_todos()<cr>', desc = 'All project TODOs' },
+    ['<leader>oc'] = { '<cmd>lua require("helpers.org-menu"):open_capture_client_submenu()<cr>', desc = 'Capture project TODO' },
+    ['<leader>ocd'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('d')<cr>", desc = 'Capture DTM TODO' },
+    ['<leader>oca'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('a')<cr>", desc = 'Capture Allitude TODO' },
+    ['<leader>oci'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('i')<cr>", desc = 'Capture ING TODO' },
+    ['<leader>oct'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('t')<cr>", desc = 'Capture Italfinance TODO' },
+    --TODO: Obsidian Commands
+    --Theese are the obsidian related commands, but with org mode now need to
+    --figure out what to actually do with them.
+    -- ['<leader>ob'] = { '<cmd>ObsidianBacklinks<cr>' },
+    -- ['<leader>ot'] = { '<cmd>ObsidianToday<cr>' },
+    -- ['<leader>oT'] = { '<cmd>ObsidianTomorrow<cr>' },
+    -- ['<leader>oy'] = { '<cmd>ObsidianYesterday<cr>' },
+    -- ['<leader>oa'] = { "zR" },
+    -- ['<leader>oo'] = { "zR" },
+
+    -- Make / Run
     ['<leader>mp'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make publish; tmux select-pane -U")<CR>', desc = 'Make publish' },
-    ['<leader>md'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make down; tmux select-pane -U")<CR>', desc = 'Make publish' },
+    ['<leader>md'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make down; tmux select-pane -U")<CR>', desc = 'Make down' },
     ['<leader>mr'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make run; tmux select-pane -U")<CR>', desc = 'Make run' },
     ['<leader>mb'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make build; tmux select-pane -U")<CR>', desc = 'Make build' },
+    ['<leader>mt'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make test; tmux select-pane -U")<CR>', desc = 'Make test' },
+    ['<leader>ml'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make local; tmux select-pane -U")<CR>', desc = 'Make local' },
+    ['<leader>ms'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make start; tmux select-pane -U")<CR>', desc = 'Make start' },
+    ['<leader>mw'] = {
+      '<cmd>lua os.execute("tmux split-window -v -p 20 make watch; tmux select-pane -U")<CR><cmd>DapContinue<cr>',
+      desc = 'Make watch and continue',
+    },
     ['<A-b>'] = {
       function()
         require('helpers.make_term').run_or_focus('build', 'clear && make build')
@@ -65,79 +154,80 @@ return {
       function()
         require('helpers.make_term').run_or_focus('make', 'clear && source $HOME/.functions && m')
       end,
-      desc = 'Make start',
+      desc = 'Make (m)',
     },
-    ['<leader>mt'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make test; tmux select-pane -U")<CR>', desc = 'Make test' },
-    ['<leader>ml'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make local; tmux select-pane -U")<CR>', desc = 'Make local' },
-    ['<leader>ms'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make start; tmux select-pane -U")<CR>', desc = 'Make start' },
-    ['<leader>mw'] = {
-      '<cmd>lua os.execute("tmux split-window -v -p 20 make watch; tmux select-pane -U")<CR><cmd>DapContinue<cr>',
-      desc = 'Make watch and continue',
-    },
-    ['<leader>yy'] = { 'GVggy<cmd>q!<CR>', desc = 'Yank all and quit' },
-    ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
-    ['<leader>at'] = { '<cmd>AerialToggle!<CR>', desc = 'Toggle Aerial' },
-    ['mt'] = { '<cmd>e TODO.md<cr>', desc = 'Toggle Aerial' },
-
     ['<leader>x'] = { '<cmd>.!sh<CR>', desc = 'Execute line under cursor' },
 
-    ['<leader>fw'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
-    ['<C-g>'] = { "<cmd>lua require'telescope.builtin'.live_grep(GET_IVY())<cr>" },
-
-    ['vap'] = { 'vip' },
-
-    --TODO: Obsidian Commands
-    --Theese are the obsidian related commands, but with org mode now need to
-    --figure out what to actually do with them.
-    -- ['<leader>ob'] = { '<cmd>ObsidianBacklinks<cr>' },
-    -- ['<leader>ot'] = { '<cmd>ObsidianToday<cr>' },
-    -- ['<leader>oT'] = { '<cmd>ObsidianTomorrow<cr>' },
-    -- ['<leader>oy'] = { '<cmd>ObsidianYesterday<cr>' },
-
-    -- Org commands
-    ['<leader>ot'] = { '<cmd>lua require("helpers.org-menu"):_open_todo_client_submenu()<cr>', desc = 'Browse project TODOs' },
-    ['<leader>oa'] = { '<cmd>lua require("helpers.org-menu"):open_custom_menu()<cr>', desc = 'Agenda menu' },
-    ['<leader>oT'] = { '<cmd>lua require("helpers.org-capture").open_all_todos()<cr>', desc = 'All project TODOs' },
-    ['<leader>oc'] = { '<cmd>lua require("helpers.org-menu"):open_capture_client_submenu()<cr>', desc = 'Capture project TODO' },
-    ['<leader>ocd'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('d')<cr>", desc = 'Capture DTM TODO' },
-    ['<leader>oca'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('a')<cr>", desc = 'Capture Allitude TODO' },
-    ['<leader>oci'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('i')<cr>", desc = 'Capture ING TODO' },
-    ['<leader>oct'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('t')<cr>", desc = 'Capture Italfinance TODO' },
-    -- TMUX Commands
+    -- Terminal & Tmux
     ['<leader>th'] = {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z\\"")<CR>',
-      desc = 'toggle term bottom',
+      desc = 'Toggle term bottom',
     },
-    ['<A-t>'] = { '<cmd>term<cr>', desc = 'Follow' },
+    ['<A-t>'] = { '<cmd>term<cr>', desc = 'Open terminal' },
     ['<C-t>'] = {
       '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\"")<CR>',
-      desc = 'toggle term bottom',
+      desc = 'Toggle term bottom',
     },
     -- ['<A-m>'] = {
     --   '<cmd>lua os.execute("tmux if-shell \\"[ $(tmux list-panes | wc -l) -eq 1 ]\\" \\"split-window -v -l 10\\" \\"resize-pane -Z; select-pane -D\\" && tmux send-keys \'m\' Enter")<CR>',
     --   desc = 'toggle term bottom and run m',
     -- },
-    ['<leader>ap'] = { '<cmd>lua os.execute("/home/jferrara/.scripts/v-script.sh")<CR>', desc = 'toggle term bottom' },
+    ['<leader>ap'] = { '<cmd>lua os.execute("/home/jferrara/.scripts/v-script.sh")<CR>', desc = 'Run v-script' },
+    ['<C-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
+    ['<C-h>'] = { '<cmd>lua require("helpers.tmux").move_top()<cr>' },
+    ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
+    ['<A-h>'] = { '<cmd>lua require("helpers.tmux").move_left()<cr>' },
+    ['<A-k>'] = { '<cmd>lua require("helpers.tmux").move_top()<cr>' },
+    ['<A-l>'] = { '<cmd>lua require("helpers.tmux").move_right()<cr>' },
+    ['<A-s>'] = { ':vsp<cr>:sleep 50m<cr><C-o>' },
+    ['<A-S>'] = { ':sp<cr>:sleep 50m<cr><C-o>' },
 
-    -- Git Commands
-    ['<leader>gj'] = { '<cmd>lua require("gitsigns").next_hunk()<cr>' },
-    ['<leader>gk'] = { '<cmd>lua require("gitsigns").prev_hunk()<cr>' },
-    ['gj'] = { '<cmd>lua require("gitsigns").nav_hunk("next", { navigation_message = false })<cr>' },
-    ['gk'] = { '<cmd>lua require("gitsigns").nav_hunk("prev", { navigation_message = false })<cr>' },
-    ['<leader>gp'] = { '<cmd>lua require("gitsigns").preview_hunk()<cr>' },
-    ['<leader>gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>' },
-    ['gh'] = { '<cmd>lua require("gitsigns").reset_hunk()<cr>' },
-    ['<leader>gr'] = { '<cmd>lua require("gitsigns").reset_buffer()<cr>' },
-    ['<leader>gs'] = { '<cmd>lua require("gitsigns").stage_hunk()<cr>' },
-    ['<leader>gu'] = { '<cmd>lua require("gitsigns").undo_stage_hunk()<cr>' },
-    ['<leader>gd'] = { '<cmd>lua require("gitsigns").diffthis()<cr>' },
-
-    -- Quick Actions
+    -- Movement
+    ['H'] = { '^' },
+    ['L'] = { '$' },
+    ['0'] = { '^' },
+    ["'"] = { '$' },
+    ['à'] = { '0', desc = 'Start of line' },
+    ['e'] = { 'E' },
+    ['t'] = { 'f' },
+    -- ['T'] = { 't' },
+    ['s'] = { '/' },
+    ['f'] = { '/' },
+    ['F'] = { "<cmd>lua require('flash').jump()<cr>" },
+    ['<bs>'] = { 'b' },
+    ['<esc>'] = { '0' },
+    ['J'] = { '<C-d>' },
+    ['K'] = { '<C-u>' },
+    ['N'] = { 'Nzzzv' },
+    ['n'] = { 'nzzzv' },
+    ['U'] = { ':redo<cr>' },
+    ['Y'] = { 'y$' },
+    ['X'] = { 's' },
+    ['ga'] = { '%', desc = '' },
+    ['gA'] = { '%%', desc = '' },
+    ['Q'] = { '@' },
     ['<A-o>'] = { '<C-o>', desc = '' },
     ['<A-i>'] = { '<C-i>', desc = '' },
     -- ['<C-o>'] = { '<C-o>', desc = '' },
-    ['<C-o>'] = { '<cmd>bprev<cr>', desc = 'Follow' },
+    ['<C-o>'] = { '<cmd>bprev<cr>', desc = 'Previous buffer' },
     ['<C-i>'] = { '<C-i>', desc = '' },
+    ['<A-n>'] = { '*', desc = 'Search word under cursor' },
+    ['<leader>0'] = { 'f=w' },
+    ['<leader>='] = { 'F=F=w' },
+    ['<leader>j'] = { '}' },
+    ['<leader>k'] = { '{' },
+    ['ç'] = { 'J' },
+    ['|'] = { '1' },
+    ['?'] = { '2' },
+    ['&'] = { '3' },
+    ['/'] = { '4' },
+
+    -- Marks
+    ['m'] = { "'", desc = 'Go to mark' },
+
+    -- Indentation
+    ['>'] = { '>>', desc = 'Shift right' },
+    ['<'] = { '<<', desc = 'Shift left' },
 
     -- Text Objects
     ['ciu'] = { 'ci{' },
@@ -164,109 +254,8 @@ return {
     ['ca8'] = { 'ca(' },
     ['da8'] = { 'da(' },
     ['va8'] = { 'va(' },
-
-    ['<leader>ai'] = { '<cmd>Opencode<CR>' },
-    ['<leader>aa'] = { '<cmd>GpChatNew vsplit<CR>' },
-
-    ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>' },
-    ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>' },
-    ['<leader>at'] = { '<cmd>lua require("user.helpers").cs2ts()<CR>' },
-
-    -- Harpoon
-    ['<leader>m'] = { '<cmd>lua require("harpoon.mark").add_file()<cr>' },
-    ['<leader>M'] = { '<cmd>lua require("harpoon.ui").toggle_quick_menu()<cr>' },
-    ['<leader>1'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
-    ['<leader>2'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
-    ['<leader>3'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
-    ['<leader>4'] = { '<cmd>lua require("harpoon.ui").nav_file(4)<cr>' },
-    ['<leader>5'] = { '<cmd>lua require("harpoon.ui").nav_file(5)<cr>' },
-    ['<leader>6'] = { '<cmd>lua require("harpoon.ui").nav_file(6)<cr>' },
-    ['<leader>7'] = { '<cmd>lua require("harpoon.ui").nav_file(7)<cr>' },
-
-    ['{'] = { '<cmd>lua require("harpoon.ui").nav_file(1)<cr>' },
-    ['}'] = { '<cmd>lua require("harpoon.ui").nav_file(2)<cr>' },
-    ['+'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>' },
-
-    -- Other
-    ['|'] = { '1' },
-    ['?'] = { '2' },
-    ['&'] = { '3' },
-    ['/'] = { '4' },
-    ['N'] = { 'Nzzzv' },
-
-    ['U'] = { ':redo<cr>' },
-    ['Y'] = { 'y$' },
-    ['n'] = { 'nzzzv' },
-    ['J'] = { '<C-d>' },
-    ['K'] = { '<C-u>' },
-
-    ['<leader>j'] = { '}' },
-    ['<leader>k'] = { '{' },
-
-    ['ç'] = { 'J' },
-    ['f'] = { '/' },
-    ['F'] = { "<cmd>lua require('flash').jump()<cr>" },
-    ['cp'] = { "<cmd>let @+ = expand('%:p')<cr>" },
-
-    ['<leader>ac'] = { '<cmd>Copilot<CR>', desc = 'Complete code' },
-
-    ['<leader>or'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(3)<cr>" },
-    ['<leader>oe'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(4)<cr>" },
-    ['<leader>ow'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(5)<cr>" },
-    -- ['<leader>oa'] = { "zR" },
-    -- ['<leader>oo'] = { "zR" },
-
-    ['<C-z>'] = { '<cmd>lua Snacks.zen.zen()<cr>' },
-
-    ['<leader>lc'] = {
-      "<cmd>lua vim.diagnostic.open_float()<cr><cmd>lua vim.diagnostic.open_float()<cr>wwy$<cmd>sleep 10ms<cr><cmd>:q<cr><cmd>lua require('user.helpers').search_chrome_yank()<cr>",
-    },
-
-    ['gd'] = { '<cmd>Lspsaga goto_definition<cr>' },
-    ['gR'] = { '<cmd>Lspsaga finder<cr>' },
-    ['<leader>lE'] = { '<cmd>Lspsaga diagnostic_jump_prev<cr>' },
-    ['<leader>le'] = { '<cmd>Lspsaga diagnostic_jump_next<cr>' },
-    ['<leader>lr'] = { '<cmd>Lspsaga rename<cr>' },
-    ['<leader>lR'] = { '<cmd>LspRestart<cr>' },
-    ['<leader>ll'] = { '<cmd>Lspsaga hover_doc<cr>' },
-    ['<leader>lo'] = { '<cmd>Lspsaga outline<cr>' },
-    ['<leader>ls'] = { '<cmd>Lspsaga outline<cr>' },
-    ['<leader>ld'] = { '<cmd>Lspsaga show_line_diagnostics<cr>' },
-    ['<leader>la'] = { '<cmd>Lspsaga code_action<cr>' },
-    ['<leader>lD'] = { '<cmd>Lspsaga show_buf_diagnostics<cr>' },
-
-    ['<A-e>'] = { '<cmd>w<cr>' },
-    ['<leader>hr'] = { "<cmd>lua require('user/react-helpers').commands()<cr>" },
-    ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>" },
-    ['<leader>hj'] = { "<cmd>lua require('user/jira-helpers').commands()<cr>" },
-
-    ['<leader>td'] = { '<cmd>TodoTrouble<cr>' },
-
-    ['yb'] = { '<cmd>lua require("helpers.markdown").yank_code_block()<cr>' },
-
-    ['<C-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
-    ['<C-h>'] = { '<cmd>lua require("helpers.tmux").move_top()<cr>' },
-
-    ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
-    ['<A-h>'] = { '<cmd>lua require("helpers.tmux").move_left()<cr>' },
-    ['<A-k>'] = { '<cmd>lua require("helpers.tmux").move_top()<cr>' },
-    ['<A-l>'] = { '<cmd>lua require("helpers.tmux").move_right()<cr>' },
-
-    ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>" }, --FIX: This should just use the snacks version, but need to figure out the window. Also fights with other zen
-
-    ['<A-s>'] = { ':vsp<cr>:sleep 50m<cr><C-o>' },
-    ['<A-S>'] = { ':sp<cr>:sleep 50m<cr><C-o>' },
-    ["'"] = { '$' },
-    ['0'] = { '^' },
-    ['t'] = { 'f' },
-    -- ['T'] = { 't' },
-
-    ['<leader>0'] = { 'f=w' },
-
-    ['<leader>='] = { 'F=F=w' },
     ['caè'] = { 'ca{' },
     ['ciè'] = { 'ci{' },
-
     ['vaè'] = { 'va{' },
     ['viè'] = { 'vi{' },
     ['tè'] = { 'f{' },
@@ -274,57 +263,162 @@ return {
     ['vw'] = { 've' },
     ['vtè'] = { 'vt{' },
     ['vt8'] = { 'vt(' },
-    ['<bs>'] = { 'b' },
-    ['<esc>'] = { '0' },
-    ['s'] = { '/' },
-    ['Q'] = { '@' },
+    ['vap'] = { 'vip' },
 
+    -- Markdown & Folding
+    ['<leader>or'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(3)<cr>" },
+    ['<leader>oe'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(4)<cr>" },
+    ['<leader>ow'] = { "zR<cmd>lua require('helpers.markdown').fold_headings_of_level(5)<cr>" },
+    ['yb'] = { '<cmd>lua require("helpers.markdown").yank_code_block()<cr>' },
+
+    -- Misc
+    ['<leader>fml'] = { '<cmd>CellularAutomaton make_it_rain<CR>', desc = 'Make it rain' },
+    ['<leader>yy'] = { 'GVggy<cmd>q!<CR>', desc = 'Yank all and quit' },
+    ['<leader>td'] = { '<cmd>TodoTrouble<cr>' },
     ['<C-u>'] = { '<esc>', desc = 'Exit insert mode' },
     -- ['<leader><leader>'] = { '@' },
-    ['X'] = { 's' },
-    ['<leader>se'] = { '<cmd>lua require("luasnip.loaders").edit_snippet_files()<cr><cr>")' },
-    ['<leader>ip'] = { '<cmd>IconPickerNormal<cr>' },
-
-    --NOTE: old quit, in terminal i'm faking it ['<leader>q'] = { '<C-\\><C-n>:q<cr>' },
-    --FIX: If more than one window open it should close the window if not do the terminal trick
-    ['<leader>q'] = { '<cmd>write<cr><cmd>term<cr>' },
-    ['<A-q>'] = { '<cmd>write<cr><cmd>term<cr>' },
-    ['<M-w>'] = { '<cmd>q<cr>' },
-
-    ['<leader>w'] = { '<cmd>only<cr><cmd>lua os.execute("tmux resize-pane -Z")<cr>' },
-
-    ['H'] = { '^' },
-    ['L'] = { '$' },
-
-    ['ga'] = { '%', desc = '' },
-
-    ['gA'] = { '%%', desc = '' },
-    -- ['<C-g>'] = function()
-    --   Snacks.picker.grep { layout = 'ivy_split', need_search = false, limit = 30, matcher = { fuzzy = false, sort_empty = false } }
-    -- end,
   },
 
-  tn = {
-    ['<leader>x'] = function()
-      local word = vim.fn.expand '<cWORD>'
-      vim.notify('chmod +x ' .. word, vim.log.levels.INFO)
-      vim.fn.chansend(vim.b.terminal_job_id, 'chmod +x ' .. word .. '\n')
-      vim.cmd.startinsert()
-    end,
-    ['<M-b>'] = function()
-      vim.fn.chansend(vim.b.terminal_job_id, 'make build' .. '\n')
-      vim.cmd.startinsert()
-    end,
-    ['<cr>'] = function()
-      require('helpers.term_path').handle_enter()
-    end,
+  -- Visual Mode
+  v = {
+    -- AI
+    ['<leader>ai'] = { 'y<cmd>GpChatNew vsplit<CR>Gp' },
+    ['<leader>ao'] = { ':GpOrganize<CR>', desc = 'Organize code' },
+    ['<leader>aO'] = { ':GpOptimize<CR>', desc = 'Optimize code' },
+    ['<leader>ac'] = { ':GpComplete<CR>', desc = 'Complete code' },
+    ['<leader>as'] = { ':GpSummarize<CR>', desc = 'Summarize code' },
+    ['<leader>af'] = { ':GpFixBugs<CR>', desc = 'Fix bugs' },
+    ['<leader>ae'] = { ':GpExplain<CR>', desc = 'Explain code' },
+    ['<leader>ar'] = { ':GpReadability<CR>', desc = 'Analyze code readability' },
+    ['<leader>ax'] = { ':GpConvert<CR>', desc = 'Convert selection (prompts for target)' },
+    ['<leader>a.'] = { ':GpCustomCmd<CR>', desc = 'Execute custom command on selection' },
+
+    -- React
+    ['<leader>re'] = { '<cmd>lua require("react-extract").extract_to_current_file()<cr>' },
+    ['<leader>rE'] = { '<cmd>lua require("react-extract").extract_to_new_file()<cr>' },
+
+    -- Jq / Quicktype
+    ['<leader>jq'] = { '<cmd>JqVisual<CR>', desc = 'JqVisual' },
+    -- ['<leader>jv'] = { '<cmd>JiraView<cr>', desc = 'View jira issue' },
+    ['<leader>qt'] = { ':!quicktype --just-types -l typescript<CR>', desc = 'Run quicktype for TypeScript' },
+
+    -- Edit
+    ['<leader>c'] = { "<esc><cmd>lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<cr>", desc = 'Toggle comment' },
+    ['<'] = { '<gv', desc = '' },
+    ['>'] = { '>gv', desc = '' },
+    ['y'] = { 'myy`y', desc = '' },
+    ['Y'] = { 'myY`y', desc = '' },
+    ["'"] = { "xi''<esc>hp", desc = '' },
+    ['è'] = { 'p', desc = '' },
+    ['e'] = { 'E' },
+
+    -- Movement
+    ['H'] = { '^' },
+    ['L'] = { '$' },
+    ['ga'] = { '%', desc = '' },
+    ['gA'] = { '%%', desc = '' },
+
+    -- Number marks
+    ['|'] = { '1', desc = 'Pipe' },
+    ['?'] = { '2', desc = 'Question mark' },
+    ['&'] = { '3', desc = 'Ampersand' },
+    ['/'] = { '4', desc = 'Forward slash' },
+    ['='] = { '6', desc = 'Equal sign' },
+    ['['] = { '7', desc = 'Opening square bracket' },
+    [']'] = { '8', desc = 'Closing square bracket' },
+    ['@'] = { '9', desc = 'At symbol' },
+    ['à'] = { '0', desc = 'Number zero with accent' },
+  },
+
+  -- Insert Mode
+  i = {
+    -- Navigation
+    ['<C-f>'] = { '$', desc = 'Move to end of line' },
+    ['<C-o>'] = { '<esc><C-o>', desc = 'Exit insert mode and execute one <C-o>' },
+    ['<C-i>'] = { '<esc><C-i>', desc = 'Exit insert mode and execute one <C-i>' },
+    ['<A-o>'] = { '<esc><C-o>', desc = 'Exit insert mode and execute one <C-o>' },
+    ['<A-i>'] = { '<esc><C-i>', desc = 'Exit insert mode and execute one <C-i>' },
+    ['jk'] = { '<esc>A', desc = 'Append at end of line' },
+    ['jK'] = { '<esc>A<space>', desc = 'Append at end of line with space' },
+    ['jè'] = { '<esc>A{<enter><esc>ddO', desc = 'Append curly braces on new line' },
+    -- ['ji'] = { '<esc>I<space>', desc = 'Insert at beginning of line with space' },
+    ['jI'] = { '<esc>I', desc = 'Insert at beginning of line' },
+    ['jo'] = { '<esc>o', desc = 'Open new line below' },
+    ['jO'] = { '<esc>ko', desc = 'Open new line above' },
+    ['jl'] = { '<esc>la', desc = 'Append at end of line' },
+    ['jf'] = { '<esc>A<space>from<space>', desc = 'Append "from" at end of line' },
+    ['j0'] = { '<esc>A<space>=<space>', desc = 'Append "= " at end of line' },
+    [';;'] = { '<esc>A;<esc>', desc = 'Append semicolon at end of line' },
+
+    -- Snippets
+    ['<c-j>'] = { "<cmd>lua require'luasnip'.jump(1)<cr>", desc = 'Jump to next snippet' },
+    ['<c-k>'] = { "<cmd>lua require'luasnip'.jump(-1)<cr>", desc = 'Jump to previous snippet' },
+
+    -- Exit insert mode
+    ['jj'] = { '<esc>', desc = 'Exit insert mode' },
+    ['JJ'] = { '<esc>', desc = 'Exit insert mode' },
+    ['kj'] = { '<esc>', desc = 'Exit insert mode' },
+    ['<C-u>'] = { '<esc>', desc = 'Exit insert mode' },
+    ['KJ'] = { '<esc>', desc = 'Exit insert mode' },
+    ['jJ'] = { '<esc><cmd>w!<cr>', desc = 'Save and exit insert mode' },
+    ['jp'] = { '<esc>:q!<cr>', desc = 'Quit without saving' },
+
+    -- Save
+    ['<C-s>'] = { '<cmd>w<cr><esc>', desc = 'Save file' },
+    ['<C-S>'] = { '<cmd>noa w<cr><esc>', desc = 'Save file without autocommands' },
+
+    -- Edit
+    ['è'] = { 'p', desc = 'Paste after cursor' },
+    ['ò'] = { '#', desc = 'Comment line' },
+    ['jy'] = { '<esc>yy<esc>p', desc = 'Yank line and paste' },
+    ['jd'] = { '<esc>dd', desc = 'Delete line' },
+    ['§'] = { '`', desc = 'Jump to mark' },
+    ['<C-Del>'] = { '<C-w>', desc = 'Delete word' },
+    ['<C-BS>'] = { '<C-w>', desc = 'Delete word' },
+
+    -- Quit
+    ['<C-w>'] = { '<cmd>q<cr>' },
+    ['<M-w>'] = { '<cmd>q<cr>' },
+
+    -- Files
+    ['<C-e>'] = { '<cmd>Oil<cr>', desc = 'Oil from insert mode' },
+  },
+
+  -- Command Mode
+  c = {
+    ['<C-Del>'] = { '<C-w>', desc = 'Delete word' },
   },
 
   -- Terminal Mode
   t = {
+    -- Escape & Quit
+    ['<Esc>'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
+    ['kj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
+    ['<A-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    ['<C-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    ['<C-t>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
+    ['<M-w>'] = { '<C-\\><C-n><cmd>q<cr>', desc = 'Quit' },
+    ['<C-u>'] = {
+      '<C-\\><C-n><cmd>lua vim.defer_fn(function() vim.api.nvim_input("<leader>") end, 150)<CR>',
+      desc = 'Exit terminal mode, wait, and trigger leader',
+    },
+
+    -- Window Navigation
     ['<M-o>'] = '<C-\\><C-n><C-o>',
     ['<M-i>'] = '<C-\\><C-n><C-i>',
-    ['è'] = { 'p', desc = 'Print' },
+    ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
+    ['<C-k>'] = { '<Cmd>wincmd k<cr>', desc = 'Move to Upper Window' },
+    ['<C-l>'] = { '<Cmd>wincmd l<cr><C-\\><C-n>i', desc = 'Move to Right Window' },
+
+    -- Tmux
+    ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h")<cr>' },
+    ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v")<cr>' },
+    ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
+    ['<A-h>'] = { '<cmd>lua require("tmux").move_left()<cr>' },
+    ['<A-k>'] = { '<cmd>lua require("tmux").move_top()<cr>' },
+    ['<A-l>'] = { '<cmd>lua require("tmux").move_right()<cr>' },
+
+    -- Run Commands
     ['<M-b>'] = function()
       vim.fn.chansend(vim.b.terminal_job_id, 'make build' .. '\n')
       vim.cmd.startinsert()
@@ -337,6 +431,9 @@ return {
       vim.fn.chansend(vim.b.terminal_job_id, 'm' .. '\n')
       vim.cmd.startinsert()
     end,
+    ['è'] = { 'p', desc = 'Print' },
+
+    -- File Finders
     --TODO: Refactor me out as this is a duplicate of the below
     ['<C-p>'] = function()
       local tmpfile = '/tmp/nvim_term_cwd'
@@ -475,133 +572,27 @@ return {
         end,
       }
     end,
+
+    -- Misc
     ['<C-^M>'] = { '<NL>', desc = 'New Line' },
-    ['<A-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
-    ['<C-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
-    ['<C-t>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
-
-    ['<M-w>'] = { '<C-\\><C-n><cmd>q<cr>', desc = 'Quit' },
-
-    ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
-    ['<Esc>'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
-    ['kj'] = { '<C-\\><C-N>', desc = 'Go to normal mode' },
-    ['<C-u>'] = {
-      '<C-\\><C-n><cmd>lua vim.defer_fn(function() vim.api.nvim_input("<leader>") end, 150)<CR>',
-      desc = 'Exit terminal mode, wait, and trigger leader',
-    },
-
-    ['<A-s>'] = { '<cmd>lua os.execute("tmux split-window -h")<cr>' },
-    ['<A-S>'] = { '<cmd>lua os.execute("tmux split-window -v")<cr>' },
-
     -- ['<C-f>'] = { '<C-\\><C-N><cmd>lua GlobalSnacksPicker()<cr>' },
     -- ['<C-f>'] = { '<C-\\><C-N>/' },
-
-    ['<A-j>'] = { '<cmd>lua require("helpers.tmux").move_bottom()<cr>' },
-    ['<A-h>'] = { '<cmd>lua require("tmux").move_left()<cr>' },
-    ['<A-k>'] = { '<cmd>lua require("tmux").move_top()<cr>' },
-    ['<A-l>'] = { '<cmd>lua require("tmux").move_right()<cr>' },
-
-    ['<C-k>'] = { '<Cmd>wincmd k<cr>', desc = 'Move to Upper Window' },
-    ['<C-l>'] = { '<Cmd>wincmd l<cr><C-\\><C-n>i', desc = 'Move to Right Window' },
   },
 
-  -- Visual Mode
-  v = {
-    ['<leader>jq'] = { '<cmd>JqVisual<CR>', desc = 'Shift right' },
-    -- ['<leader>jv'] = { '<cmd>JiraView<cr>', desc = 'View jira issue' },
-
-    ['e'] = { 'E' },
-    ['<leader>re'] = { '<cmd>lua require("react-extract").extract_to_current_file()<cr>' },
-    ['<leader>rE'] = { '<cmd>lua require("react-extract").extract_to_new_file()<cr>' },
-
-    ['H'] = { '^' },
-    ['L'] = { '$' },
-
-    ['|'] = { '1', desc = 'Pipe' },
-    ['?'] = { '2', desc = 'Question mark' },
-    ['&'] = { '3', desc = 'Ampersand' },
-    ['/'] = { '4', desc = 'Forward slash' },
-    ['='] = { '6', desc = 'Equal sign' },
-    ['['] = { '7', desc = 'Opening square bracket' },
-    [']'] = { '8', desc = 'Closing square bracket' },
-    ['@'] = { '9', desc = 'At symbol' },
-    ['à'] = { '0', desc = 'Number zero with accent' },
-    ['<leader>qt'] = { ':!quicktype --just-types -l typescript<CR>', desc = 'Run quicktype for TypeScript' },
-
-    -- NOTE: [ Ai ]
-    ['<leader>ai'] = { 'y<cmd>GpChatNew vsplit<CR>Gp' },
-
-    ['<leader>ao'] = { ':GpOrganize<CR>', desc = 'Organize code' },
-    ['<leader>aO'] = { ':GpOptimize<CR>', desc = 'Optimize code' },
-    ['<leader>ac'] = { ':GpComplete<CR>', desc = 'Complete code' },
-    ['<leader>as'] = { ':GpSummarize<CR>', desc = 'Summarize code' },
-    ['<leader>af'] = { ':GpFixBugs<CR>', desc = 'Fix bugs' },
-    ['<leader>ae'] = { ':GpExplain<CR>', desc = 'Explain code' },
-    ['<leader>ar'] = { ':GpReadability<CR>', desc = 'Analyze code readability' },
-    ['<leader>ax'] = { ':GpConvert<CR>', desc = 'Convert selection (prompts for target)' },
-    ['<leader>a.'] = { ':GpCustomCmd<CR>', desc = 'Execute custom command on selection' },
-
-    ['<leader>c'] = { "<esc><cmd>lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<cr>", desc = 'Toggle comment' },
-
-    ['è'] = { 'p', desc = '' },
-    ['<'] = { '<gv', desc = '' },
-    ['>'] = { '>gv', desc = '' },
-    ['ga'] = { '%', desc = '' },
-    ['gA'] = { '%%', desc = '' },
-    ['y'] = { 'myy`y', desc = '' },
-    ['Y'] = { 'myY`y', desc = '' },
-    ["'"] = { "xi''<esc>hp", desc = '' },
-  },
-
-  -- Insert Mode
-  i = {
-    ['<C-f>'] = { '$', desc = 'Move to end of line' },
-    ['<C-o>'] = { '<esc><C-o>', desc = 'Exit insert mode and execute one <C-o>' },
-    ['<C-i>'] = { '<esc><C-i>', desc = 'Exit insert mode and execute one <C-i>' },
-    ['<A-o>'] = { '<esc><C-o>', desc = 'Exit insert mode and execute one <C-o>' },
-    ['<A-i>'] = { '<esc><C-i>', desc = 'Exit insert mode and execute one <C-i' },
-
-    ['<c-j>'] = { "<cmd>lua require'luasnip'.jump(1)<cr>", desc = 'Jump to next snippet' },
-    ['<c-k>'] = { "<cmd>lua require'luasnip'.jump(-1)<cr>", desc = 'Jump to previous snippet' },
-
-    ['è'] = { 'p', desc = 'Paste after cursor' },
-    ['ò'] = { '#', desc = 'Comment line' },
-    ['jj'] = { '<esc>', desc = 'Exit insert mode' },
-    ['JJ'] = { '<esc>', desc = 'Exit insert mode' },
-    ['kj'] = { '<esc>', desc = 'Exit insert mode' },
-    ['<C-u>'] = { '<esc>', desc = 'Exit insert mode' },
-    ['KJ'] = { '<esc>', desc = 'Exit insert mode' },
-    ['jJ'] = { '<esc><cmd>w!<cr>', desc = 'Save and exit insert mode' },
-    ['jp'] = { '<esc>:q!<cr>', desc = 'Quit without saving' },
-    ['jk'] = { '<esc>A', desc = 'Append at end of line' },
-    ['jK'] = { '<esc>A<space>', desc = 'Append at end of line with space' },
-    ['jè'] = { '<esc>A{<enter><esc>ddO', desc = 'Append curly braces on new line' },
-    -- ['ji'] = { '<esc>I<space>', desc = 'Insert at beginning of line with space' },
-    ['jI'] = { '<esc>I', desc = 'Insert at beginning of line' },
-    ['<C-s>'] = { '<cmd>w<cr><esc>', desc = 'Save file' },
-    ['<C-S>'] = { '<cmd>noa w<cr><esc>', desc = 'Save file without autocommands' },
-
-    ['jo'] = { '<esc>o', desc = 'Open new line below' },
-    ['jO'] = { '<esc>ko', desc = 'Open new line above' },
-
-    ['jy'] = { '<esc>yy<esc>p', desc = 'Yank line and paste' },
-    ['jd'] = { '<esc>dd', desc = 'Delete line' },
-    ['jl'] = { '<esc>la', desc = 'Append at end of line' },
-    ['jf'] = { '<esc>A<space>from<space>', desc = 'Append "from" at end of line' },
-    ['j0'] = { '<esc>A<space>=<space>', desc = 'Append "= " at end of line' },
-    ['§'] = { '`', desc = 'Jump to mark' },
-    [';;'] = { '<esc>A;<esc>', desc = 'Append semicolon at end of line' },
-
-    ['<C-Del>'] = { '<C-w>', desc = 'Delete word' },
-    ['<C-BS>'] = { '<C-w>', desc = 'Delete word' },
-
-    ['<C-w>'] = { '<cmd>q<cr>' },
-    ['<M-w>'] = { '<cmd>q<cr>' },
-    ['<C-e>'] = { '<cmd>Oil<cr>', desc = 'Oil from insert mode' },
-  },
-
-  -- Command mode
-  c = {
-    ['<C-Del>'] = { '<C-w>', desc = 'Delete word' },
+  -- Terminal Normal Mode
+  tn = {
+    ['<leader>x'] = function()
+      local word = vim.fn.expand '<cWORD>'
+      vim.notify('chmod +x ' .. word, vim.log.levels.INFO)
+      vim.fn.chansend(vim.b.terminal_job_id, 'chmod +x ' .. word .. '\n')
+      vim.cmd.startinsert()
+    end,
+    ['<M-b>'] = function()
+      vim.fn.chansend(vim.b.terminal_job_id, 'make build' .. '\n')
+      vim.cmd.startinsert()
+    end,
+    ['<cr>'] = function()
+      require('helpers.term_path').handle_enter()
+    end,
   },
 }
