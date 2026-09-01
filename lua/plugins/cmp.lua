@@ -11,6 +11,11 @@ return {
     local cmp = require 'cmp'
     local luasnip = require 'luasnip'
 
+    -- Register the buffer-preview source before any cmdline setup references it.
+    local buffer_preview = require 'helpers.cmp_buffer_preview'
+    cmp.register_source('buffer_preview', buffer_preview.new())
+    buffer_preview.setup()
+
     -- --------------------------------------------------------------------- }}}
     -- {{{ Confirmation options
 
@@ -79,12 +84,43 @@ return {
       },
     })
 
+    -- Cmdline navigation keys that also drive the live buffer preview.
+    local function cmdline_nav(next, opts)
+      opts = opts or {}
+      return {
+        c = function(fallback)
+          if cmp.visible() then
+            if next then
+              cmp.select_next_item()
+            else
+              cmp.select_prev_item()
+            end
+            buffer_preview.preview_active()
+          elseif opts.complete then
+            cmp.complete()
+            buffer_preview.schedule_preview()
+          else
+            fallback()
+          end
+        end,
+      }
+    end
+
     cmp.setup.cmdline(':', {
-      mapping = cmp.mapping.preset.cmdline(),
+      mapping = cmp.mapping.preset.cmdline({
+        ['<C-z>'] = cmdline_nav(true, { complete = true }),
+        ['<Tab>'] = cmdline_nav(true, { complete = true }),
+        ['<S-Tab>'] = cmdline_nav(false, { complete = true }),
+        ['<C-n>'] = cmdline_nav(true),
+        ['<C-p>'] = cmdline_nav(false),
+        ['<C-j>'] = cmdline_nav(true),
+        ['<C-k>'] = cmdline_nav(false),
+      }),
       sources = cmp.config.sources({
         { name = 'path' },
+        { name = 'buffer_preview' },
       }, {
-        { name = 'cmdline', option = { ignore_cmds = { 'Man', "!'" } } },
+        { name = 'cmdline', option = { ignore_cmds = { 'Man', "!'", 'buffer', 'sbuffer', 'bdelete', 'bwipeout', 'bunload' } } },
       }),
     })
 
