@@ -1,48 +1,36 @@
 local mappings = require 'mappings'
 
-for mode, mode_mappings in pairs(mappings) do
+-- Normalize a mapping value into `(rhs, opts)`.
+-- Values are a plain string, a function, or a `{ rhs, desc = ... }` table.
+local function normalize(value)
+  if type(value) == 'table' then
+    local opts = {}
+    if value.desc then
+      opts.desc = value.desc
+    end
+    return value[1], opts
+  end
+  return value, {}
+end
+
+for mode, defs in pairs(mappings) do
   if mode == 'tn' then
-    -- Terminal normal mode mappings
+    -- Terminal-normal mappings apply buffer-locally once a terminal opens
     vim.api.nvim_create_autocmd('TermOpen', {
       callback = function(args)
-        for key, actions in pairs(mode_mappings) do
-          local opts = { buffer = args.buf, silent = true, noremap = true }
-          if not actions then
-            vim.keymap.set('n', key, '', opts)
-          elseif type(actions) == 'function' then
-            vim.keymap.set('n', key, actions, opts)
-          elseif type(actions) == 'string' then
-            vim.keymap.set('n', key, actions, opts)
-          elseif type(actions) == 'table' then
-            local action_string = table.concat(actions, '<bar>')
-            vim.keymap.set('n', key, action_string, opts)
-          else
-            vim.notify(('Unsupported mapping type for %s in mode %s'):format(key, mode), vim.log.levels.WARN)
-          end
+        for key, value in pairs(defs) do
+          local rhs, opts = normalize(value)
+          opts.buffer = args.buf
+          opts.silent = true
+          vim.keymap.set('n', key, rhs, opts)
         end
       end,
     })
   else
-    -- Normal mappings
-    for key, actions in pairs(mode_mappings) do
-      local opts = { silent = true }
-      if not actions then
-        vim.keymap.set(mode, key, '', opts)
-      elseif type(actions) == 'function' then
-        vim.keymap.set(mode, key, actions, opts)
-      elseif type(actions) == 'string' then
-        vim.keymap.set(mode, key, actions, opts)
-      elseif type(actions) == 'table' then
-        if type(actions[1]) == 'function' then
-          vim.keymap.set(mode, key, actions[1], opts)
-        else
-          local action_string = table.concat(actions, '<bar>')
-          vim.keymap.set(mode, key, action_string, opts)
-        end
-      else
-        vim.notify(('Unsupported mapping type for %s in mode %s'):format(key, mode), vim.log.levels.WARN)
-      end
+    for key, value in pairs(defs) do
+      local rhs, opts = normalize(value)
+      opts.silent = true
+      vim.keymap.set(mode, key, rhs, opts)
     end
   end
 end
-
