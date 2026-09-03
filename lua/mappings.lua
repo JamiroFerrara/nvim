@@ -31,6 +31,13 @@ return {
     ['<leader>c'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },
     ['cc'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
+    ['<leader>tw'] = {
+      function()
+        vim.opt.wrap = not vim.opt.wrap:get()
+        vim.notify('Wrap ' .. (vim.opt.wrap:get() and 'on' or 'off'), vim.log.levels.INFO)
+      end,
+      desc = 'Toggle line wrap',
+    },
     ['<C-z>'] = { '<cmd>lua Snacks.zen.zen()<cr>', desc = 'Zen mode' },
     ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>", desc = 'Zen mode (full width)' }, --FIX: This should just use the snacks version, but need to figure out the window. Also fights with other zen
 

@@ -21,6 +21,7 @@ vim.opt.cmdheight = 0
 vim.opt.lazyredraw = true
 vim.opt.wrap = false
 vim.opt.breakindent = true
+vim.opt.linebreak = true
 vim.opt.smartcase = true
 vim.opt.signcolumn = 'yes'
 vim.opt.updatetime = 250
