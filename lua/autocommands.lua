@@ -39,6 +39,14 @@ vim.api.nvim_create_autocmd('LspAttach', {
 -- [TERMINAL]
 -------------------------------------------------
 
+-- Remove shada-restored terminal buffers from the jumplist so <C-o>/<A-o>
+-- doesn't reopen a stale terminal at a previously visited directory.
+vim.api.nvim_create_autocmd('VimEnter', {
+  callback = function()
+    require('helpers.jumplist').clean_restored_terminals()
+  end,
+})
+
 vim.api.nvim_create_autocmd('FocusLost', {
   pattern = '*',
   callback = function()
