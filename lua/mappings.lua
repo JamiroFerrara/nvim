@@ -595,7 +595,7 @@ return {
                 if line then
                   cmd = cmd .. ' +' .. line
                 end
-                os.execute(cmd .. vim.fn.shellescape(abs_path))
+                os.execute(cmd .. ' ' .. vim.fn.shellescape(abs_path))
               else
                 pcall(vim.api.nvim_set_current_win, term_win)
                 vim.cmd('e! ' .. vim.fn.fnameescape(abs_path))
