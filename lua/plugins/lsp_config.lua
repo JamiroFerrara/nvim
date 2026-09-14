@@ -46,8 +46,14 @@ return { -- LSP Configuration & Plugins
     -- },
   },
   init = function()
-    vim.lsp.config('ts_go_ls', {
-      cmd = { vim.loop.os_homedir() .. '/dotfiles/nvim/lsp/tsgo/tsgo', '--lsp', '-stdio' },
+    -- TypeScript 7 removed legacy tsconfig options (`moduleResolution: node10`, `baseUrl`, ...).
+    -- Older CRA projects still use them, and react-scripts restores the file on `npm start`,
+    -- so the editor diagnostic is not actionable there. The server keeps checking the project
+    -- regardless, so drop those config diagnostics and keep everything coming from source files.
+    local removed_option_codes =
+      { [5101] = true, [5102] = true, [5103] = true, [5104] = true, [5105] = true, [5106] = true, [5107] = true, [5108] = true, [5109] = true }
+    vim.lsp.config('tsc', {
+      cmd = { 'tsc', '--lsp', '--stdio' },
       filetypes = {
         'javascript',
         'javascriptreact',
@@ -57,8 +63,18 @@ return { -- LSP Configuration & Plugins
         'typescript.tsx',
       },
       root_markers = { 'tsconfig.json', 'jsconfig.json', 'package.json', '.git' },
+      handlers = {
+        ['textDocument/publishDiagnostics'] = function(err, result, ctx, config)
+          if result.diagnostics and result.uri:match '[jt]sconfig[^/]*%.json$' then
+            result.diagnostics = vim.tbl_filter(function(d)
+              return not (removed_option_codes[d.code] and d.message:find('has been removed', 1, true))
+            end, result.diagnostics)
+          end
+          vim.lsp.handlers['textDocument/publishDiagnostics'](err, result, ctx, config)
+        end,
+      },
     })
-    vim.lsp.enable 'ts_go_ls'
+    vim.lsp.enable 'tsc'
   end,
   config = function()
     -- Brief aside: **What is LSP?**
@@ -217,6 +233,7 @@ return { -- LSP Configuration & Plugins
     local ensure_installed = vim.tbl_keys(servers or {})
     vim.list_extend(ensure_installed, {
       'stylua', -- Used to format Lua code
+      'tsc', -- TypeScript 7 native compiler + language server
     })
     require('mason-tool-installer').setup {
       ensure_installed = ensure_installed,
