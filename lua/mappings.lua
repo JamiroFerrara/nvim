@@ -42,7 +42,7 @@ return {
     ['<A-r>'] = { "<cmd>lua require('zen-mode').toggle({window= {width = 1}})<cr>", desc = 'Zen mode (full width)' }, --FIX: This should just use the snacks version, but need to figure out the window. Also fights with other zen
 
     -- Files & Buffers
-    ['<leader>e'] = { '<cmd>Neotree<cr>', desc = 'Toggle Neotree' },
+    ['<leader>e'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
     -- ['<C-e>'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
     ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
     ['<leader>dB'] = { '<cmd>DBUI<cr>', desc = 'Open DBUI' },
