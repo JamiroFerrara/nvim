@@ -78,25 +78,9 @@ return {
     -- dap.configurations.typescript = dap.configurations.javascript
 
 
-    dap.configurations.cs = {
-      {
-        cwd = '${fileDirname}',
-        name = 'NetCoreDbg: Launch',
-        program = function()
-          return require('helpers.nvim-dap-dotnet').build_dll_path()
-        end,
-        request = 'launch',
-        type = 'coreclr',
-        env = {
-          ASPNETCORE_ENVIRONMENT = function()
-            return "DEVE"
-          end,
-          ASPNETCORE_URLS = function()
-            return "http://localhost:8000"
-          end,
-        },
-      },
-    }
+    -- .NET/C#: the project and its build output are resolved from the buffer you
+    -- are in, so <F5> works from any file inside the project.
+    require('helpers.nvim-dap-dotnet').setup()
 
     dap.configurations.php = vim.tbl_deep_extend('force', dap.configurations.php or {}, {
       {

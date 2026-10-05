@@ -53,6 +53,8 @@ function M.parse_line(line)
   end
 
   local patterns = {
+    -- Stack frames: `at Foo.Bar (./Utils/File.cs:8)`, `(../src/a.ts:12)`.
+    { '%(([^%s:]+%.%w+):(%d+)%)', true },
     { 'in%s+([^%s:]+%.%w+):line%s+(%d+)', true },
     { '([^%s:]+%.%w+)%((%d+)%)', true },
     { '([^%s:]+%.%w+):(%d+):', true },
@@ -80,7 +82,7 @@ end
 
 -- Base Vim regex patterns for highlighting.
 -- File paths: /path/file.ext optionally followed by :N, :line N, or (N).
-local BASE_PATH = [[\v(\s|^)\zs(\/|\~)\S+\.(nvim)@!\w+(:\d+|\:line\s+\d+|\(\d+\))?\ze(\s|$|\)|\]|,|;)]]
+local BASE_PATH = [[\v(^|\s|\()\zs(\.{0,2}\/|\~)\S+\.(nvim)@!\w+(:\d+|\:line\s+\d+|\(\d+\))?\ze(\s|$|\)|\]|,|;)]]
 -- URLs: https?://... until whitespace or common delimiters.
 local BASE_URL  = [=[\v(\s|^)\zshttps?://[^[:space:])\]]+\ze(\s|$|\)|\]|,|;)]=]
 

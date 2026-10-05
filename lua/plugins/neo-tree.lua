@@ -241,7 +241,7 @@ return {
           ['D'] = 'fuzzy_finder_directory',
           ['#'] = 'fuzzy_sorter', -- fuzzy sorting using the fzy algorithm
           -- ["D"] = "fuzzy_sorter_directory",
-          ['f'] = 'filter_on_submit',
+          ['f'] = false, -- unmapped: `f` stays a plain vim motion, no filter prompt
 
           ['<c-x>'] = 'clear_filter',
           ['[g'] = 'prev_git_modified',

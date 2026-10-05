@@ -123,25 +123,6 @@ return {
     ['<leader>hg'] = { "<cmd>lua require('user/git').commands()<cr>", desc = 'Git helpers' },
     ['<leader>hj'] = { "<cmd>lua require('user/jira-helpers').commands()<cr>", desc = 'Jira helpers' },
 
-    -- Org
-    ['<leader>ot'] = { '<cmd>lua require("helpers.org-menu"):_open_todo_client_submenu()<cr>', desc = 'Browse project TODOs' },
-    ['<leader>oa'] = { '<cmd>lua require("helpers.org-menu"):open_custom_menu()<cr>', desc = 'Agenda menu' },
-    ['<leader>oT'] = { '<cmd>lua require("helpers.org-capture").open_all_todos()<cr>', desc = 'All project TODOs' },
-    ['<leader>oc'] = { '<cmd>lua require("helpers.org-menu"):open_capture_client_submenu()<cr>', desc = 'Capture project TODO' },
-    ['<leader>ocd'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('d')<cr>", desc = 'Capture DTM TODO' },
-    ['<leader>oca'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('a')<cr>", desc = 'Capture Allitude TODO' },
-    ['<leader>oci'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('i')<cr>", desc = 'Capture ING TODO' },
-    ['<leader>oct'] = { "<cmd>lua require('helpers.org-capture').capture_with_picker('t')<cr>", desc = 'Capture Italfinance TODO' },
-    --TODO: Obsidian Commands
-    --Theese are the obsidian related commands, but with org mode now need to
-    --figure out what to actually do with them.
-    -- ['<leader>ob'] = { '<cmd>ObsidianBacklinks<cr>' },
-    -- ['<leader>ot'] = { '<cmd>ObsidianToday<cr>' },
-    -- ['<leader>oT'] = { '<cmd>ObsidianTomorrow<cr>' },
-    -- ['<leader>oy'] = { '<cmd>ObsidianYesterday<cr>' },
-    -- ['<leader>oa'] = { "zR" },
-    -- ['<leader>oo'] = { "zR" },
-
     -- Make / Run
     ['<leader>mp'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make publish; tmux select-pane -U")<CR>', desc = 'Make publish' },
     ['<leader>md'] = { '<cmd>lua os.execute("tmux split-window -v -p 20 make down; tmux select-pane -U")<CR>', desc = 'Make down' },
@@ -222,11 +203,20 @@ return {
     ['ga'] = { '%', desc = 'Jump to matching bracket' },
     ['gA'] = { '%%', desc = 'Jump to matching bracket' },
     ['Q'] = { '@', desc = 'Replay macro' },
-    ['<A-o>'] = { '<C-o>', desc = 'Jump back' },
-    ['<A-i>'] = { '<C-i>', desc = 'Jump forward' },
+    ['<A-o>'] = {
+      function() require('helpers.term_insert').jump('<C-o>') end,
+      desc = 'Jump back',
+    },
+    ['<A-i>'] = {
+      function() require('helpers.term_insert').jump('<C-i>') end,
+      desc = 'Jump forward',
+    },
     -- ['<C-o>'] = { '<C-o>', desc = '' },
     ['<C-o>'] = { '<cmd>bprev<cr>', desc = 'Previous buffer' },
-    ['<C-i>'] = { '<C-i>', desc = 'Jump forward' },
+    ['<C-i>'] = {
+      function() require('helpers.term_insert').jump('<C-i>') end,
+      desc = 'Jump forward',
+    },
     ['<A-n>'] = { '*', desc = 'Search word under cursor' },
     ['<leader>0'] = { 'f=w', desc = 'Find = then word' },
     ['<leader>='] = { 'F=F=w', desc = 'Find = backward' },
@@ -358,10 +348,22 @@ return {
   i = {
     -- Navigation
     ['<C-f>'] = { '$', desc = 'Move to end of line' },
-    ['<C-o>'] = { '<esc><C-o>', desc = 'Exit insert mode and execute one <C-o>' },
-    ['<C-i>'] = { '<esc><C-i>', desc = 'Exit insert mode and execute one <C-i>' },
-    ['<A-o>'] = { '<esc><C-o>', desc = 'Exit insert mode and execute one <C-o>' },
-    ['<A-i>'] = { '<esc><C-i>', desc = 'Exit insert mode and execute one <C-i>' },
+    ['<C-o>'] = {
+      function() require('helpers.term_insert').jump('<esc><C-o>') end,
+      desc = 'Exit insert mode and execute one <C-o>',
+    },
+    ['<C-i>'] = {
+      function() require('helpers.term_insert').jump('<esc><C-i>') end,
+      desc = 'Exit insert mode and execute one <C-i>',
+    },
+    ['<A-o>'] = {
+      function() require('helpers.term_insert').jump('<esc><C-o>') end,
+      desc = 'Exit insert mode and execute one <C-o>',
+    },
+    ['<A-i>'] = {
+      function() require('helpers.term_insert').jump('<esc><C-i>') end,
+      desc = 'Exit insert mode and execute one <C-i>',
+    },
     ['jk'] = { '<esc>A', desc = 'Append at end of line' },
     ['jK'] = { '<esc>A<space>', desc = 'Append at end of line with space' },
     ['jè'] = { '<esc>A{<enter><esc>ddO', desc = 'Append curly braces on new line' },
@@ -428,8 +430,14 @@ return {
     },
 
     -- Window Navigation
-    ['<M-o>'] = { '<C-\\><C-n><C-o>', desc = 'Jump back' },
-    ['<M-i>'] = { '<C-\\><C-n><C-i>', desc = 'Jump forward' },
+    ['<M-o>'] = {
+      function() require('helpers.term_insert').jump('<C-\\><C-n><C-o>') end,
+      desc = 'Jump back',
+    },
+    ['<M-i>'] = {
+      function() require('helpers.term_insert').jump('<C-\\><C-n><C-i>') end,
+      desc = 'Jump forward',
+    },
     ['<C-h>'] = { '<Cmd>wincmd h<cr><C-\\><C-n>i', desc = 'Move to Left Window' },
     ['<C-k>'] = { '<Cmd>wincmd k<cr>', desc = 'Move to Upper Window' },
     ['<C-l>'] = { '<Cmd>wincmd l<cr><C-\\><C-n>i', desc = 'Move to Right Window' },
