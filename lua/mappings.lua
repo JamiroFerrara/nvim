@@ -223,7 +223,7 @@ return {
     ['<leader>j'] = { '}', desc = 'Next paragraph' },
     ['<leader>k'] = { '{', desc = 'Prev paragraph' },
     ['ç'] = { 'J', desc = 'Join lines' },
-    ['|'] = { '1', desc = 'Digit 1' },
+    ['|'] = { function() require('org').agenda('a') end, desc = 'Org agenda' },
     ['?'] = { '2', desc = 'Digit 2' },
     ['&'] = { '3', desc = 'Digit 3' },
     ['/'] = { '4', desc = 'Digit 4' },

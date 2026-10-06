@@ -1,7 +1,9 @@
+-- Lives in terminal_plugins/ (always imported) so the tmux `nvim +terminal`
+-- session -- what `alt+o` opens -- its key hints, org.nvim's groups included,
+-- instead of being off there (which-key was gated on NVIM_TERMINAL_ONLY).
 return {
   'folke/which-key.nvim',
   event = 'VeryLazy',
-  enabled = not _G.NVIM_TERMINAL_ONLY,
   opts = {
     plugins = {
       presets = {

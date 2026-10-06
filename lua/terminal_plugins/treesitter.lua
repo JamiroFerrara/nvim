@@ -1,6 +1,10 @@
 return { -- Highlight, edit, and navigate code
   'nvim-treesitter/nvim-treesitter',
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
+  -- `main` is the 2025 rewrite: no `nvim-treesitter.configs`, no `define_modules`
+  -- (breaks playground + the `highlight`/`indent`/`ensure_installed` opts below).
+  -- `master` is the frozen legacy-API branch kept for nvim 0.11.
+  branch = 'master',
   event = { "BufReadPost", "BufNewFile" },
   build = ':TSUpdate',
   dependencies = {
