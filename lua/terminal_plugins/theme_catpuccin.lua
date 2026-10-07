@@ -10,6 +10,22 @@ return { -- You can easily change to a different colorscheme.
     -- Load the colorscheme here.
     -- Like many other themes, this one has different styles, and you could load
     -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
+    --
+    -- setup() runs here, before the first :colorscheme, so the
+    -- custom_highlights below are already in the compiled theme; doing it
+    -- through lazy's `opts` would run after and only rewrite the cache.
+    require('catppuccin').setup {
+      custom_highlights = function(colors)
+        return {
+          -- snacks' dashboard startup section ("⚡ Neovim loaded 6/92
+          -- plugins in 74ms"): catppuccin's snacks integration paints the
+          -- footer chunk yellow-italic and the numbers pink. Both blue,
+          -- like SnacksDashboardHeader.
+          SnacksDashboardFooter = { fg = colors.blue, style = {} },
+          SnacksDashboardSpecial = { fg = colors.blue },
+        }
+      end,
+    }
     vim.cmd.colorscheme 'catppuccin-mocha'
 
     -- You can configure highlights by doing something like:
