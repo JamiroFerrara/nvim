@@ -26,11 +26,14 @@ return {
     default_notes_file = '~/org/refile.org',
     -- The stock Task template (org.capture.templates DEFAULT_TEMPLATES.t)
     -- ends with `%a`, the annotation link back to the file/headline the
-    -- capture was started from; it is dropped here. `target`/`headline`
-    -- come from helpers/org/capture.lua: the picker asks for the level-1
-    -- project headline the task belongs to, and the entry is stored under
-    -- it right away. A configured `templates` table replaces the defaults
-    -- rather than merging into them, so `t` is spelled out in full.
+    -- capture was started from; it is dropped here. `target`/`olp` come from
+    -- helpers/org/capture.lua: the working directory decides the project
+    -- first (helpers/org/project.lua), so the entry goes straight under that
+    -- project's headline -- a headline of a shared file included, which is
+    -- why the destination is an outline path and not a title. Only a cwd
+    -- that names no project opens the picker for it. A configured
+    -- `templates` table replaces the defaults rather than merging into them,
+    -- so `t` is spelled out in full.
     capture = {
       templates = {
         t = {
@@ -39,8 +42,8 @@ return {
           target = function()
             return capture.target()
           end,
-          headline = function()
-            return capture.headline()
+          olp = function()
+            return capture.olp()
           end,
           template = '* TODO %?\n  %u',
         },
@@ -106,8 +109,10 @@ return {
       -- Global actions, not buffer-local. pick_project_todo is
       -- helpers/org_todo.lua, registered as an action in the config
       -- function below (the pick_* actions ship with no default keys).
-      -- Two steps: the projects (~/org/projects/*.org, by level-1
-      -- headline), then the open TODOs of the chosen project.
+      -- The cwd decides first (helpers/org/project.lua): with a project it
+      -- jumps straight to that project's open TODOs, otherwise the two-step
+      -- picker runs: the projects (~/org/projects/*.org, by level-1
+      -- headline), then the TODOs of the chosen one.
       -- NOTE: inside org buffers `<prefix>s` is the buffer-local `schedule`
       -- (defaults, lua/org/config/mappings.lua) and shadows this.
       global = {
@@ -240,7 +245,7 @@ return {
     require('org.actions').list.pick_project_todo = {
       'helpers.org_todo',
       'pick',
-      desc = 'Pick a project, then a TODO in it',
+      desc = 'Jump to a TODO of the current project (else pick a project)',
       global = true,
     }
     -- helpers/org/cycle.lua: <S-Tab> restores the #+STARTUP visibility
