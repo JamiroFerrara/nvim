@@ -18,8 +18,12 @@
 --                   fold to the buffer's #+STARTUP on a jump from the list
 --   cycle.lua       <S-Tab> folds to the buffer's #+STARTUP visibility
 --   refile.lua      save the emptied store buffer after capture-refile
+--   notes.lua       notes land in the entry body (newest first, timestamp +
+--                   rule header) instead of a LOGBOOK drawer, and saving
+--                   the note buffer stores it
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
+local notes = require 'helpers.org.notes'
 
 return {
   'xheisenbugx/org.nvim',
@@ -43,16 +47,23 @@ return {
       -- TODO picker) reads one project, so the tags and priorities the
       -- ticket lines already carry are only visible here. Reached from the
       -- dispatcher menu or `:Org agenda <key>`, which give the whole set;
-      -- the agenda buffer's 1 / 2 (helpers/org/agenda.lua) open the same
-      -- commands narrowed to the cwd's project. The keys avoid the built-in
-      -- dispatcher ones (a t T m M s S n # / < > e * ?), so they add rows
-      -- instead of replacing. Blocks are `tags_todo` (tags/property match,
-      -- TODO entries only) -- the `/!` trailing the match is the TODO part
-      -- of |org-match-syntax|, "not done". `b` pulls the bug tag and the
+      -- the agenda buffer's 1 / 2 / 3 (helpers/org/agenda.lua) open them,
+      -- 1 global and 2 / 3 narrowed to the cwd's project. The keys avoid the
+      -- built-in dispatcher ones (a t T m M s S n # / < > e * ?), so they
+      -- add rows instead of replacing. Blocks are `tags_todo` (tags/property
+      -- match, TODO entries only) -- the `/!` trailing the match is the TODO
+      -- part of |org-match-syntax|, "not done". `o` is every open TODO
+      -- (`type = 'todo'`, org's `alltodo`), `b` pulls the bug tag and the
       -- WARN keyword, `p` the open A/B priorities. A block's
       -- `header` labels the group; a composite command shows its blocks
       -- one after the other, in this order.
       custom_commands = {
+        o = {
+          description = 'All open TODOs',
+          types = {
+            { type = 'todo', header = 'All open TODOs' },
+          },
+        },
         b = {
           description = 'Bugs and warnings',
           types = {
@@ -90,7 +101,7 @@ return {
           olp = function()
             return capture.olp()
           end,
-          template = '* TODO %?\n  %u',
+          template = '* TODO %?\n  %u ' .. string.rep('-', notes.DASHES),
         },
       },
     },
@@ -184,10 +195,24 @@ return {
         -- same keys reach the TODO view, which renders into an orgagenda
         -- buffer too.
         todo_next = { '<C-S-Right>', 'N' },
+        -- `t` adds/edits the tags of the entry at point (org-set-tags: the
+        -- fast-selection menu, where <Tab> types one with completion). It
+        -- takes over the default `t` (org-agenda-todo, a fast state
+        -- selection) -- `D` toggles DONE and `N` cycles the keyword already
+        -- -- but keeps the Emacs key <C-c><C-t> on the state selection.
+        -- Reaches the TODO view too, which renders into an orgagenda
+        -- buffer. The default `:` and the <C-c><C-q> / <C-c><C-c>
+        -- spellings stay on set_tags.
+        todo = '<C-c><C-t>',
+        set_tags = { 't', ':', '<C-c><C-q>', '<C-c><C-c>' },
         -- `|` quits like `q`, taking over the default `|` (remove the
         -- filter at point), unbound here
         quit = { 'q', '`' },
         filter_remove = false,
+        -- `^` is the global org capture key (lua/mappings.lua). The default
+        -- agenda `^` (filter to the top headline) would shadow it in the
+        -- agenda and in the TODO view, which renders into the same buffer.
+        filter_top_headline = false,
       },
       -- Capture buffer keys. The defaults stay: finalize <C-c><C-c> /
       -- <prefix>w, kill <C-c><C-k> / <prefix>k, refile <C-c><C-w> /
@@ -337,6 +362,7 @@ return {
     -- org.nvim is required at startup.
     require('helpers.org.agenda').setup()
     require('helpers.org.decorations').setup()
+    require('helpers.org.notes').setup()
     require('helpers.org.mappings').setup()
     require('helpers.org.folding').setup()
     require('helpers.org.refile').setup()

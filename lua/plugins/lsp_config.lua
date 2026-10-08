@@ -218,6 +218,14 @@ return { -- LSP Configuration & Plugins
           },
         },
       },
+
+      -- Mason ships eslint-lsp as a `#!/usr/bin/env node` shim, and the system `node` is v14,
+      -- which cannot parse the `??=` syntax used by modern @typescript-eslint/parser (v8.x).
+      -- Every `textDocument/diagnostic` request then fails with `-32603 ... Failed to load
+      -- parser`. Run the same server under Bun, which reports itself as node v24.
+      eslint = {
+        cmd = vim.fn.executable 'bun' == 1 and { 'bun', vim.fn.stdpath 'data' .. '/mason/bin/vscode-eslint-language-server', '--stdio' } or nil,
+      },
     }
 
     -- Ensure the servers and tools above are installed

@@ -115,36 +115,39 @@ local function setup_pick_todo()
 end
 
 -- Number keys open the custom views configured in
--- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 bugs, 2
--- priorities. Buffer-local to orgagenda -- the TODO view renders into the
--- same buffer, so it switches from there too -- which is why the keys are
--- the plain digits and not the `<leader>o` ones: a count typed in the
--- agenda (`<C-u>` style) no longer starts with 1 or 2, and nothing else
--- claims them. `agenda.window = 'current'` makes the open take the window
--- over, so the same buffer is refilled and this reads as switching view
--- rather than stacking a second agenda.
+-- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
+-- TODOs across every project, 2 bugs, 3 priorities. Buffer-local to
+-- orgagenda -- the TODO view renders into the same buffer, so it switches
+-- from there too -- which is why the keys are the plain digits and not the
+-- `<leader>o` ones: a count typed in the agenda (`<C-u>` style) no longer
+-- starts with 1 or 2, and nothing else claims them. `agenda.window =
+-- 'current'` makes the open take the window over, so the same buffer is
+-- refilled and this reads as switching view rather than stacking a second
+-- agenda.
 --
--- The view is scoped to the project of the working directory, the way `°`
--- is for the TODO view (helpers/org/project.lua): each block's `files`
--- becomes the project's file and a headline claim adds its subtree
+-- The 2 / 3 views are scoped to the project of the working directory, the
+-- way `°` is for the TODO view (helpers/org/project.lua): each block's
+-- `files` becomes the project's file and a headline claim adds its subtree
 -- restriction. A cwd that names no project -- or one whose file does not
 -- exist yet -- opens the full view, the same one the dispatcher menu's `b`
 -- / `p` give. Resolution runs per key press (project.current reads getcwd,
 -- or the job cwd of a terminal buffer), so a `cd` moves the scope with it.
+-- 1 is global: it never scopes, so it lists the open TODOs of every project.
 local CUSTOM_VIEWS = {
-  { '1', 'b', 'bugs and warnings' },
-  { '2', 'p', 'open A/B priorities' },
+  { '1', 'o', 'all open TODOs', true },
+  { '2', 'b', 'bugs and warnings' },
+  { '3', 'p', 'open A/B priorities' },
 }
 
-local function open_custom_view(key, label)
+local function open_custom_view(key, label, global)
   local command = (require('org.config').opts.agenda.custom_commands or {})[key]
   if not command then
     require('org.utils').warn('agenda: no custom command ' .. key)
     return
   end
-  local project = require 'helpers.org.project'
-  local current = project.current()
   local spec, opts = vim.deepcopy(command), nil
+  local project = require 'helpers.org.project'
+  local current = not global and project.current() or nil
   if current and vim.uv.fs_stat(current.file) then
     local title = project.title(current)
     local files = project.files(current)
@@ -170,9 +173,9 @@ local function setup_custom_views()
     pattern = 'orgagenda',
     callback = function(args)
       for _, view in ipairs(CUSTOM_VIEWS) do
-        local key, command, label = view[1], view[2], view[3]
+        local key, command, label, global = view[1], view[2], view[3], view[4]
         vim.keymap.set('n', key, function()
-          open_custom_view(command, label)
+          open_custom_view(command, label, global)
         end, { buffer = args.buf, desc = 'org: Agenda view ' .. key .. ' (' .. label .. ')' })
       end
     end,
