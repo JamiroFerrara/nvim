@@ -7,6 +7,10 @@
 -- Re-assert org folding for org windows once origami has loaded:
 -- setup_buffer restores the fold options, set_startup_visibility reopens/
 -- closes to the STARTUP mode.
+--
+-- show_jump_target is the other half of the file: folding a buffer entered
+-- from the agenda/TODO list back to the #+STARTUP rule before unfolding the
+-- entry that was entered.
 local M = {}
 
 function M.setup()
@@ -26,6 +30,25 @@ function M.setup()
       end
     end,
   })
+end
+
+--- Fold the current window to its buffer's #+STARTUP rule, then unfold the
+--- entry at the cursor with its subtree (drawers folded) -- what the agenda
+--- RET/<Tab> and the TODO picker call after jumping into a file. The rule
+--- from the header is applied when a buffer is loaded (org.fold.setup_buffer),
+--- not when it is shown again: a file left unfolded (`zR`, or simply never
+--- folded in the window it is shown in) stays unfolded like that, and the
+--- `zv` of the jump does nothing when nothing is closed. Hence re-apply the
+--- rule first, then show the tree that was entered -- org.fold.show_level
+--- level 3, the SUBTREE level of org-agenda-show-1.
+function M.show_jump_target()
+  local fold = require 'org.fold'
+  if vim.wo.foldexpr ~= "v:lua.require'org.fold'.foldexpr(v:lnum)" then
+    return
+  end
+  local lnum = vim.api.nvim_win_get_cursor(0)[1]
+  fold.apply_startup(0)
+  fold.show_level(lnum, 3)
 end
 
 return M

@@ -1,8 +1,14 @@
 -- Agenda-side customizations for org.nvim (wired in
--- lua/terminal_plugins/org.nvim.lua): the `D` toggle_done action, and
--- opening the agenda without throwing away the window layout. Both plug
--- into modules the plugin loads on first use, so they go through
--- org.lazy.on_load and nothing here is required at startup.
+-- lua/terminal_plugins/org.nvim.lua): the `D` toggle_done action, the fold
+-- state left behind by entering an entry, the insert mode a terminal
+-- window would otherwise leave in the agenda, and the 1/2/3 switch between
+-- the custom views of agenda.custom_commands. All of them plug into modules
+-- the plugin loads on first use, so they go through org.lazy.on_load and
+-- nothing here is required at startup.
+--
+-- The agenda opens in the focused window (agenda.window = 'current' in the
+-- plugin spec), so there is no split to unwrap on open and `q` puts the
+-- previous buffer back (view/window.lua, mode "current").
 local M = {}
 
 -- `D` in the agenda toggles an entry between DONE and TODO: a done entry
@@ -27,83 +33,66 @@ local function setup_toggle_done()
   end)
 end
 
--- org.nvim's "split" agenda window is Emacs' reorganize-frame: show_buffer
--- (view/window.lua) runs `silent! only`, so the agenda becomes the only
--- other window and an open vsplit is thrown away. Instead the agenda should
--- land in a full-width split *below* the existing windows -- `botright
--- split`, which `fit_window` then sizes. Drop just that `silent! only` for
--- the opening call; `agenda.window = "only"` and the quit-time layout
--- restore keep their own.
-local function without_only(fn, ...)
-  local cmd = vim.cmd
-  vim.cmd = function(c, ...)
-    if type(c) == 'string' and c == 'silent! only' then
-      return
+-- Entering an entry from the list (RET = switch_to, <Tab> = goto) lands in
+-- the entry's file, in whatever fold state the buffer was last left in: the
+-- #+STARTUP rule is applied when a buffer is loaded, not when it is shown
+-- again, and a file open unfolded in another window stays unfolded here.
+-- helpers/org/folding.lua show_jump_target re-applies the rule and unfolds
+-- the entered tree; the wrappers below run it after the jump. The action
+-- table is read when the agenda mappings are built, so both are wrapped the
+-- way toggle_done is registered above.
+local function setup_entry_folds()
+  require('org.lazy').on_load('org.agenda.view', 'entry_folds', function(view)
+    for _, name in ipairs { 'switch_to', 'goto' } do
+      local action = view.actions[name]
+      if action then
+        view.actions[name] = function(...)
+          local result = action(...)
+          require('helpers.org.folding').show_jump_target()
+          return result
+        end
+      end
     end
-    return cmd(c, ...)
-  end
-  local ok, err = pcall(fn, ...)
-  vim.cmd = cmd
-  if not ok then
-    error(err)
-  end
+  end)
 end
 
---- Whether the agenda window mode keeps the other windows.
-local function keeps_windows()
-  local mode = require('org.config').opts.agenda.window
-  return mode == nil or mode == 'split' or mode == 'reorganize-frame'
-end
-
--- Launching the agenda from a terminal window (the `nvim +terminal` session)
--- should take that window over, not split below the terminal. org.agenda.open
--- reads agenda.window in show_buffer() while it runs, so swap in "current"
--- for the call when the buffer is a terminal. The wrapper is installed when
--- org.agenda first loads (the agenda command requiring it), which is before
--- any of its functions run.
+-- Launching the agenda from a terminal window must not leave insert mode
+-- running in the agenda buffer: the terminal's autocommands
+-- (autocommands.lua: TermOpen / FocusGained / BufEnter term://*) call
+-- startinsert, and that lands in the agenda buffer right after it is set
+-- (logged: FileType orgagenda, then InsertEnter buftype=nofile
+-- name=agenda). Exit insert/terminal mode now, and once more for the insert
+-- that follows. The wrapper is installed when org.agenda first loads (the
+-- agenda command requiring it), which is before any of its functions run.
 local function setup_open()
   require('org.lazy').on_load('org.agenda', 'window_setup', function(agenda)
     local agenda_open = agenda.open
     agenda.open = function(spec, opts)
-      if vim.bo.buftype == 'terminal' then
-        local config = require 'org.config'
-        local saved = config.opts.agenda.window
-        config.opts.agenda.window = 'current'
-        local ok, err = pcall(agenda_open, spec, opts)
-        config.opts.agenda.window = saved
-        if not ok then
-          error(err)
-        end
-        -- The window held a terminal buffer; its autocommands
-        -- (autocommands.lua: TermOpen / FocusGained / BufEnter term://*)
-        -- call startinsert, and that lands in the agenda buffer right
-        -- after it is set (logged: FileType orgagenda, then
-        -- InsertEnter buftype=nofile name=agenda). Exit insert/terminal
-        -- mode now, and once more for the insert that follows.
-        local function normal_mode()
-          local mode = vim.api.nvim_get_mode().mode
-          if mode == 't' then
-            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-\\><C-n>', true, false, true), 'n', false)
-          elseif mode:sub(1, 1) == 'i' then
-            pcall(vim.cmd, 'stopinsert')
-          end
-        end
-        normal_mode()
-        local guard = vim.api.nvim_create_autocmd('InsertEnter', {
-          callback = function()
-            -- stopinsert during InsertEnter does not take; leave after
-            vim.defer_fn(normal_mode, 0)
-          end,
-        })
-        vim.defer_fn(function()
-          pcall(vim.api.nvim_del_autocmd, guard)
-        end, 2000)
-        return
+      if vim.bo.buftype ~= 'terminal' then
+        return agenda_open(spec, opts)
       end
-      if keeps_windows() then
-        return without_only(agenda_open, spec, opts)
+      local ok, err = pcall(agenda_open, spec, opts)
+      if not ok then
+        error(err)
       end
-      return agenda_open(spec, opts)
+      local function normal_mode()
+        local mode = vim.api.nvim_get_mode().mode
+        if mode == 't' then
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-\\><C-n>', true, false, true), 'n', false)
+        elseif mode:sub(1, 1) == 'i' then
+          pcall(vim.cmd, 'stopinsert')
+        end
+      end
+      normal_mode()
+      local guard = vim.api.nvim_create_autocmd('InsertEnter', {
+        callback = function()
+          -- stopinsert during InsertEnter does not take; leave after
+          vim.defer_fn(normal_mode, 0)
+        end,
+      })
+      vim.defer_fn(function()
+        pcall(vim.api.nvim_del_autocmd, guard)
+      end, 2000)
     end
   end)
 end
@@ -125,10 +114,77 @@ local function setup_pick_todo()
   })
 end
 
+-- Number keys open the custom views configured in
+-- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 bugs, 2
+-- priorities. Buffer-local to orgagenda -- the TODO view renders into the
+-- same buffer, so it switches from there too -- which is why the keys are
+-- the plain digits and not the `<leader>o` ones: a count typed in the
+-- agenda (`<C-u>` style) no longer starts with 1 or 2, and nothing else
+-- claims them. `agenda.window = 'current'` makes the open take the window
+-- over, so the same buffer is refilled and this reads as switching view
+-- rather than stacking a second agenda.
+--
+-- The view is scoped to the project of the working directory, the way `°`
+-- is for the TODO view (helpers/org/project.lua): each block's `files`
+-- becomes the project's file and a headline claim adds its subtree
+-- restriction. A cwd that names no project -- or one whose file does not
+-- exist yet -- opens the full view, the same one the dispatcher menu's `b`
+-- / `p` give. Resolution runs per key press (project.current reads getcwd,
+-- or the job cwd of a terminal buffer), so a `cd` moves the scope with it.
+local CUSTOM_VIEWS = {
+  { '1', 'b', 'bugs and warnings' },
+  { '2', 'p', 'open A/B priorities' },
+}
+
+local function open_custom_view(key, label)
+  local command = (require('org.config').opts.agenda.custom_commands or {})[key]
+  if not command then
+    require('org.utils').warn('agenda: no custom command ' .. key)
+    return
+  end
+  local project = require 'helpers.org.project'
+  local current = project.current()
+  local spec, opts = vim.deepcopy(command), nil
+  if current and vim.uv.fs_stat(current.file) then
+    local title = project.title(current)
+    local files = project.files(current)
+    for _, block in ipairs(spec.types or { spec }) do
+      block.files = files
+      -- the block header is drawn (view.title is not), so the project name
+      -- goes there: an empty view -- a project with no bug, say -- still
+      -- says what it filtered on instead of looking broken
+      block.header = block.header and (title .. ' - ' .. block.header) or title
+    end
+    local restrict = project.restrict(current)
+    if restrict then
+      opts = { restrict = restrict }
+    end
+  end
+  require('org.utils').run(function()
+    require('org.agenda').open(spec, opts)
+  end)
+end
+
+local function setup_custom_views()
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'orgagenda',
+    callback = function(args)
+      for _, view in ipairs(CUSTOM_VIEWS) do
+        local key, command, label = view[1], view[2], view[3]
+        vim.keymap.set('n', key, function()
+          open_custom_view(command, label)
+        end, { buffer = args.buf, desc = 'org: Agenda view ' .. key .. ' (' .. label .. ')' })
+      end
+    end,
+  })
+end
+
 function M.setup()
   setup_toggle_done()
+  setup_entry_folds()
   setup_open()
   setup_pick_todo()
+  setup_custom_views()
 end
 
 return M

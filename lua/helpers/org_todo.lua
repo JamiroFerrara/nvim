@@ -50,6 +50,9 @@ local function pick_todos(path, title)
   local todo = pickers.choose { title = 'TODO: ' .. title, items = items }
   if todo then
     pickers.jump(todo[1])
+    -- Back to the file's #+STARTUP visibility, with the entered tree open
+    -- (helpers/org/folding.lua): the buffer may have been left unfolded.
+    require('helpers.org.folding').show_jump_target()
   end
 end
 

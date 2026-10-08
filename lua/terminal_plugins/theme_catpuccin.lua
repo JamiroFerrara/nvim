@@ -22,7 +22,7 @@ return { -- You can easily change to a different colorscheme.
           -- footer chunk yellow-italic and the numbers pink. Both blue,
           -- like SnacksDashboardHeader.
           SnacksDashboardFooter = { fg = colors.blue, style = {} },
-          SnacksDashboardSpecial = { fg = colors.blue },
+          -- SnacksDashboardSpecial = { fg = colors.blue },
         }
       end,
     }

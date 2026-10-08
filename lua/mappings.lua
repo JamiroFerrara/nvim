@@ -113,7 +113,12 @@ return {
     ['+'] = { '<cmd>lua require("harpoon.ui").nav_file(3)<cr>', desc = 'Harpoon: file 3' },
 
     -- AI
-    ['<leader>ai'] = { '<cmd>Opencode<CR>', desc = 'Opencode' },
+    ['<leader>ai'] = {
+      function()
+        require('helpers.omp_term').open()
+      end,
+      desc = 'omp terminal (vsplit right / focus)',
+    },
     ['<leader>aa'] = { '<cmd>GpChatNew vsplit<CR>', desc = 'GpChat new (vsplit)' },
     ['<leader>av'] = { '<cmd>lua require("user.helpers").visualModeAi()<CR>', desc = 'AI visual mode' },
     ['<leader>am'] = { '<cmd>lua require("user.helpers").apiMockAi()<CR>', desc = 'AI mock API' },

@@ -1,7 +1,8 @@
 -- Buffer-local org mappings for org.nvim (wired in
 -- lua/terminal_plugins/org.nvim.lua): normal-mode <CR> like the markdown
 -- config's smart action (obsidian util.toggle_checkbox), insert-mode <CR>
--- continuing lists like bullets.vim, and dd deleting a whole subtree.
+-- continuing lists like bullets.vim, dd deleting a whole subtree, and the
+-- insert-mode capture keys (org.nvim binds those in normal mode only).
 -- Registered on FileType org so they land after org.nvim attaches its own
 -- buffer mappings.
 local M = {}
@@ -98,6 +99,55 @@ function M.setup()
         vim.api.nvim_buf_set_lines(buf, lnum, lnum, false, { new_line })
         vim.api.nvim_win_set_cursor(0, { lnum + 1, #new_line })
       end, { buffer = buf, desc = 'org: continue list (like bullets.vim)' })
+
+      -- Capture buffers: the Emacs capture keys work from insert mode too,
+      -- where the entry is written -- <C-c><C-c> files the capture,
+      -- <C-c><C-k> aborts it, <C-c><C-w> files and refiles it. org.nvim
+      -- binds the configured capture mappings in normal mode only, so
+      -- pressing <C-c><C-c> in insert mode just leaves insert mode and the
+      -- entry stays unfiled. Only the <C-c>-prefixed lhs are bound here:
+      -- the <prefix> (leader) ones are normal-mode sequences that would
+      -- steal ordinary typing. `sessions` is the capture registry, and a
+      -- capture buffer only exists after org.capture loaded, so an org
+      -- file never loads the module.
+      local capture = package.loaded['org.capture']
+      if capture and capture.sessions[buf] then
+        local config = require 'org.config'
+        local utils = require 'org.utils'
+        local maps = config.opts.mappings.capture or {}
+
+        local function add(value, fn, desc)
+          for _, lhs in ipairs(config.lhs_list(value)) do
+            if lhs:find '^<C%-c>' then
+              vim.keymap.set('i', lhs, fn, { buffer = buf, desc = desc })
+            end
+          end
+        end
+
+        add(maps.finalize, function()
+          utils.run(capture.finalize, buf, { jump = vim.v.count > 0 })
+        end, 'org: finalize capture (count: and jump to it)')
+        add(maps.kill, function()
+          capture.kill(buf)
+        end, 'org: abort capture')
+        add(maps.refile, function()
+          utils.run(capture.refile, buf)
+        end, 'org: refile capture')
+
+        -- The entry is typed in insert mode, but org.nvim only starts
+        -- insert when it opens the buffer: coming back to it (a window
+        -- switch, closing a picker) landed in normal mode. Re-enter insert
+        -- on every BufEnter/WinEnter that makes the capture buffer current.
+        vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+          buffer = buf,
+          callback = function()
+            if capture.sessions[buf] and vim.api.nvim_get_current_buf() == buf and vim.api.nvim_get_mode().mode == 'n' then
+              vim.cmd 'startinsert'
+            end
+          end,
+          desc = 'org: enter insert mode in a capture buffer',
+        })
+      end
 
       -- dd on a headline deletes the whole subtree, like `dar`
       -- (org.structure's around-subtree range is hl.line..hl.end_line).

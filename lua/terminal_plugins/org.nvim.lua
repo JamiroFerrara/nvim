@@ -7,10 +7,15 @@
 --   capture.lua     capture-task destination (level-1 project headlines)
 --   ics.lua         iCalendar subscriptions + event-detail scratch viewer
 --   cookies.lua     automatic statistics cookies and checkbox auto-DONE
---   agenda.lua      `D` toggle_done action and terminal-window takeover
+--   agenda.lua      `D` toggle_done action, the fold state after entering
+--                   an entry from the list, and the insert mode a terminal
+--                   window would leave in the agenda
 --   decorations.lua checkbox icons (conceal, like the markdown config)
---   mappings.lua    buffer-local <CR> (normal/insert) and dd-on-headline
---   folding.lua     re-assert org folding after nvim-origami loads
+--   mappings.lua    buffer-local <CR> (normal/insert), dd-on-headline,
+--                   the capture keys in insert mode, and insert mode back
+--                   when the capture buffer is entered again
+--   folding.lua     re-assert org folding after nvim-origami loads, and
+--                   fold to the buffer's #+STARTUP on a jump from the list
 --   cycle.lua       <S-Tab> folds to the buffer's #+STARTUP visibility
 --   refile.lua      save the emptied store buffer after capture-refile
 local ics = require 'helpers.org.ics'
@@ -24,6 +29,46 @@ return {
     org_directory = '~/org',
     agenda_files = { '~/org/**/*.org' },
     default_notes_file = '~/org/refile.org',
+    -- Where the agenda opens: the focused window (Emacs
+    -- org-agenda-window-setup "current-window"), so `§` / `<leader>ot` /
+    -- `°` take over the buffer that has focus -- a terminal window
+    -- included, where helpers/org/agenda.lua only has to undo the
+    -- startinsert its autocommands run -- and `q` puts the previous buffer
+    -- back (agenda.restore_windows_after_quit stays false). Was "split":
+    -- the agenda landed in a window below and view/window.lua ran
+    -- `silent! only` first, throwing the layout away.
+    agenda = {
+      window = 'current',
+      -- Cross-project roll-ups: every other view (agenda_files, `°`, the
+      -- TODO picker) reads one project, so the tags and priorities the
+      -- ticket lines already carry are only visible here. Reached from the
+      -- dispatcher menu or `:Org agenda <key>`, which give the whole set;
+      -- the agenda buffer's 1 / 2 (helpers/org/agenda.lua) open the same
+      -- commands narrowed to the cwd's project. The keys avoid the built-in
+      -- dispatcher ones (a t T m M s S n # / < > e * ?), so they add rows
+      -- instead of replacing. Blocks are `tags_todo` (tags/property match,
+      -- TODO entries only) -- the `/!` trailing the match is the TODO part
+      -- of |org-match-syntax|, "not done". `b` pulls the bug tag and the
+      -- WARN keyword, `p` the open A/B priorities. A block's
+      -- `header` labels the group; a composite command shows its blocks
+      -- one after the other, in this order.
+      custom_commands = {
+        b = {
+          description = 'Bugs and warnings',
+          types = {
+            { type = 'tags_todo', match = 'bug/!', header = 'Tagged bug, open' },
+            { type = 'todo', match = 'WARN', header = 'WARN' },
+          },
+        },
+        p = {
+          description = 'Open A/B priorities',
+          types = {
+            { type = 'tags_todo', match = 'PRIORITY="A"/!', header = 'Priority A, open' },
+            { type = 'tags_todo', match = 'PRIORITY="B"/!', header = 'Priority B, open' },
+          },
+        },
+      },
+    },
     -- The stock Task template (org.capture.templates DEFAULT_TEMPLATES.t)
     -- ends with `%a`, the annotation link back to the file/headline the
     -- capture was started from; it is dropped here. `target`/`olp` come from
@@ -134,10 +179,30 @@ return {
         -- diary), unbound here.
         toggle_done = 'D',
         toggle_diary = false,
+        -- `N` cycles the TO-DO keyword of the entry at point (TODO -> NEXT
+        -- -> PEND -> TEST -> WARN -> DONE -> none), like <C-S-Right>; the
+        -- same keys reach the TODO view, which renders into an orgagenda
+        -- buffer too.
+        todo_next = { '<C-S-Right>', 'N' },
         -- `|` quits like `q`, taking over the default `|` (remove the
         -- filter at point), unbound here
         quit = { 'q', '`' },
         filter_remove = false,
+      },
+      -- Capture buffer keys. The defaults stay: finalize <C-c><C-c> /
+      -- <prefix>w, kill <C-c><C-k> / <prefix>k, refile <C-c><C-w> /
+      -- <prefix>r.
+      capture = {
+        -- <C-s> is the insert-mode save key (lua/mappings.lua); `:w` files
+        -- the capture through org.nvim's BufWriteCmd hook, so the key files
+        -- it from insert mode already. Bind it in normal mode too, so
+        -- saving files the capture whichever mode the cursor is in.
+        finalize = { '<C-c><C-c>', '<prefix>w', '<C-s>' },
+        -- `q` aborts the capture and closes its window instead of starting
+        -- a macro recording. Normal mode only: helpers/org/mappings.lua
+        -- mirrors just the <C-c>-prefixed keys in insert mode, so a typed
+        -- `q` stays a character.
+        kill = { '<C-c><C-k>', '<prefix>k', 'q' },
       },
       org = {
         -- <CR> on a checkbox item toggles it, elsewhere cycles visibility
@@ -204,24 +269,32 @@ return {
       ics = { calendars = ics.calendars() },
       -- quickadd = {},
       super_agenda = {
-        -- The "Today" group has two selectors (`date`, `time_grid`). A Lua
-        -- group runs its selectors sorted by name, so `date` would list the
-        -- timed entries and `time_grid` then append the bare grid rows below
-        -- them. keep_order (= org-super-agenda-keep-order) sorts a group's
-        -- items back into the agenda's time order, so grid lines interleave
-        -- with the entries they mark, as Emacs does.
+        -- Grouping runs once per rendered unit: the grouper hook is called
+        -- per day block for an agenda view (with that day's number) and once
+        -- for a list block, so a group with a fixed name prints its header
+        -- under *every* day of a week view. The time-grid group therefore
+        -- has no name: its job is to hold the timed entries and the grid
+        -- pseudo-rows (which otherwise fall into "Other items" and lose
+        -- their interleaving), not to label the day. The day sections and
+        -- the `← now` line already say which day is today.
+        --
+        -- A group's selectors take their items in turn (an implicit OR), so
+        -- `time_grid = true, date = 'today'` means "timed items, plus
+        -- anything dated today". keep_order (= org-super-agenda-keep-order)
+        -- sorts a group's items back into agenda order, so the grid lines
+        -- interleave with the entries they mark, as Emacs does.
         keep_order = true,
         groups = {
           -- first match wins, in this list's order: the STIWIE calendar's
-          -- events (ics diary items) must be claimed before Today (time
-          -- grid) and Work (they carry the 'work' tag) can take them
+          -- events (ics diary items) must be claimed before the time-grid
+          -- group and Work (they carry the 'work' tag) can take them
           {
             name = 'GIGS',
             pred = function(it)
               return it.ics ~= nil and it.ics.calendar == 'STIWIE'
             end,
           },
-          { name = 'Today', time_grid = true, date = 'today' },
+          { name = false, time_grid = true, date = 'today' },
           { name = 'Important', priority = 'A' },
           { name = 'Due soon', deadline = 'future', order = 2 },
           { name = 'Work', tag = { 'work', 'office' }, order = 1 },

@@ -97,7 +97,9 @@ end
 ---@param path string
 ---@return table[] { dir, olp?, line?, end_line? }
 local function claims_of(path)
-  local ok, file = pcall(require('org.files').get, path)
+  local ok, file = pcall(function()
+    return require('org.files').get(path)
+  end)
   if not ok or not file then
     return {}
   end
@@ -257,15 +259,57 @@ local function excluded(cwd)
   return false
 end
 
+--- Directory the current command reads: a terminal buffer resolves to the
+--- working directory of the shell running in it (`cd` inside the terminal
+--- counts, which is what a capture started there should file against),
+--- anything else to nvim's own cwd.
+---@return string
+local function base_dir()
+  local buf = vim.api.nvim_get_current_buf()
+  local job = vim.bo[buf].buftype == 'terminal' and vim.b[buf].terminal_job_id or nil
+  local pid = job and vim.fn.jobpid(job) or nil
+  if pid and pid > 0 then
+    local ok, cwd = pcall(vim.uv.fs_readlink, '/proc/' .. pid .. '/cwd')
+    if ok and cwd then
+      return cwd
+    end
+  end
+  return vim.fn.getcwd()
+end
+
+--- Warn when a claim is so broad it swallows an excluded directory (~ and
+--- friends): every cwd below it then resolves to that one project.
+---@param claim table
+local function warn_broad(claim)
+  local dirs = { norm '~' }
+  vim.list_extend(dirs, vim.tbl_map(norm, excluded_dirs))
+  for _, dir in ipairs(dirs) do
+    if is_under(claim.dir, dir) then
+      once(
+        'broad:' .. claim.file .. claim.dir,
+        string.format(
+          'project: %s claims %s, which covers %s -- every directory below it resolves to this file',
+          vim.fn.fnamemodify(claim.file, ':t'),
+          claim.dir,
+          dir
+        )
+      )
+      return
+    end
+  end
+end
+
 --- The project the cwd belongs to.
 ---@return table|nil { name, file, dir?, olp?, line?, end_line?, root?, source = 'claim'|'git' }
 function M.current()
-  local cwd = norm(vim.uv.fs_realpath(vim.fn.getcwd()) or vim.fn.getcwd())
+  local base = base_dir()
+  local cwd = norm(vim.uv.fs_realpath(base) or base)
   if excluded(cwd) then
     return nil
   end
   local claim = best_claim(cwd)
   if claim then
+    warn_broad(claim)
     return {
       name = claim.name,
       file = claim.file,
@@ -296,7 +340,9 @@ function M.title(project)
     return project.name
   end
   if vim.uv.fs_stat(project.file) then
-    local ok, file = pcall(require('org.files').get, project.file)
+    local ok, file = pcall(function()
+      return require('org.files').get(project.file)
+    end)
     local first = ok and file and file.children and file.children[1]
     if first then
       return first:plain_title()
@@ -381,7 +427,9 @@ end
 
 --- The `°` view: the open TODOs of the current project, or of every agenda
 --- file when the cwd has no project. A headline project is restricted to its
---- subtree.
+--- subtree. The view takes over the focused window (agenda.window =
+--- 'current' in the plugin spec) rather than splitting below it; `q` puts
+--- the buffer back.
 function M.todo_view()
   local utils = require 'org.utils'
   utils.run(function()
