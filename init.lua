@@ -98,7 +98,10 @@ vim.api.nvim_command [[nnoremap <expr> k (v:count > 1 ? "m'" . v:count : '') . '
 local argv = vim.v.argv or {}
 local function launched_with_terminal()
   for _, arg in ipairs(argv) do
-    if arg == '+terminal' then
+    -- `+terminal` alone (tmux default-command) or `+terminal <cmd>` (a wrapped
+    -- command, e.g. the omp pane <leader>ai opens); the whole `+terminal …` is
+    -- one argv element.
+    if arg == '+terminal' or arg:match '^%+terminal%s' then
       return true
     end
   end

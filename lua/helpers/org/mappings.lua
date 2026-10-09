@@ -177,6 +177,13 @@ function M.setup()
         end
         vim.cmd 'normal! dd'
       end, { buffer = args.buf, desc = 'org: delete subtree (on a headline) / line' })
+
+      -- <leader>ai starts an `omp` instance for the headline at point in a
+      -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp
+      -- terminal key in org buffers.
+      vim.keymap.set('n', '<leader>ai', function()
+        require('helpers.org.ai').launch()
+      end, { buffer = args.buf, desc = 'org: OMP on the headline at point' })
     end,
   })
 end

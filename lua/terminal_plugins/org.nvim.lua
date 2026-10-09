@@ -21,6 +21,9 @@
 --   notes.lua       notes land in the entry body (newest first, timestamp +
 --                   rule header) instead of a LOGBOOK drawer, and saving
 --                   the note buffer stores it
+--   ai.lua          <leader>ai on an entry launches an `omp` instance for
+--                   the ticket in a tmux pane and follows its write-back
+--                   (reload changed org files on FocusGained)
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
 local notes = require 'helpers.org.notes'
@@ -33,6 +36,14 @@ return {
     org_directory = '~/org',
     agenda_files = { '~/org/**/*.org' },
     default_notes_file = '~/org/refile.org',
+    -- org.nvim can remind you about timed entries: SCHEDULED, DEADLINE and
+    -- plain timestamps in the agenda files fire a vim.notify -- and, with
+    -- system_notification, a desktop toast -- before they start. It is the
+    -- only notification org.nvim ships, it reads the whole global agenda file
+    -- set (`agenda_files`), and it is the "org mode notification" that would
+    -- pop up over the agenda. Already off by default, pinned off so nothing
+    -- (:Org notifications_start included) turns it back on.
+    notifications = { enabled = false },
     -- Where the agenda opens: the focused window (Emacs
     -- org-agenda-window-setup "current-window"), so `§` / `<leader>ot` /
     -- `°` take over the buffer that has focus -- a terminal window
@@ -43,20 +54,29 @@ return {
     -- `silent! only` first, throwing the layout away.
     agenda = {
       window = 'current',
+      -- Write the source buffer after every edit made from the view (TODO
+      -- state, priority, tags, dates, notes...). Emacs leaves them modified
+      -- (org.nvim's default, `save_after_edit = false`); here a change from
+      -- the view writes the file. The `°` TODO view renders into the same
+      -- orgagenda buffer, so this is what makes changing a TODO there save
+      -- the project file instead of leaving it dirty in the background.
+      save_after_edit = true,
       -- Cross-project roll-ups: every other view (agenda_files, `°`, the
       -- TODO picker) reads one project, so the tags and priorities the
       -- ticket lines already carry are only visible here. Reached from the
       -- dispatcher menu or `:Org agenda <key>`, which give the whole set;
-      -- the agenda buffer's 1 / 2 / 3 (helpers/org/agenda.lua) open them,
-      -- 1 global and 2 / 3 narrowed to the cwd's project. The keys avoid the
-      -- built-in dispatcher ones (a t T m M s S n # / < > e * ?), so they
-      -- add rows instead of replacing. Blocks are `tags_todo` (tags/property
-      -- match, TODO entries only) -- the `/!` trailing the match is the TODO
-      -- part of |org-match-syntax|, "not done". `o` is every open TODO
-      -- (`type = 'todo'`, org's `alltodo`), `b` pulls the bug tag and the
-      -- WARN keyword, `p` the open A/B priorities. A block's
-      -- `header` labels the group; a composite command shows its blocks
-      -- one after the other, in this order.
+      -- the agenda buffer's 1 / 2 / 3 / 4 / 5 (helpers/org/agenda.lua) open
+      -- them, 1 global and the rest narrowed to the cwd's project. The keys
+      -- avoid the built-in dispatcher ones (a t T m M s S n # / < > e * ?), so
+      -- they add rows instead of replacing. Blocks are `tags_todo` (tags/
+      -- property match, TODO entries only) -- the `/!` trailing the match is
+      -- the TODO part of |org-match-syntax|, "not done". `o` is every open
+      -- TODO (`type = 'todo'`, org's `alltodo`), `b` pulls the bug tag and the
+      -- WARN keyword, `f` the feat tag, `d` the DONE keyword (a `todo` block,
+      -- not `tags_todo`, so the finished entries are listed, not filtered
+      -- out), `p` the open A/B priorities. A block's `header` labels the
+      -- group; a composite command shows its blocks one after the other, in
+      -- this order.
       custom_commands = {
         o = {
           description = 'All open TODOs',
@@ -71,6 +91,18 @@ return {
             { type = 'todo', match = 'WARN', header = 'WARN' },
           },
         },
+        f = {
+          description = 'Features',
+          types = {
+            { type = 'tags_todo', match = 'feat/!', header = 'Tagged feat, open' },
+          },
+        },
+        d = {
+          description = 'Done items',
+          types = {
+            { type = 'todo', match = 'DONE', header = 'Done' },
+          },
+        },
         p = {
           description = 'Open A/B priorities',
           types = {
@@ -79,6 +111,16 @@ return {
           },
         },
       },
+      -- Emacs' org-agenda-show-outline-path: echo the outline path of the
+      -- entry at point on every cursor move. Off here, because org.nvim
+      -- echoes it as a message and Neovim answers any message wider than the
+      -- window with the hit-enter prompt (`Press ENTER or type command to
+      -- continue`), which then eats the next `j` / `k`. Launching an omp
+      -- instance splits the tmux window, so every ticket line -- the long
+      -- ones a project file is full of -- is wider than what nvim has left.
+      -- The entry line already carries the category, and the `°` TODO view
+      -- reads one project, so the path said little anyway.
+      show_outline_path = false,
     },
     -- The stock Task template (org.capture.templates DEFAULT_TEMPLATES.t)
     -- ends with `%a`, the annotation link back to the file/headline the
@@ -205,6 +247,14 @@ return {
         -- spellings stay on set_tags.
         todo = '<C-c><C-t>',
         set_tags = { 't', ':', '<C-c><C-q>', '<C-c><C-c>' },
+        -- `p` sets the priority of the entry at point (org-priority: prompt
+        -- for a value, SPC removes it). The default `p` (previous item) is
+        -- unbound here so it cannot win the key -- both would bind it, in
+        -- table order. `n` still steps forward and `J` / `K` move by day.
+        -- The Emacs keys `,` and <C-c>, stay. Reaches the TODO view, which
+        -- renders into the same orgagenda buffer.
+        priority = { 'p', ',', '<C-c>,' },
+        prev_item = false,
         -- `|` quits like `q`, taking over the default `|` (remove the
         -- filter at point), unbound here
         quit = { 'q', '`' },
@@ -255,9 +305,9 @@ return {
         -- global fff <C-p> file finder in org files only; the agenda binds
         -- the same action in helpers/org/agenda.lua.
         pick_project_todo = '<C-p>',
-        -- promote/demote on <S-h>/<S-l> (H/L) instead of <M-h>/<M-l>
-        meta_left = { '<S-h>', '<M-Left>' },
-        meta_right = { '<S-l>', '<M-Right>' },
+        -- promote/demote on <C-h>/<C-l> instead of <M-h>/<M-l>
+        meta_left = { '<C-h>', '<M-Left>' },
+        meta_right = { '<C-l>', '<M-Right>' },
         -- <S-Tab> folds to the buffer's #+STARTUP visibility when the
         -- header names one (show2levels .., content, showall, ...), else
         -- the default cycle (helpers/org/cycle.lua, registered below).
@@ -368,5 +418,6 @@ return {
     require('helpers.org.refile').setup()
     require('helpers.org.cookies').setup()
     require('helpers.org.ics').setup()
+    require('helpers.org.ai').setup()
   end,
 }

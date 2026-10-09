@@ -1,19 +1,17 @@
 # Agent Guidelines for JVIM Neovim Configuration
 
+## Navigation
+- Terminal/tmux surface: tmux panes run `nvim +terminal` (`.tmux.conf` `default-command`); terminal-only mode is `init.lua`'s `NVIM_TERMINAL_ONLY`; the `<leader>ai` omp pane is `lua/helpers/org/ai.lua`.
+
 ## Build/Lint/Test Commands
-- **Format check**: `stylua --check .`
-- **Format fix**: `stylua .`
+- **Format check** (changed files): `stylua --check <files>`; the `.githooks/pre-commit` hook runs this on staged `.lua` files (enable once with `git config core.hooksPath .githooks`)
+- **Format fix**: `stylua <files>`
 - **No unit tests**: This is a Neovim configuration, not an application with traditional tests
 
 ## Code Style Guidelines
 
 ### Formatting
-- Use `stylua` for Lua formatting (configured in `.stylua.toml`)
-- 2-space indentation
-- Column width: 160 characters
-- Unix line endings
-- Single quotes preferred for strings
-- No parentheses around function calls when possible
+- `.stylua.toml` is the source of truth; `stylua` applies it.
 
 ### Imports and Dependencies
 - Use `require` for module imports
