@@ -28,9 +28,12 @@
 -- nvim terminal closes, its TermClose autocmd quits nvim, and tmux closes the
 -- pane with it instead of parking an idle interactive session.
 --
--- The agent edits the org file on disk, so nvim has to follow: on FocusGained
--- (tmux `focus-events on` reports the pane switch) every changed, unmodified
--- org buffer is reloaded and the agenda view re-rendered.
+-- The agent edits the org file on disk, so nvim has to follow: a directory
+-- watcher over the org tree (helpers/org/watch.lua) reloads changed,
+-- unmodified org buffers and re-renders the agenda view with the cursor on
+-- the same entry as soon as the file changes, and the FocusGained autocmd
+-- below does the same for a change that happens while nvim was unfocused
+-- (tmux `focus-events on` reports the pane switch).
 local M = {}
 
 local SKILL = vim.fn.expand '~/.agents/skills/omp-org-ticket/SKILL.md'
@@ -354,9 +357,16 @@ function M.sync()
       end)
     end
   end
-  pcall(function()
-    require('org.agenda.view').refresh()
-  end)
+  -- A rebuild, not just a redraw: `redo` re-reads the files and puts the
+  -- cursor back on the entry it was on, so a write-back that shifts the
+  -- lines does not move the cursor off the ticket being read. Skipped when
+  -- no view was ever opened, so a background write does not pull the whole
+  -- agenda machinery in.
+  if package.loaded['org.agenda.view'] then
+    pcall(function()
+      require('org.agenda.view').redo()
+    end)
+  end
 end
 
 --- `<leader>ai` in an org or orgagenda buffer.
@@ -380,6 +390,12 @@ function M.setup()
     end,
     desc = 'org ai: pick up an agent write-back on focus',
   })
+  -- A detached omp pane writes the ticket file without ever taking the
+  -- focus off nvim, so FocusGained never fires for it. The tree watcher
+  -- (helpers/org/watch.lua) is what makes the view follow the file live.
+  local ok, cfg = pcall(require, 'org.config')
+  local root = (ok and cfg.opts and cfg.opts.org_directory) or '~/org'
+  require('helpers.org.watch').start(root, M.sync)
 end
 
 return M

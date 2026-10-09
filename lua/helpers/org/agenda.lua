@@ -3,7 +3,7 @@
 -- one-key tag/priority toggles (helpers/org/tagging.lua), the fold state
 -- left behind by entering an entry, the insert mode a terminal window would
 -- otherwise leave in the agenda, the re-render after a capture filed from
--- it, and the 1..6 switch between the custom views of
+-- it, and the 1..4 switch between the custom views of
 -- agenda.custom_commands. All of them plug into modules
 -- the plugin loads on first use, so they go through org.lazy.on_load and
 -- nothing here is required at startup.
@@ -190,51 +190,67 @@ local function setup_open()
   end)
 end
 
--- <C-p> in the agenda opens the project/TODO picker: the same
--- helpers/org_todo.pick `pick_project_todo` action the global <leader>os
--- key runs (org buffers bind it through mappings.org in the plugin spec).
--- Buffer-local, so in the agenda it shadows the global fff <C-p> file
--- finder. The TODO block is rendered in the same orgagenda buffer, so one
--- mapping covers the agenda and the todo view.
-local function setup_pick_todo()
-  vim.api.nvim_create_autocmd('FileType', {
-    pattern = 'orgagenda',
-    callback = function(args)
-      vim.keymap.set('n', '<C-p>', function()
-        require('org.actions').run 'pick_project_todo'
-      end, { buffer = args.buf, desc = 'org: Pick a project, then a TODO in it' })
-    end,
-  })
-end
-
 -- Number keys open the custom views configured in
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
--- TODOs across every project, 2 bugs, 3 features, 4 done items, 5
--- priorities, 6 chores. Buffer-local to orgagenda -- the TODO view renders
--- into the same buffer, so it switches from there too -- which is why the
--- keys are the plain digits and not the `<leader>o` ones: a count typed in
--- the agenda (`<C-u>` style) no longer starts with 1 or 2, and nothing else
--- claims them. `agenda.window = 'current'` makes the open take the window
--- over, so the same buffer is refilled and this reads as switching view
--- rather than stacking a second agenda.
+-- TODOs across every project, 2 the sectioned board (bugs, WARN, features,
+-- done), 3 priorities, 4 chores. Buffer-local to orgagenda -- the TODO view
+-- renders into the same buffer, so it switches from there too -- which is
+-- why the keys are the plain digits and not the `<leader>o` ones: a count
+-- typed in the agenda (`<C-u>` style) no longer starts with 1 or 2, and
+-- nothing else claims them. `agenda.window = 'current'` makes the open take
+-- the window over, so the same buffer is refilled and this reads as
+-- switching view rather than stacking a second agenda.
 --
--- The 2 / 3 / 4 / 5 / 6 views are scoped to the project of the working
--- directory, the way `°` is for the TODO view (helpers/org/project.lua):
--- each block's `files` becomes the project's file and a headline claim adds
--- its subtree restriction. A cwd that names no project -- or one whose file
--- does not exist yet -- opens the full view, the same one the dispatcher
--- menu's `b` / `d` / `p` give. Resolution runs per key press
--- (project.current reads getcwd, or the job cwd of a terminal buffer), so a
--- `cd` moves the scope with it. 1 is global: it never scopes, so it lists
--- the open TODOs of every project.
+-- The 2 / 3 / 4 views are scoped to the project of the working directory,
+-- the way `°` is for the TODO view (helpers/org/project.lua): each block's
+-- `files` becomes the project's file and a headline claim adds its subtree
+-- restriction. A cwd that names no project -- or one whose file does not
+-- exist yet -- opens the full view, the same one the dispatcher menu's
+-- `w` / `p` / `c` give. Resolution runs per key press (project.current reads
+-- getcwd, or the job cwd of a terminal buffer), so a `cd` moves the scope
+-- with it. 1 is global: it never scopes, so it lists the open TODOs of every
+-- project.
 local CUSTOM_VIEWS = {
   { '1', 'o', 'all open TODOs', true },
-  { '2', 'b', 'bugs and warnings' },
-  { '3', 'f', 'open features' },
-  { '4', 'd', 'done items' },
-  { '5', 'p', 'open A/B priorities' },
-  { '6', 'c', 'open chores' },
+  { '2', 'w', 'bugs, features and done' },
+  { '3', 'p', 'open A/B priorities' },
+  { '4', 'c', 'open chores' },
 }
+
+-- The group headers the custom views draw: the global super_agenda groups
+-- (lua/terminal_plugins/org.nvim.lua) with `auto_category` swapped for a
+-- title group, so the entries are headed by the project file's title (the
+-- "Nvim" of "Nvim [30/35]") instead of "Category: nvim". Scoped to one
+-- project the group becomes a nameless catch-all (an empty section name
+-- draws no header, and every item still lands in a section, so the "Other
+-- items" heading does not appear either): the category is the same under
+-- every section -- "Category: nvim" repeated in each of Bugs, WARN,
+-- Features and Done -- and each block header already names the title
+-- ("Nvim - Bugs, open"). The list is read and copied at open time, so the
+-- agenda's own groups -- the day view keeps the globals -- are untouched.
+local function view_groups(scoped)
+  local project = require 'helpers.org.project'
+  local out = {}
+  for _, group in ipairs(require('org.extensions').opts('super_agenda').groups or {}) do
+    if group.auto_category then
+      local replacement = vim.deepcopy(group)
+      replacement.auto_category = nil
+      if scoped then
+        replacement.auto_map = function()
+          return ''
+        end
+      else
+        replacement.auto_map = function(item)
+          return item.filename and project.file_title(item.filename) or nil
+        end
+      end
+      out[#out + 1] = replacement
+    else
+      out[#out + 1] = vim.deepcopy(group)
+    end
+  end
+  return out
+end
 
 local function open_custom_view(key, label, global)
   local command = (require('org.config').opts.agenda.custom_commands or {})[key]
@@ -245,16 +261,24 @@ local function open_custom_view(key, label, global)
   local spec, opts = vim.deepcopy(command), nil
   local project = require 'helpers.org.project'
   local current = not global and project.current() or nil
-  if current and vim.uv.fs_stat(current.file) then
-    local title = project.title(current)
-    local files = project.files(current)
-    for _, block in ipairs(spec.types or { spec }) do
+  local scoped = current ~= nil and vim.uv.fs_stat(current.file) ~= nil
+  local groups = view_groups(scoped)
+  local title, files
+  if scoped then
+    title = project.title(current)
+    files = project.files(current)
+  end
+  for _, block in ipairs(spec.types or { spec }) do
+    block.super_groups = groups
+    if scoped then
       block.files = files
       -- the block header is drawn (view.title is not), so the project name
       -- goes there: an empty view -- a project with no bug, say -- still
       -- says what it filtered on instead of looking broken
       block.header = block.header and (title .. ' - ' .. block.header) or title
     end
+  end
+  if scoped then
     local restrict = project.restrict(current)
     if restrict then
       opts = { restrict = restrict }
@@ -325,7 +349,6 @@ function M.setup()
   setup_one_key()
   setup_entry_folds()
   setup_open()
-  setup_pick_todo()
   setup_custom_views()
   setup_capture_refresh()
   setup_ai()

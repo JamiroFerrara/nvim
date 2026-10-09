@@ -23,12 +23,46 @@
 --   notes.lua       notes land in the entry body (newest first, timestamp +
 --                   rule header) instead of a LOGBOOK drawer, and saving
 --                   the note buffer stores it
+--   changed.lua     the "last changed" date column of the TODO-entry lists,
+--                   read per entry through the todo `prefix_format` below
 --   ai.lua          <leader>ai on an entry launches an `omp` instance for
 --                   the ticket in a tmux pane and follows its write-back
---                   (reload changed org files on FocusGained)
+--                   (watch.lua reloads the changed org files live; the
+--                   FocusGained autocmd covers a change made while nvim
+--                   was unfocused)
+--   watch.lua       fs_event watcher over the org tree: reloads changed
+--                   org buffers and re-renders the agenda view whenever an
+--                   org file changes on disk, focus aside
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
 local notes = require 'helpers.org.notes'
+
+-- org-agenda-cmp-user-defined for the `d` Done view below (`sorting =
+-- { 'user-defined-down' }`): the entries ordered by the CLOSED planning
+-- timestamp, i.e. most recently finished first. The stock strategies cannot
+-- do it -- timestamp-* / ts-* / tsia-* read an active timestamp, or the first
+-- inactive one from the section, and the planning line is not part of either
+-- (org.parser keeps CLOSED in leading.planning, out of headline.timestamps).
+-- The comparator orders ascending by minute (older first); user-defined-down
+-- reverses it. An entry that was never logged (no CLOSED) has no date and
+-- sinks below the dated ones, whichever direction the strategy runs.
+local function done_recency(a, b)
+  local ha, hb = a.headline, b.headline
+  local da = ha and ha.planning and ha.planning.closed
+  local db = hb and hb.planning and hb.planning.closed
+  if da == nil and db == nil then
+    return false
+  elseif da == nil then
+    return 1
+  elseif db == nil then
+    return -1
+  end
+  local ma, mb = da:minutes(), db:minutes()
+  if ma == mb then
+    return false
+  end
+  return ma < mb and -1 or 1
+end
 
 return {
   'xheisenbugx/org.nvim',
@@ -67,16 +101,17 @@ return {
       -- TODO picker) reads one project, so the tags and priorities the
       -- ticket lines already carry are only visible here. Reached from the
       -- dispatcher menu or `:Org agenda <key>`, which give the whole set;
-      -- the agenda buffer's 1 / 2 / 3 / 4 / 5 / 6 (helpers/org/agenda.lua)
-      -- open them, 1 global and the rest narrowed to the cwd's project. The
+      -- the agenda buffer's 1 / 2 / 3 / 4 (helpers/org/agenda.lua) open
+      -- them, 1 global and the rest narrowed to the cwd's project. The
       -- keys avoid the built-in dispatcher ones (a t T m M s S n # / < > e *
       -- ?), so they add rows instead of replacing. Blocks are `tags_todo`
       -- (tags/property match, TODO entries only) -- the `/!` trailing the
       -- match is the TODO part of |org-match-syntax|, "not done". `o` is
-      -- every open TODO (`type = 'todo'`, org's `alltodo`), `b` pulls the
-      -- bug tag and the WARN keyword, `f` the feat tag, `d` the DONE keyword
-      -- (a `todo` block, not `tags_todo`, so the finished entries are
-      -- listed, not filtered out), `p` the open A/B priorities, `c` the
+      -- every open TODO (`type = 'todo'`, org's `alltodo`); `w` is the one
+      -- sectioned board -- bug tag, WARN keyword, feat tag, DONE keyword, in
+      -- that order, so a ticket moves between sections as it changes state
+      -- (`DONE` is a `todo` block, not `tags_todo`, so the finished entries
+      -- are listed, not filtered out); `p` the open A/B priorities, `c` the
       -- chore tag. A block's `header` labels the group; a composite command
       -- shows its blocks one after the other, in this order.
       custom_commands = {
@@ -86,23 +121,24 @@ return {
             { type = 'todo', header = 'All open TODOs' },
           },
         },
-        b = {
-          description = 'Bugs and warnings',
+        w = {
+          description = 'Bugs, features and done',
           types = {
-            { type = 'tags_todo', match = 'bug/!', header = 'Tagged bug, open' },
+            { type = 'tags_todo', match = 'bug/!', header = 'Bugs, open' },
             { type = 'todo', match = 'WARN', header = 'WARN' },
-          },
-        },
-        f = {
-          description = 'Features',
-          types = {
-            { type = 'tags_todo', match = 'feat/!', header = 'Tagged feat, open' },
-          },
-        },
-        d = {
-          description = 'Done items',
-          types = {
-            { type = 'todo', match = 'DONE', header = 'Done' },
+            { type = 'tags_todo', match = 'feat/!', header = 'Features, open' },
+            {
+              type = 'todo',
+              match = 'DONE',
+              header = 'Done',
+              -- Most recently finished first: user-defined-down reverses
+              -- done_recency above, which orders the entries by CLOSED
+              -- ascending. Replaces the default todo sorting (urgency-down),
+              -- which says nothing about a finished entry. Both the digit 2
+              -- view (helpers/org/agenda.lua, project-scoped) and the
+              -- dispatcher menu's `w` deep-copy this block.
+              sorting = { 'user-defined-down' },
+            },
           },
         },
         p = {
@@ -118,6 +154,27 @@ return {
             { type = 'tags_todo', match = 'chore/!', header = 'Tagged chore, open' },
           },
         },
+      },
+      -- org-agenda-cmp-user-defined: the comparator `user-defined-up` /
+      -- `user-defined-down` call, defined once here (done_recency, at the top
+      -- of this file) and used by the `w` board's Done section above. It
+      -- compares the CLOSED planning timestamp, so nothing else in the config
+      -- may use a user-defined strategy or it would sort by completion date
+      -- too.
+      cmp_user_defined = done_recency,
+      -- Line prefix (org-agenda-prefix-format) for the entry lists. The stock
+      -- `" %i %-12:c"` is kept, and the `todo` kind -- the `°` project view,
+      -- the global `o`, the `w` board -- gains the entry's last-changed
+      -- date before the keyword, the date the entry last moved: helpers/org/
+      -- changed.lua takes the newest timestamp the entry carries (CLOSED, a
+      -- note/capture header, an edited date) and reads it relative while
+      -- recent ("today 15:53", "3d ago") and as "9 Oct" past a week.
+      -- `%?-13(...)` is the `%(lua expression)` element: an entry with no
+      -- timestamp drops the field instead of leaving a gap. The other kinds
+      -- (agenda, tags, search) keep their default formats -- a table here
+      -- merges into the defaults.
+      prefix_format = {
+        todo = ' %i %-12:c %?-13(require("helpers.org.changed").label(hl))',
       },
       -- Emacs' org-agenda-show-outline-path: echo the outline path of the
       -- entry at point on every cursor move. Off here, because org.nvim
@@ -327,8 +384,8 @@ return {
         -- <C-p> opens the project/TODO picker (helpers/org_todo.pick, the
         -- global <leader>os action -- which <prefix>s shadows with
         -- `schedule` in org buffers). Buffer-local, so it shadows the
-        -- global fff <C-p> file finder in org files only; the agenda binds
-        -- the same action in helpers/org/agenda.lua.
+        -- global fff <C-p> file finder in org files only; the agenda and
+        -- the TODO view keep only <leader>os for this action.
         pick_project_todo = '<C-p>',
         -- promote/demote on <C-h>/<C-l> instead of <M-h>/<M-l>
         meta_left = { '<C-h>', '<M-Left>' },
@@ -399,6 +456,12 @@ return {
           { name = 'Due soon', deadline = 'future', order = 2 },
           { name = 'Work', tag = { 'work', 'office' }, order = 1 },
           { discard = { tag = 'someday' } },
+          -- the catch-all heading. The custom views (helpers/org/agenda.lua
+          -- view_groups) swap it for a title one -- the project file's
+          -- level-1 headline, "Nvim" not "Category: nvim" -- and, scoped to
+          -- one project, for a nameless catch-all: the category would be
+          -- the same under all of a board's sections and the block header
+          -- ("Nvim - Bugs, open") already names it once.
           { auto_category = true, order = 9 },
         },
       },

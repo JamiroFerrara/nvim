@@ -351,6 +351,26 @@ function M.title(project)
   return project.name
 end
 
+--- Display name of a project file by path: its level-1 headline (the "Nvim"
+--- of "Nvim [30/35]"), else the file's basename. `M.title` needs the cwd's
+--- project; this is the same name for an agenda item's file, which may not
+--- be the cwd's project at all.
+---@param path string
+---@return string
+function M.file_title(path)
+  local ok, file = pcall(function()
+    return require('org.files').get(path)
+  end)
+  local first = ok and file and file.children and file.children[1]
+  if first then
+    local title = first:plain_title()
+    if title and title ~= '' then
+      return title
+    end
+  end
+  return vim.fn.fnamemodify(path, ':t:r')
+end
+
 --- Outline path the capture for `project` lands under. Both branches rely on
 --- the node existing: a `.git`-derived file is written with its level-1
 --- headline by `ensure`, and a headline claim resolves exactly.
@@ -425,6 +445,30 @@ function M.ensure(project)
   return true
 end
 
+--- The blocks of the `°` view, one per project file: the block header is the
+--- file's category -- the heading the global groups put the whole list under
+--- -- and the block's own `super_groups` split its entries into a section per
+--- TODO keyword (`auto_todo`), so NEXT, TODO, PEND... each get a heading. A
+--- file is one category, so the per-file block is what keeps the category
+--- heading while the entries below it are sectioned; `someday` stays the
+--- discarded tag it is in the global groups. `super_groups` is read per block,
+--- so only this view changes -- the agenda and the custom views keep theirs.
+local function sections(project)
+  local files = require 'org.files'
+  local blocks = {}
+  for _, path in ipairs(M.files(project)) do
+    local ok, file = pcall(files.get, path)
+    local category = (ok and file and file.settings and file.settings.category) or vim.fn.fnamemodify(path, ':t:r')
+    blocks[#blocks + 1] = {
+      type = 'todo',
+      files = { path },
+      header = 'Category: ' .. category,
+      super_groups = { { discard = { tag = 'someday' } }, { auto_todo = true } },
+    }
+  end
+  return blocks
+end
+
 --- The `°` view: the open TODOs of the current project, or of every agenda
 --- file when the cwd has no project. A headline project is restricted to its
 --- subtree. The view takes over the focused window (agenda.window =
@@ -436,7 +480,7 @@ function M.todo_view()
     local project = M.current()
     local spec, opts
     if project and vim.uv.fs_stat(project.file) then
-      spec = { type = 'todo', files = M.files(project), description = 'TODO: ' .. M.title(project) }
+      spec = { types = sections(project), description = 'TODO: ' .. M.title(project) }
       local restrict = M.restrict(project)
       if restrict then
         opts = { restrict = restrict }
