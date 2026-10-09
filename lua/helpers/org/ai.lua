@@ -21,8 +21,9 @@
 -- (reusing one already there), sets the state to NEXT, saves the file, and
 -- only then starts omp. Everything after that is the omp-org-ticket skill
 -- appended to omp's system prompt: answer the `AI:` lines, resolve the
--- ticket, leave DONE/WARN/PEND, write the <=2 line robot-icon summary, and
--- remove a temporary :ID:.
+-- ticket, leave TEST/WARN/PEND (the user promotes TEST to DONE once they have
+-- validated the change), write the <=2 line robot-icon summary, and remove a
+-- temporary :ID:.
 --
 -- The run is one-shot (`omp --print`): omp processes the ticket and exits; the
 -- nvim terminal closes, its TermClose autocmd quits nvim, and tmux closes the

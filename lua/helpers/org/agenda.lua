@@ -3,7 +3,9 @@
 -- one-key tag/priority toggles (helpers/org/tagging.lua), the fold state
 -- left behind by entering an entry, the insert mode a terminal window would
 -- otherwise leave in the agenda, the re-render after a capture filed from
--- it, and the 1..4 switch between the custom views of
+-- it (with the subtree range of a headline project's `°` view kept in step,
+-- else the entry it just wrote falls outside it), and the 1..3 switch
+-- between the custom views of
 -- agenda.custom_commands. All of them plug into modules
 -- the plugin loads on first use, so they go through org.lazy.on_load and
 -- nothing here is required at startup.
@@ -192,29 +194,28 @@ end
 
 -- Number keys open the custom views configured in
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
--- TODOs across every project, 2 the sectioned board (bugs, WARN, features,
--- done), 3 priorities, 4 chores. Buffer-local to orgagenda -- the TODO view
--- renders into the same buffer, so it switches from there too -- which is
--- why the keys are the plain digits and not the `<leader>o` ones: a count
+-- TODOs across every project, 2 the sectioned board (bugs, features,
+-- untagged, done), 3 priorities. Buffer-local to orgagenda -- the TODO view
+-- renders into the same buffer, so it switches from there too -- which
+-- is why the keys are the plain digits and not the `<leader>o` ones: a count
 -- typed in the agenda (`<C-u>` style) no longer starts with 1 or 2, and
 -- nothing else claims them. `agenda.window = 'current'` makes the open take
 -- the window over, so the same buffer is refilled and this reads as
 -- switching view rather than stacking a second agenda.
 --
--- The 2 / 3 / 4 views are scoped to the project of the working directory,
--- the way `°` is for the TODO view (helpers/org/project.lua): each block's
--- `files` becomes the project's file and a headline claim adds its subtree
--- restriction. A cwd that names no project -- or one whose file does not
--- exist yet -- opens the full view, the same one the dispatcher menu's
--- `w` / `p` / `c` give. Resolution runs per key press (project.current reads
--- getcwd, or the job cwd of a terminal buffer), so a `cd` moves the scope
--- with it. 1 is global: it never scopes, so it lists the open TODOs of every
--- project.
+-- The 2 / 3 views are scoped to the project of the working directory, the
+-- way `°` is (helpers/org/project.lua, which opens the `w` board directly
+-- through M.custom_view): each block's `files` becomes the project's file
+-- and a headline claim adds its subtree restriction. A cwd that names no
+-- project -- or one whose file does not exist yet -- opens the full view,
+-- the same one the dispatcher menu's `w` / `p` give. Resolution runs per key
+-- press (project.current reads getcwd, or the job cwd of a terminal buffer),
+-- so a `cd` moves the scope with it. 1 is global: it never scopes, so it
+-- lists the open TODOs of every project.
 local CUSTOM_VIEWS = {
   { '1', 'o', 'all open TODOs', true },
-  { '2', 'w', 'bugs, features and done' },
+  { '2', 'w', 'bugs, features, untagged and done' },
   { '3', 'p', 'open A/B priorities' },
-  { '4', 'c', 'open chores' },
 }
 
 -- The group headers the custom views draw: the global super_agenda groups
@@ -224,10 +225,12 @@ local CUSTOM_VIEWS = {
 -- project the group becomes a nameless catch-all (an empty section name
 -- draws no header, and every item still lands in a section, so the "Other
 -- items" heading does not appear either): the category is the same under
--- every section -- "Category: nvim" repeated in each of Bugs, WARN,
--- Features and Done -- and each block header already names the title
--- ("Nvim - Bugs, open"). The list is read and copied at open time, so the
--- agenda's own groups -- the day view keeps the globals -- are untouched.
+-- every section -- "Category: nvim" repeated -- and each block header
+-- already names the title ("Nvim - Bugs, open"). A block that brings its
+-- own `super_groups` -- the board's Bugs / Features / Untagged sections,
+-- which split by state -- keeps them (open_custom_view below). The list is
+-- read and copied at open time, so the agenda's own groups -- the day view
+-- keeps the globals -- are untouched.
 local function view_groups(scoped)
   local project = require 'helpers.org.project'
   local out = {}
@@ -269,7 +272,12 @@ local function open_custom_view(key, label, global)
     files = project.files(current)
   end
   for _, block in ipairs(spec.types or { spec }) do
-    block.super_groups = groups
+    -- a block with its own groups keeps them; the board's state sections
+    -- set them in the config, and its flat Done section opts out with
+    -- `super_groups = false` (org-super-agenda leaves such a block ungrouped)
+    if block.super_groups == nil then
+      block.super_groups = groups
+    end
     if scoped then
       block.files = files
       -- the block header is drawn (view.title is not), so the project name
@@ -289,6 +297,17 @@ local function open_custom_view(key, label, global)
   end)
 end
 
+--- Open a `custom_commands` view by its key, the same the agenda buffer's
+--- number keys run (helpers.org.project.todo_view opens the `w` board this
+--- way). Scoped to the cwd's project like the `2` / `3` keys; `global`
+--- (`1`) skips the scope. The `label` the keymaps pass is only their `desc`,
+--- so the key stands in for it.
+---@param key string a key of agenda.custom_commands
+---@param global boolean|nil list every agenda file instead of the project
+function M.custom_view(key, global)
+  open_custom_view(key, key, global)
+end
+
 local function setup_custom_views()
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'orgagenda',
@@ -301,6 +320,144 @@ local function setup_custom_views()
       end
     end,
   })
+end
+
+-- A full-width `─` rule line, what the extension's `add_separator` draws for
+-- a one-character `header_separator`. It splices a line into the builder at
+-- `pos` (1-based, before the line already there) and shifts the line-indexed
+-- tables the builder carries with it -- the highlight rows (0-based), the
+-- `items` / `line_hls` / `line_ctx` / `entry_text_lines` / `day_lines` /
+-- `super_headers` maps keyed by line, and `block_starts` (render.view) -- so
+-- the block that already wrote its header keeps it. Used for the board's
+-- Done section, which carries `rule_above`.
+local function insert_rule(b, pos, width)
+  local text = string.rep('─', math.max((width or 80) - 1, 10))
+  table.insert(b.lines, pos, text)
+  for _, h in ipairs(b.hls) do
+    if h[1] >= pos - 1 then
+      h[1] = h[1] + 1
+    end
+  end
+  b.hls[#b.hls + 1] = { pos - 1, 0, #text, 'OrgSuperAgendaSeparator' }
+  for _, key in ipairs { 'items', 'line_hls', 'line_ctx', 'entry_text_lines', 'day_lines', 'super_headers' } do
+    local t = b[key]
+    if t then
+      local moved = {}
+      for k, v in pairs(t) do
+        moved[k >= pos and k + 1 or k] = v
+      end
+      b[key] = moved
+    end
+  end
+  for i, s in ipairs(b.block_starts or {}) do
+    if s >= pos then
+      b.block_starts[i] = s + 1
+    end
+  end
+end
+
+-- The board's state sections want a rule between them ("WARN", a line,
+-- the entries), not the blank line the extension's `header_separator`
+-- gives every group, and a blank line after the section, not another rule.
+-- Both are options for the whole extension, so they are swapped around the
+-- render of a block that carries `state_sections` (set in the config with
+-- the block's `super_groups`), and put back whatever the render did. A block
+-- marked `hide_empty` with nothing in it is dropped instead: the header
+-- `insert_header` already wrote is taken back off the builder (with its
+-- `block_starts` entry), and the grouper reports the block rendered so
+-- the (empty) list is not drawn under nothing. A block marked `rule_above`
+-- gets a `─` rule on the line before its header (insert_rule), which is how
+-- the board sets the Done section apart from the open ones. This wraps the
+-- grouper super_agenda installs through its own on_load for the same module,
+-- so it must run after it: on_load runs a module's hooks sorted by key, and
+-- the key here sorts after super_agenda's.
+local function setup_board_sections()
+  require('org.lazy').on_load('org.agenda.render', 'super_agenda_sections', function(render)
+    local grouper = render.grouper
+    if not grouper then
+      return
+    end
+    -- lines insert_header writes for `block`'s header (the same split it
+    -- does: `\n`, blank lines dropped; "" and nil are the no-header cases)
+    local function header_lines(block)
+      local h = block.header
+      if type(h) == 'function' then
+        h = h()
+      end
+      return #vim.split(tostring(h or ''), '\n', { trimempty = true })
+    end
+    render.grouper = function(b, rows, block, ctx, add, day)
+      local hidden = block and block.hide_empty and #rows == 0
+      if hidden then
+        for _ = 1, header_lines(block) do
+          table.remove(b.lines)
+        end
+        if b.block_starts and #b.block_starts > 0 then
+          table.remove(b.block_starts)
+        end
+        return true
+      end
+      if block and block.rule_above and b.block_starts and #b.block_starts > 0 then
+        local pos = b.block_starts[#b.block_starts]
+        -- nothing above (every open section was empty): a rule would top the view
+        if pos > 1 then
+          insert_rule(b, pos, ctx.width)
+        end
+      end
+      if not (block and block.state_sections and block.super_groups) then
+        return grouper(b, rows, block, ctx, add, day)
+      end
+      local opts = require('org.extensions').opts 'super_agenda'
+      local header, final = opts.header_separator, opts.final_group_separator
+      opts.header_separator = '─'
+      opts.final_group_separator = '\n'
+      local ok, result = pcall(grouper, b, rows, block, ctx, add, day)
+      opts.header_separator = header
+      opts.final_group_separator = final
+      if not ok then
+        error(result, 0)
+      end
+      return result
+    end
+  end)
+end
+
+-- A board view is several sections, and org.nvim joins blocks with
+-- org-agenda-block-separator, a rule by default (render.view). On the board
+-- a rule belongs inside a section -- it splits the per-state subsections the
+-- grouper draws -- so the between-block one is turned off: each section
+-- leaves the blank line from the final separator above, and that is what
+-- separates them. The option is the view-wide default, read when the view is
+-- rendered; a `block_separator` a block sets itself is untouched
+-- (with_block_options restores it around the block anyway).
+local function setup_board_view()
+  require('org.lazy').on_load('org.agenda.render', 'board_block_separator', function(render)
+    local view = render.view
+    if not view then
+      return
+    end
+    render.view = function(v, ctx)
+      local board = false
+      for _, block in ipairs(v.blocks or {}) do
+        if block.state_sections then
+          board = true
+          break
+        end
+      end
+      if not board then
+        return view(v, ctx)
+      end
+      local acfg = require('org.config').opts.agenda
+      local separator = acfg.block_separator
+      acfg.block_separator = false
+      local ok, result = pcall(view, v, ctx)
+      acfg.block_separator = separator
+      if not ok then
+        error(result, 0)
+      end
+      return result
+    end
+  end)
 end
 
 -- <leader>ai on an entry launches an `omp` instance for that ticket in a
@@ -328,6 +485,40 @@ end
 -- current buffer here is the orgagenda one -- and re-render it. The User
 -- autocmd is global but the callback leaves every other capture (a normal
 -- org buffer's) alone; the view module is required only when it fires.
+-- The `°` TODO view of a headline project (helpers/org/project.lua) scopes
+-- the agenda to that headline's subtree with a line range, fixed when the
+-- view opens. A capture started from the view files its entry at the end of
+-- the subtree -- past that end -- so the re-render the capture triggers
+-- would drop the entry it just wrote and leave the view looking unchanged.
+-- Recompute the range from the claim headline before every render. The
+-- restriction carries the headline's text, so the headline is found again
+-- even after edits shift its line (the anchor the plugin's own restriction
+-- lock uses, org/agenda/init.lua); a restriction without it -- the lock,
+-- which tracks its subtree through a buffer extmark -- is left alone.
+local function setup_restrict_refresh()
+  require('org.lazy').on_load('org.agenda.view', 'restrict_refresh', function(view)
+    local refresh = view.refresh
+    view.refresh = function(...)
+      local r = view.state and view.state.restrict
+      if r and r.filename and r.range and r.raw then
+        local ok, file = pcall(function()
+          return require('org.files').get(r.filename)
+        end)
+        -- the claim headline is normally still on its line; its text is the
+        -- fallback for when edits above it shifted the line (a capture that
+        -- bumped the entry counts changed the text, so it is tried second)
+        local hl = ok and file and (file:headline_on(r.range[1]) or file:find_headline(function(h)
+          return h.raw == r.raw
+        end))
+        if hl then
+          r.range = { hl.line, hl.end_line }
+        end
+      end
+      return refresh(...)
+    end
+  end)
+end
+
 local function setup_capture_refresh()
   vim.api.nvim_create_autocmd('User', {
     pattern = 'OrgCaptureAfterFinalize',
@@ -350,6 +541,9 @@ function M.setup()
   setup_entry_folds()
   setup_open()
   setup_custom_views()
+  setup_board_sections()
+  setup_board_view()
+  setup_restrict_refresh()
   setup_capture_refresh()
   setup_ai()
 end

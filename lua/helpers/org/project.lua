@@ -119,7 +119,7 @@ local function claims_of(path)
         require('org.utils').warn(string.format('project: empty :PROJECT_DIRS: on %s line %d', vim.fn.fnamemodify(path, ':t'), hl.line))
       end
       for _, dir in ipairs(dirs) do
-        out[#out + 1] = { dir = dir, olp = olp_of(hl), line = hl.line, end_line = hl.end_line, name = hl:plain_title() }
+        out[#out + 1] = { dir = dir, olp = olp_of(hl), line = hl.line, end_line = hl.end_line, name = hl:plain_title(), raw = hl.raw }
       end
     end
   end
@@ -162,6 +162,7 @@ local function refresh()
         olp = claim.olp,
         line = claim.line,
         end_line = claim.end_line,
+        raw = claim.raw,
       }
     end
   end
@@ -317,6 +318,7 @@ function M.current()
       olp = claim.olp,
       line = claim.line,
       end_line = claim.end_line,
+      raw = claim.raw,
       source = 'claim',
     }
   end
@@ -384,14 +386,17 @@ function M.olp(project)
 end
 
 --- Agenda restriction narrowing the project to its subtree, for a headline
---- claim. Nil for a file project, whose TODOs are the whole file.
+--- claim. Nil for a file project, whose TODOs are the whole file. `raw` is
+--- the claim headline's own text, the anchor the range is recomputed from
+--- before each render (helpers/org/agenda.lua): a capture appends its entry
+--- at the end of the subtree, past the range captured when the view opened.
 ---@param project table
----@return table|nil { filename, range }
+---@return table|nil { filename, range, raw }
 function M.restrict(project)
   if not project.line then
     return nil
   end
-  return { filename = project.file, range = { project.line, project.end_line } }
+  return { filename = project.file, range = { project.line, project.end_line }, raw = project.raw }
 end
 
 --- The files a project's TODOs live in.
@@ -445,51 +450,14 @@ function M.ensure(project)
   return true
 end
 
---- The blocks of the `°` view, one per project file: the block header is the
---- file's category -- the heading the global groups put the whole list under
---- -- and the block's own `super_groups` split its entries into a section per
---- TODO keyword (`auto_todo`), so NEXT, TODO, PEND... each get a heading. A
---- file is one category, so the per-file block is what keeps the category
---- heading while the entries below it are sectioned; `someday` stays the
---- discarded tag it is in the global groups. `super_groups` is read per block,
---- so only this view changes -- the agenda and the custom views keep theirs.
-local function sections(project)
-  local files = require 'org.files'
-  local blocks = {}
-  for _, path in ipairs(M.files(project)) do
-    local ok, file = pcall(files.get, path)
-    local category = (ok and file and file.settings and file.settings.category) or vim.fn.fnamemodify(path, ':t:r')
-    blocks[#blocks + 1] = {
-      type = 'todo',
-      files = { path },
-      header = 'Category: ' .. category,
-      super_groups = { { discard = { tag = 'someday' } }, { auto_todo = true } },
-    }
-  end
-  return blocks
-end
-
---- The `°` view: the open TODOs of the current project, or of every agenda
---- file when the cwd has no project. A headline project is restricted to its
---- subtree. The view takes over the focused window (agenda.window =
---- 'current' in the plugin spec) rather than splitting below it; `q` puts
---- the buffer back.
+--- The `°` view: the project's board, i.e. the `w` custom command -- the
+--- same view the agenda's `2` key opens (helpers.org.agenda.custom_view),
+--- scoped to the cwd's project when there is one and to every agenda file
+--- otherwise. A headline claim is restricted to its subtree. The view takes
+--- over the focused window (agenda.window = 'current' in the plugin spec)
+--- rather than splitting below it; `q` puts the buffer back.
 function M.todo_view()
-  local utils = require 'org.utils'
-  utils.run(function()
-    local project = M.current()
-    local spec, opts
-    if project and vim.uv.fs_stat(project.file) then
-      spec = { types = sections(project), description = 'TODO: ' .. M.title(project) }
-      local restrict = M.restrict(project)
-      if restrict then
-        opts = { restrict = restrict }
-      end
-    else
-      spec = { type = 'todo', description = 'TODO' }
-    end
-    require('org.agenda').open(spec, opts)
-  end)
+  require('helpers.org.agenda').custom_view 'w'
 end
 
 return M
