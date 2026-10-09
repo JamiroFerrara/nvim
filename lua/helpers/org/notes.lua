@@ -1,15 +1,16 @@
 -- Custom note handling for org.nvim (wired in
 -- lua/terminal_plugins/org.nvim.lua). Replaces org.todo.add_note so a note
--- lands directly in the entry body -- newest first, above the older notes
--- and above the initial capture -- instead of being wrapped in a LOGBOOK
--- drawer, which is what `#+STARTUP: ... logdrawer` makes the stock insertion
--- do. An entry then reads as a sequence of plain blocks headed by an
--- inactive timestamp and a dash rule:
+-- lands directly in the entry body -- appended at the end, below the older
+-- notes and below the initial capture -- instead of being wrapped in a
+-- LOGBOOK drawer, which is what `#+STARTUP: ... logdrawer` makes the stock
+-- insertion do. An entry then reads as a chronological log: the capture that
+-- created it first, then the notes in the order they were taken, each a
+-- plain block headed by an inactive timestamp and a dash rule:
 --
---   [2026-10-08 Thu 15:53] ------------------------------------------------
---   text of the note
 --   [2026-10-08 Thu] ------------------------------------------------------
 --   content captured when the entry was created
+--   [2026-10-08 Thu 15:53] ------------------------------------------------
+--   text of the note
 --
 -- The rule is a fixed run of dashes in the source (tools that do not render
 -- still read it as a separator); helpers/org/decorations.lua overflows it to
@@ -38,26 +39,29 @@ local function entry_lines(ts, note)
   return lines
 end
 
---- Insert `lines` at the top of `hl`'s body -- after the planning line and
---- property drawer, past any blank line -- so a new note reads before the
---- older ones. Indented like the entry's existing body when it has one
---- (captures and Emacs wrote theirs indented; org.nvim would otherwise drop
---- the note to column 0), else by `org.edit.body_indent`. Returns the line
---- number the first inserted line landed on.
+--- Append `lines` at the end of `hl`'s body -- after the last non-blank body
+--- line, so a new note reads after the older ones and the subtree stays a
+--- chronological log (the capture that created the entry first, then the
+--- notes in the order they were taken). A blank separator before the next
+--- headline is left where it is. Indented like the entry's existing body when
+--- it has one (captures and Emacs wrote theirs indented; org.nvim would
+--- otherwise drop the note to column 0), else by `org.edit.body_indent`.
+--- Returns the line number the first inserted line landed on.
 ---@param bufnr integer
 ---@param hl org.Headline
 ---@param lines string[]
 ---@return integer
-local function insert_top(bufnr, hl, lines)
+local function append_block(bufnr, hl, lines)
   local edit = require 'org.edit'
   local file = require('org.files').get_buffer(bufnr)
-  local at = edit.meta_end(hl) + 1
   local body = file.lines
-  while at <= hl.body_end and body[at] and body[at]:match '^%s*$' do
-    at = at + 1
+  local floor = edit.meta_end(hl)
+  local at = hl.body_end or floor
+  while at > floor and body[at] and body[at]:match '^%s*$' do
+    at = at - 1
   end
   local indent = edit.body_indent(hl.level)
-  if at <= hl.body_end and body[at] then
+  if at > floor then
     local existing = body[at]:match '^(%s*)'
     if #existing > #indent then
       indent = existing
@@ -67,12 +71,12 @@ local function insert_top(bufnr, hl, lines)
   for _, l in ipairs(lines) do
     out[#out + 1] = indent .. l
   end
-  vim.api.nvim_buf_set_lines(bufnr, at - 1, at - 1, false, out)
-  return at
+  vim.api.nvim_buf_set_lines(bufnr, at, at, false, out)
+  return at + 1
 end
 
---- org-add-note: prompt for the note, then store it at the top of the
---- entry body (newest first). Registered as `org.todo.add_note`, so both the
+--- org-add-note: prompt for the note, then store it at the end of the entry
+--- body (chronological order). Registered as `org.todo.add_note`, so both the
 --- org buffer `<leader>n` and the agenda/todo view `z` use it.
 ---@param target? table
 ---@return boolean|nil
@@ -89,7 +93,7 @@ function M.add(target)
   end
   local date = require 'org.date'
   local ts = date.effective_now(hl):clone({ active = false }):to_string()
-  local first = insert_top(bufnr, hl, entry_lines(ts, note))
+  local first = append_block(bufnr, hl, entry_lines(ts, note))
   edit.note_stored(bufnr, first, hl.line)
   return true
 end

@@ -194,7 +194,7 @@ end
 
 -- Number keys open the custom views configured in
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
--- TODOs across every project, 2 the sectioned board (bugs, features,
+-- TODOs across every project, 2 the board (in progress, bugs, features,
 -- untagged, done), 3 priorities. Buffer-local to orgagenda -- the TODO view
 -- renders into the same buffer, so it switches from there too -- which
 -- is why the keys are the plain digits and not the `<leader>o` ones: a count
@@ -214,7 +214,7 @@ end
 -- lists the open TODOs of every project.
 local CUSTOM_VIEWS = {
   { '1', 'o', 'all open TODOs', true },
-  { '2', 'w', 'bugs, features, untagged and done' },
+  { '2', 'w', 'in progress, bugs, features, untagged and done' },
   { '3', 'p', 'open A/B priorities' },
 }
 
@@ -228,9 +228,10 @@ local CUSTOM_VIEWS = {
 -- every section -- "Category: nvim" repeated -- and each block header
 -- already names the title ("Nvim - Bugs, open"). A block that brings its
 -- own `super_groups` -- the board's Bugs / Features / Untagged sections,
--- which split by state -- keeps them (open_custom_view below). The list is
--- read and copied at open time, so the agenda's own groups -- the day view
--- keeps the globals -- are untouched.
+-- which split by state -- keeps them (open_custom_view below). The "In
+-- progress" block sets `super_groups = false` and is not grouped at all.
+-- The list is read and copied at open time, so the agenda's own groups --
+-- the day view keeps the globals -- are untouched.
 local function view_groups(scoped)
   local project = require 'helpers.org.project'
   local out = {}

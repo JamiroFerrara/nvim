@@ -20,8 +20,9 @@
 --                   fold to the buffer's #+STARTUP on a jump from the list
 --   cycle.lua       <S-Tab> folds to the buffer's #+STARTUP visibility
 --   refile.lua      save the emptied store buffer after capture-refile
---   notes.lua       notes land in the entry body (newest first, timestamp +
---                   rule header) instead of a LOGBOOK drawer, and saving
+--   notes.lua       notes land in the entry body (appended at the end,
+--                   timestamp + rule header) instead of a LOGBOOK drawer,
+--                   so an entry reads as a chronological log, and saving
 --                   the note buffer stores it
 --   changed.lua     the "last changed" date column of the TODO-entry lists,
 --                   read per entry through the todo `prefix_format` below
@@ -51,12 +52,16 @@ local TODO_KEYWORDS = { 'TODO NEXT PEND TEST WARN | DONE' }
 -- sequence.
 local BOARD_STATE_ORDER = { 'TEST', 'NEXT', 'TODO', 'PEND', 'WARN' }
 
--- The board section list: one section per open keyword, named with just the
--- keyword, plus the `someday` discard every custom view keeps. Ordered by
--- BOARD_STATE_ORDER (the `°` view, which used to carry its own
--- org-super-agenda `auto_todo` ordering, is the board itself now). The board
--- blocks below share the table (the grouper copies it); helpers/org/agenda.lua
--- only reads it -- and, for the blocks marked `state_sections`, swaps the
+-- The classification sections' state list: one section per open keyword,
+-- named with just the keyword, plus the `someday` discard every custom view
+-- keeps. Ordered by BOARD_STATE_ORDER (the `°` view, which used to carry its
+-- own org-super-agenda `auto_todo` ordering, is the board itself now). The
+-- board blocks below share the table (the grouper copies it); the "In
+-- progress" block sets `super_groups = false` and lists NEXT/TEST mixed
+-- across tags, so in the classification sections those two keywords match
+-- nothing and their subsections are dropped -- the derivation is kept whole
+-- so a new open keyword still lands in one. helpers/org/agenda.lua only
+-- reads it -- and, for the blocks marked `state_sections`, swaps the
 -- extension's blank-line separator for a rule.
 local BOARD_SECTIONS = { { discard = { tag = 'someday' } } }
 do
@@ -79,9 +84,10 @@ do
   end
 end
 
--- The board's three open sections (the `w` blocks below; the Done one is
--- flat and ordered by completion date instead): the open entries carrying
--- one classification tag, split into the per-state subsections of
+-- The board's three classification sections (the `w` blocks below; the
+-- "In progress" one above them is a plain keyword block and the Done one is
+-- flat and ordered by completion date): the open entries carrying one
+-- classification tag, split into the per-state subsections of
 -- BOARD_SECTIONS and ordered by priority inside each -- A/B/C first, the
 -- default urgency order settling the ties. No priority means the
 -- unprioritized value, so those entries sort after C. helpers/org/agenda.lua
@@ -171,22 +177,24 @@ return {
       -- dispatcher ones (a t T m M s S n # / < > e * ?), so they add rows
       -- instead of replacing. Blocks are `tags_todo`
       -- (tags/property match, TODO entries only) -- the `/!` trailing the
-      -- match is the TODO part of |org-match-syntax|, "not done". `o` is
-      -- every open TODO (`type = 'todo'`, org's `alltodo`); `w` is the
-      -- sectioned board -- bug tag, feat tag, the untagged rest, DONE
-      -- keyword, in that order, so a ticket moves between sections as it
-      -- changes state (`DONE` is a `todo` block, not `tags_todo`, so the
-      -- finished entries are listed, not filtered out). The three open
-      -- sections are the `board_section` helper's, one subsection per TODO
-      -- keyword (TEST, NEXT, TODO, PEND, WARN -- BOARD_STATE_ORDER) with a
-      -- rule between, and ordered by
-      -- priority inside each, so a ticket also moves between subsections as
-      -- it changes state. A section holding nothing is not drawn -- the
-      -- Done block included -- and the sections are told apart by a blank
-      -- line, not a rule (a rule only splits the subsections inside one);
-      -- `p` the open A/B priorities. A block's `header` labels the group; a
-      -- composite command shows its blocks one after the other, in this
-      -- order.
+      -- match is the TODO part of |org-match-syntax|, "not done", and the
+      -- `-NEXT-TEST` after it excludes those keywords. `o` is every open
+      -- TODO (`type = 'todo'`, org's `alltodo`); `w` is the board --
+      -- the "In progress" block (every NEXT and TEST entry, any tag), then
+      -- the classification sections -- bug tag, feat tag, the untagged
+      -- rest -- and DONE last, in that order, so a ticket moves between
+      -- sections as it changes state (`DONE` is a `todo` block, not
+      -- `tags_todo`, so the finished entries are listed, not filtered out).
+      -- The classification sections are the `board_section` helper's, one
+      -- subsection per remaining open keyword (TODO, PEND, WARN --
+      -- BOARD_STATE_ORDER) with a rule between and ordered by priority
+      -- inside each, so a ticket also moves between subsections as it
+      -- changes state. A section holding nothing is not drawn -- the "In
+      -- progress" and Done blocks included -- and the sections are told
+      -- apart by a blank line, not a rule (a rule only splits the
+      -- subsections inside one); `p` the open A/B priorities. A block's
+      -- `header` labels the group; a composite command shows its blocks one
+      -- after the other, in this order.
       custom_commands = {
         o = {
           description = 'All open TODOs',
@@ -195,14 +203,39 @@ return {
           },
         },
         w = {
-          description = 'Bugs, features, untagged and done',
+          description = 'In progress, bugs, features, untagged and done',
           types = {
-            board_section('bug/!', 'Bugs, open'),
-            board_section('feat/!', 'Features, open'),
+            -- Every NEXT and TEST entry, whatever its classification tag, in
+            -- one block at the top of the board: the states that ask for
+            -- action, mixed across categories instead of split into the
+            -- per-tag sections below. A plain `todo` keyword block --
+            -- `match = 'NEXT|TEST'` is the keyword list render.lua reads --
+            -- and `super_groups = false` keeps the extension from drawing
+            -- the state subsections the sections below use, so the entries
+            -- stay in one list. The sorting puts the keyword first
+            -- (`todo-state-up`: NEXT before TEST, org's sequence) and then
+            -- priority; no `category-keep`, so the categories interleave.
+            {
+              type = 'todo',
+              match = 'NEXT|TEST',
+              header = 'In progress',
+              hide_empty = true,
+              super_groups = false,
+              sorting = { 'todo-state-up', 'priority-down', 'urgency-down' },
+            },
+            -- the classification sections: the open entries carrying one
+            -- tag, minus the NEXT/TEST states the block above already
+            -- listed (`/!-NEXT-TEST` -- not done, keyword not NEXT/TEST --
+            -- so a ticket leaves its section as it enters progress and only
+            -- the TODO/PEND/WARN rest stays). An untagged project whose
+            -- every open entry is in progress keeps no section at all
+            -- (`hide_empty`).
+            board_section('bug/!-NEXT-TEST', 'Bugs, open'),
+            board_section('feat/!-NEXT-TEST', 'Features, open'),
             -- the open entries carrying neither classification tag: the
             -- section new captures land in before they are sorted into
             -- bug / feature
-            board_section('-bug-feat/!', 'Untagged, open'),
+            board_section('-bug-feat/!-NEXT-TEST', 'Untagged, open'),
             {
               type = 'todo',
               match = 'DONE',
@@ -277,7 +310,10 @@ return {
     -- why the destination is an outline path and not a title. Only a cwd
     -- that names no project opens the picker for it. A configured
     -- `templates` table replaces the defaults rather than merging into them,
-    -- so `t` is spelled out in full.
+    -- so `t` is spelled out in full. `%U` is the inactive timestamp with the
+    -- time (%u is the date alone), so the created entry opens the body's
+    -- chronological log with the same header shape as a note
+    -- (helpers/org/notes.lua).
     capture = {
       templates = {
         t = {
@@ -289,7 +325,7 @@ return {
           olp = function()
             return capture.olp()
           end,
-          template = '* TODO %?\n  %u ' .. string.rep('-', notes.DASHES),
+          template = '* TODO %?\n  %U ' .. string.rep('-', notes.DASHES),
         },
       },
     },

@@ -152,6 +152,21 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 -------------------------------------------------
+-- [ORG]
+-------------------------------------------------
+
+-- org files are prose: wrap long lines. The global default is `wrap = false`
+-- (init.lua); the global `linebreak` / `breakindent` are left on, so a wrapped
+-- line breaks at words and hangs under its own indent. Window-local, so it
+-- reaches org buffers opened after startup too.
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'org',
+  callback = function()
+    vim.wo.wrap = true
+  end,
+})
+
+-------------------------------------------------
 -- [XLSX - CSV]
 -------------------------------------------------
 
