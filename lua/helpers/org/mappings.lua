@@ -1,7 +1,8 @@
 -- Buffer-local org mappings for org.nvim (wired in
 -- lua/terminal_plugins/org.nvim.lua): normal-mode <CR> like the markdown
 -- config's smart action (obsidian util.toggle_checkbox), insert-mode <CR>
--- continuing lists like bullets.vim, dd deleting a whole subtree, and the
+-- continuing lists like bullets.vim, dd deleting a whole subtree, the
+-- one-key tag/priority toggles (helpers/org/tagging.lua), and the
 -- insert-mode capture keys (org.nvim binds those in normal mode only).
 -- Registered on FileType org so they land after org.nvim attaches its own
 -- buffer mappings.
@@ -184,6 +185,13 @@ function M.setup()
       vim.keymap.set('n', '<leader>ai', function()
         require('helpers.org.ai').launch()
       end, { buffer = args.buf, desc = 'org: OMP on the headline at point' })
+
+      -- One-key tagging and priorities (helpers/org/tagging.lua): B/F/C
+      -- toggle :bug:/:feat:/:chore:, <M-a>/<M-b>/<M-c> priority A/B/C on
+      -- the headline at point -- here in an org buffer (a capture buffer
+      -- included); helpers/org/agenda.lua binds the same set in the agenda
+      -- / TODO view.
+      require('helpers.org.tagging').map(args.buf)
     end,
   })
 end

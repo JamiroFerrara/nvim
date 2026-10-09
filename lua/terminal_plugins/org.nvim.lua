@@ -10,6 +10,8 @@
 --   agenda.lua      `D` toggle_done action, the fold state after entering
 --                   an entry from the list, and the insert mode a terminal
 --                   window would leave in the agenda
+--   tagging.lua     one-key tag/priority toggles (B/F/C, <M-a>/<M-b>/<M-c>)
+--                   in org buffers and, via agenda.lua, in the view
 --   decorations.lua checkbox icons (conceal, like the markdown config)
 --   mappings.lua    buffer-local <CR> (normal/insert), dd-on-headline,
 --                   the capture keys in insert mode, and insert mode back
@@ -65,18 +67,18 @@ return {
       -- TODO picker) reads one project, so the tags and priorities the
       -- ticket lines already carry are only visible here. Reached from the
       -- dispatcher menu or `:Org agenda <key>`, which give the whole set;
-      -- the agenda buffer's 1 / 2 / 3 / 4 / 5 (helpers/org/agenda.lua) open
-      -- them, 1 global and the rest narrowed to the cwd's project. The keys
-      -- avoid the built-in dispatcher ones (a t T m M s S n # / < > e * ?), so
-      -- they add rows instead of replacing. Blocks are `tags_todo` (tags/
-      -- property match, TODO entries only) -- the `/!` trailing the match is
-      -- the TODO part of |org-match-syntax|, "not done". `o` is every open
-      -- TODO (`type = 'todo'`, org's `alltodo`), `b` pulls the bug tag and the
-      -- WARN keyword, `f` the feat tag, `d` the DONE keyword (a `todo` block,
-      -- not `tags_todo`, so the finished entries are listed, not filtered
-      -- out), `p` the open A/B priorities. A block's `header` labels the
-      -- group; a composite command shows its blocks one after the other, in
-      -- this order.
+      -- the agenda buffer's 1 / 2 / 3 / 4 / 5 / 6 (helpers/org/agenda.lua)
+      -- open them, 1 global and the rest narrowed to the cwd's project. The
+      -- keys avoid the built-in dispatcher ones (a t T m M s S n # / < > e *
+      -- ?), so they add rows instead of replacing. Blocks are `tags_todo`
+      -- (tags/property match, TODO entries only) -- the `/!` trailing the
+      -- match is the TODO part of |org-match-syntax|, "not done". `o` is
+      -- every open TODO (`type = 'todo'`, org's `alltodo`), `b` pulls the
+      -- bug tag and the WARN keyword, `f` the feat tag, `d` the DONE keyword
+      -- (a `todo` block, not `tags_todo`, so the finished entries are
+      -- listed, not filtered out), `p` the open A/B priorities, `c` the
+      -- chore tag. A block's `header` labels the group; a composite command
+      -- shows its blocks one after the other, in this order.
       custom_commands = {
         o = {
           description = 'All open TODOs',
@@ -108,6 +110,12 @@ return {
           types = {
             { type = 'tags_todo', match = 'PRIORITY="A"/!', header = 'Priority A, open' },
             { type = 'tags_todo', match = 'PRIORITY="B"/!', header = 'Priority B, open' },
+          },
+        },
+        c = {
+          description = 'Chores',
+          types = {
+            { type = 'tags_todo', match = 'chore/!', header = 'Tagged chore, open' },
           },
         },
       },
@@ -255,6 +263,23 @@ return {
         -- renders into the same orgagenda buffer.
         priority = { 'p', ',', '<C-c>,' },
         prev_item = false,
+        -- One-key tagging and priorities on the entry at point
+        -- (helpers/org/tagging.lua, actions registered in
+        -- helpers/org/agenda.lua): B/F/C toggle :bug:/:feat:/:chore:,
+        -- <M-a>/<M-b>/<M-c> toggle the A/B/C priority. Takes the plain
+        -- B / F / C defaults to make room: bulk_action loses its key
+        -- (nothing else claimed it), follow_mode keeps `vf`, clock_report
+        -- keeps `vR`. The priorities sit on <M-> because B and C are the
+        -- tag keys.
+        bulk_action = false,
+        follow_mode = 'vf',
+        clockreport_mode = 'vR',
+        toggle_bug_tag = 'B',
+        toggle_feat_tag = 'F',
+        toggle_chore_tag = 'C',
+        toggle_priority_a = '<M-a>',
+        toggle_priority_b = '<M-b>',
+        toggle_priority_c = '<M-c>',
         -- `|` quits like `q`, taking over the default `|` (remove the
         -- filter at point), unbound here
         quit = { 'q', '`' },

@@ -1,13 +1,16 @@
 -- OMP on an org ticket: `<leader>ai` in the TODO view (or an org buffer)
--- opens an `omp` instance for the headline at point, in a tmux pane beside
--- nvim, seeded with the ticket's :ID: and file.
+-- opens an `omp` instance for the headline at point, seeded with the ticket's
+-- :ID: and file.
 --
 -- Layout: the first launch splits the nvim pane once with a vertical divider
--- (`split-window -h`, omp on the right); every later launch splits the right
--- column with `split-window -v`, so the right panel stacks instances. Each
--- pane carries the ticket's :ID: in its `@omp_ticket` pane option (the
--- "already running?" lookup) and its title. The splits are detached: the
--- launch never moves the active pane off nvim, so the cursor stays put.
+-- (`split-window -h`, omp on the right). Once anything already sits beside
+-- nvim, every later launch opens its own tmux window inserted after the
+-- current one (`new-window -a`, the `prefix+n` equivalent) instead of stacking
+-- panes in the right column, so each instance gets a full window. Each pane
+-- carries the ticket's :ID: in its `@omp_ticket` pane option (the "already
+-- running?" lookup) plus its window name / title. Splits and windows are
+-- created detached (`-d`): the launch never moves the active pane or window
+-- off nvim, so the cursor stays put.
 --
 -- The pane runs `nvim "+terminal omp …"`, the same shape as the tmux
 -- default-command (`nvim +terminal`) every other pane uses, so the instance
@@ -209,45 +212,72 @@ local function running_pane(id)
   end
 end
 
---- Split once to the right of the nvim pane, then stack further runs inside
---- that right column. The split is detached (`-d`), so the new pane is made
---- without becoming the active one: launching never pulls the cursor out of
---- nvim's pane.
----@param cur string the nvim pane
+--- The pane in `panes` holding `cur`, or nil.
+---@param cur string
 ---@param panes table[]
----@return string|nil new pane id
-local function split_for_run(cur, panes)
-  local current
+---@return table|nil
+local function pane_of(cur, panes)
   for _, p in ipairs(panes) do
     if p.id == cur then
-      current = p
-      break
+      return p
     end
   end
-  if not current then
-    return nil
-  end
-  local column, bottom
+end
+
+--- Whether anything already sits to the right of `current` (its window is
+--- already split). With the right column taken, the next run opens its own
+--- window instead of extending that column.
+---@param current table
+---@param panes table[]
+---@return boolean
+local function right_column_taken(current, panes)
   for _, p in ipairs(panes) do
-    if p.left >= current.right and (not bottom or p.bottom > bottom.bottom) then
-      column, bottom = p.id, p
+    if p.left >= current.right then
+      return true
     end
   end
-  local id
-  if column then
-    id = tmux { 'split-window', '-d', '-v', '-t', column, '-P', '-F', '#{pane_id}' }
-  else
-    id = tmux { 'split-window', '-d', '-h', '-t', cur, '-P', '-F', '#{pane_id}' }
-  end
+  return false
+end
+
+--- A detached split to the right of the nvim pane — the first run. `-d` makes
+--- the pane without becoming the active one, so launching never pulls the
+--- cursor out of nvim's pane.
+---@param cur string the nvim pane
+---@return string|nil new pane id
+local function split_for_run(cur)
+  local id = tmux { 'split-window', '-d', '-h', '-t', cur, '-P', '-F', '#{pane_id}' }
   return id or nil
 end
 
---- Start `ticket` in a pane beside nvim and hand it to omp. Nothing here
---- moves the active pane: a ticket already running is reported instead of
---- focused, and the new pane is created detached, titled, and respawned
---- without taking over (`respawn-pane` on an inactive pane leaves it
---- inactive). The trailing `select-pane` back to nvim's pane is belt and
---- braces, so focus is nvim's whatever tmux version is behind this.
+--- A detached tmux window inserted after the current one (`new-window -a`, the
+--- `prefix+n` equivalent), its pane born running the ticket's omp instance —
+--- `new-window` with a command runs it directly, so no respawn is needed. `-d`
+--- leaves the current window selected, so nvim keeps focus.
+---@param ticket OrgTicket
+---@return string|nil new pane id
+local function window_for_run(ticket)
+  local id = tmux {
+    'new-window',
+    '-d',
+    '-a',
+    '-n',
+    '🤖 ' .. ticket.title,
+    '-c',
+    '#{pane_current_path}',
+    '-P',
+    '-F',
+    '#{pane_id}',
+    pane_command(ticket),
+  }
+  return id or nil
+end
+
+--- Start `ticket` for the headline and hand it to omp. Nothing here moves the
+--- active pane or window: a ticket already running is reported instead of
+--- focused, and a new split or window is created detached (and, for the split,
+--- respawned) without taking over. The trailing `select-pane` back to nvim's
+--- pane is belt and braces, so focus is nvim's whatever tmux version is behind
+--- this.
 ---@param ticket OrgTicket
 local function open_pane(ticket)
   local running = running_pane(ticket.id)
@@ -261,17 +291,34 @@ local function open_pane(ticket)
     notify('org ai: $TMUX_PANE is unset', vim.log.levels.ERROR)
     return
   end
-  local pane = split_for_run(cur, panes_of(cur))
-  if not pane then
-    notify('org ai: could not split the tmux window', vim.log.levels.ERROR)
+
+  local panes = panes_of(cur)
+  local me = pane_of(cur, panes)
+  if not me then
+    notify('org ai: could not resolve the current tmux pane', vim.log.levels.ERROR)
     return
   end
-  tmux { 'set-option', '-p', '-t', pane, '@omp_ticket', ticket.id }
-  tmux { 'select-pane', '-t', pane, '-T', '🤖 ' .. ticket.title }
-  local cmd = pane_command(ticket)
-  local _, err = tmux { 'respawn-pane', '-k', '-t', pane, cmd }
-  if err then
-    notify('org ai: ' .. err, vim.log.levels.ERROR)
+
+  local pane
+  if right_column_taken(me, panes) then
+    pane = window_for_run(ticket)
+    if not pane then
+      notify('org ai: could not open a tmux window', vim.log.levels.ERROR)
+      return
+    end
+    tmux { 'set-option', '-p', '-t', pane, '@omp_ticket', ticket.id }
+  else
+    pane = split_for_run(cur)
+    if not pane then
+      notify('org ai: could not split the tmux window', vim.log.levels.ERROR)
+      return
+    end
+    tmux { 'set-option', '-p', '-t', pane, '@omp_ticket', ticket.id }
+    tmux { 'select-pane', '-t', pane, '-T', '🤖 ' .. ticket.title }
+    local _, err = tmux { 'respawn-pane', '-k', '-t', pane, pane_command(ticket) }
+    if err then
+      notify('org ai: ' .. err, vim.log.levels.ERROR)
+    end
   end
   tmux { 'select-pane', '-t', cur }
 end

@@ -1,8 +1,9 @@
 -- Agenda-side customizations for org.nvim (wired in
--- lua/terminal_plugins/org.nvim.lua): the `D` toggle_done action, the fold
--- state left behind by entering an entry, the insert mode a terminal
--- window would otherwise leave in the agenda, the re-render after a capture
--- filed from it, and the 1/2/3 switch between the custom views of
+-- lua/terminal_plugins/org.nvim.lua): the `D` toggle_done action, the
+-- one-key tag/priority toggles (helpers/org/tagging.lua), the fold state
+-- left behind by entering an entry, the insert mode a terminal window would
+-- otherwise leave in the agenda, the re-render after a capture filed from
+-- it, and the 1..6 switch between the custom views of
 -- agenda.custom_commands. All of them plug into modules
 -- the plugin loads on first use, so they go through org.lazy.on_load and
 -- nothing here is required at startup.
@@ -31,6 +32,32 @@ local function setup_toggle_done()
       local done = file.settings.todo:is_done(hl.todo)
       return require('org.todo').change_state({ bufnr = bufnr, lnum = hl.line }, done and 'TODO' or 'DONE')
     end, 'lines')
+  end)
+end
+
+-- One-key tagging and priorities (helpers/org/tagging.lua): the plain
+-- B/F/C toggle :bug:/:feat:/:chore: and <M-a>/<M-b>/<M-c> the A/B/C
+-- priority on the entry at point. Every toggle is registered as an agenda
+-- action named in the specs' `action` field, and `mappings.agenda` in the
+-- plugin spec binds it -- the way toggle_done above does; the plain B / F /
+-- C defaults (bulk action, follow mode, clock report) are reassigned there
+-- to make room. The hook runs inside `require 'org.agenda.view'`, before
+-- view.open builds the agenda mappings from that table.
+local function setup_one_key()
+  require('org.lazy').on_load('org.agenda.view', 'one_key', function(view)
+    local tagging = require 'helpers.org.tagging'
+    for _, spec in ipairs(tagging.tags) do
+      local tag = spec.tag
+      view.actions[spec.action] = view.on_item(function(target)
+        return tagging.toggle_tag(tag, target)
+      end, 'lines')
+    end
+    for _, spec in ipairs(tagging.priorities) do
+      local value = spec.value
+      view.actions[spec.action] = view.on_item(function(target)
+        return tagging.toggle_priority(value, target)
+      end, 'lines')
+    end
   end)
 end
 
@@ -183,29 +210,30 @@ end
 -- Number keys open the custom views configured in
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
 -- TODOs across every project, 2 bugs, 3 features, 4 done items, 5
--- priorities. Buffer-local to orgagenda -- the TODO view renders into the
--- same buffer, so it switches from there too -- which is why the keys are the
--- plain digits and not the `<leader>o` ones: a count typed in the agenda
--- (`<C-u>` style) no longer starts with 1 or 2, and nothing else claims them.
--- `agenda.window = 'current'` makes the open take the window over, so the
--- same buffer is refilled and this reads as switching view rather than
--- stacking a second agenda.
+-- priorities, 6 chores. Buffer-local to orgagenda -- the TODO view renders
+-- into the same buffer, so it switches from there too -- which is why the
+-- keys are the plain digits and not the `<leader>o` ones: a count typed in
+-- the agenda (`<C-u>` style) no longer starts with 1 or 2, and nothing else
+-- claims them. `agenda.window = 'current'` makes the open take the window
+-- over, so the same buffer is refilled and this reads as switching view
+-- rather than stacking a second agenda.
 --
--- The 2 / 3 / 4 / 5 views are scoped to the project of the working directory,
--- the way `°` is for the TODO view (helpers/org/project.lua): each block's
--- `files` becomes the project's file and a headline claim adds its subtree
--- restriction. A cwd that names no project -- or one whose file does not
--- exist yet -- opens the full view, the same one the dispatcher menu's `b`
--- / `d` / `p` give. Resolution runs per key press (project.current reads
--- getcwd, or the job cwd of a terminal buffer), so a `cd` moves the scope
--- with it. 1 is global: it never scopes, so it lists the open TODOs of every
--- project.
+-- The 2 / 3 / 4 / 5 / 6 views are scoped to the project of the working
+-- directory, the way `°` is for the TODO view (helpers/org/project.lua):
+-- each block's `files` becomes the project's file and a headline claim adds
+-- its subtree restriction. A cwd that names no project -- or one whose file
+-- does not exist yet -- opens the full view, the same one the dispatcher
+-- menu's `b` / `d` / `p` give. Resolution runs per key press
+-- (project.current reads getcwd, or the job cwd of a terminal buffer), so a
+-- `cd` moves the scope with it. 1 is global: it never scopes, so it lists
+-- the open TODOs of every project.
 local CUSTOM_VIEWS = {
   { '1', 'o', 'all open TODOs', true },
   { '2', 'b', 'bugs and warnings' },
   { '3', 'f', 'open features' },
   { '4', 'd', 'done items' },
   { '5', 'p', 'open A/B priorities' },
+  { '6', 'c', 'open chores' },
 }
 
 local function open_custom_view(key, label, global)
@@ -294,6 +322,7 @@ end
 
 function M.setup()
   setup_toggle_done()
+  setup_one_key()
   setup_entry_folds()
   setup_open()
   setup_pick_todo()
