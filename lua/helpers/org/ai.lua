@@ -22,7 +22,7 @@
 -- only then starts omp. Everything after that is the omp-org-ticket skill
 -- appended to omp's system prompt: answer the `AI:` lines, resolve the
 -- ticket, leave TEST/WARN/PEND (the user promotes TEST to DONE once they have
--- validated the change), write the <=2 line robot-icon summary, and remove a
+-- validated the change), write the <=2 line 🤖-headed summary, and remove a
 -- temporary :ID:.
 --
 -- The run is one-shot (`omp --print`): omp processes the ticket and exits; the

@@ -166,6 +166,10 @@ return {
       -- orgagenda buffer, so this is what makes changing a TODO there save
       -- the project file instead of leaving it dirty in the background.
       save_after_edit = true,
+      -- Never ask before `dd` / <C-k> deletes an entry from the view (the
+      -- default asks above a 1-line entry, org-agenda-confirm-kill). The
+      -- kill mapping lives in mappings.agenda below.
+      confirm_kill = false,
       -- Cross-project roll-ups: every other view (agenda_files, the TODO
       -- picker) reads one project, so the tags and priorities the ticket
       -- lines already carry are only visible here. Reached from the
@@ -310,10 +314,16 @@ return {
     -- why the destination is an outline path and not a title. Only a cwd
     -- that names no project opens the picker for it. A configured
     -- `templates` table replaces the defaults rather than merging into them,
-    -- so `t` is spelled out in full. `%U` is the inactive timestamp with the
+    -- `t` is spelled out in full. `%U` is the inactive timestamp with the
     -- time (%u is the date alone), so the created entry opens the body's
     -- chronological log with the same header shape as a note
-    -- (helpers/org/notes.lua).
+    -- (helpers/org/notes.lua). `%?` sits on the headline, so a description
+    -- typed below the title in the capture buffer lands *between* the title
+    -- and the header; the template's `hook` (helpers/org/capture.lua) keeps
+    -- the header back directly under the headline as the entry is typed --
+    -- the description, and the cursor, below it -- and the store filter there
+    -- finishes the same reorder (title, header, description) and indents the
+    -- description like it, for a buffer that was not kept in order.
     capture = {
       templates = {
         t = {
@@ -326,6 +336,9 @@ return {
             return capture.olp()
           end,
           template = '* TODO %?\n  %U ' .. string.rep('-', notes.DASHES),
+          -- Keep the buffer in title/header/description order while the
+          -- entry is typed (lua/helpers/org/capture.lua `hook`).
+          hook = capture.hook,
         },
       },
     },
@@ -461,15 +474,35 @@ return {
         -- `dd` deletes the entry's whole subtree in the source file, like
         -- the Emacs key <C-k> (kept): org-agenda-kill, the kill action in
         -- org.agenda.view, which removes `hl.line..hl.end_line` from the
-        -- entry's own buffer (a multi-line subtree asks for confirmation,
-        -- agenda.confirm_kill). It takes over neither `d` nor its
-        -- <C-c><C-d> -- agenda's deadline: with `dd` bound, a lone `d`
-        -- waits a moment for the second key and still sets the deadline.
+        -- entry's own buffer. No confirmation, even for a multi-line
+        -- subtree: `agenda.confirm_kill` is off above, so a `dd` deletes
+        -- at once. It takes over neither `d` nor its <C-c><C-d> --
+        -- agenda's deadline: with `dd` bound, a lone `d` waits a moment
+        -- for the second key and still sets the deadline.
         kill = { '<C-k>', 'dd' },
+        -- `a` archives the entry at point at once. Default is archive with
+        -- confirmation (org-agenda-archive-default-with-confirmation, which
+        -- asks "Archive this subtree or entry?"); here `a` takes over the
+        -- plain org-agenda-archive-default action, which does not ask. The
+        -- Emacs key <C-c><C-x><C-a> keeps working, now also unconfirmed.
+        archive_default_confirm = false,
+        archive_default = { '<C-c><C-x><C-a>', 'a' },
         -- `^` is the global org capture key (lua/mappings.lua). The default
         -- agenda `^` (filter to the top headline) would shadow it in the
         -- agenda and in the TODO view, which renders into the same buffer.
         filter_top_headline = false,
+        -- <CR> opens the entry at point by itself: only its own lines
+        -- (headline through the end of its subtree) in an editable scratch
+        -- buffer that takes over the view's window, `q` back
+        -- (helpers/org/agenda.lua setup_entry_scratch). The buffer wraps by
+        -- default and `:w` splices it back into its file in place of the
+        -- entry; the whole file stays out of the way of a long project file.
+        -- The old <CR> behaviour (switch_to: the entry opened in its file,
+        -- the view left behind) moves here to <Space> and <S-CR>, which open
+        -- the `show` default to make room.
+        entry_scratch = '<CR>',
+        switch_to = { '<Space>', '<S-CR>' },
+        show = false,
       },
       -- Capture buffer keys. The defaults stay: finalize <C-c><C-c> /
       -- <prefix>w, kill <C-c><C-k> / <prefix>k, refile <C-c><C-w> /
@@ -626,6 +659,7 @@ return {
     require('helpers.org.agenda').setup()
     require('helpers.org.decorations').setup()
     require('helpers.org.notes').setup()
+    capture.setup()
     require('helpers.org.mappings').setup()
     require('helpers.org.folding').setup()
     require('helpers.org.refile').setup()

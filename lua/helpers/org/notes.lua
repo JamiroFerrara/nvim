@@ -9,8 +9,16 @@
 --
 --   [2026-10-08 Thu] ------------------------------------------------------
 --   content captured when the entry was created
+--
 --   [2026-10-08 Thu 15:53] ------------------------------------------------
 --   text of the note
+--
+-- Blocks are separated by a blank line, so each reads as its own turn in the
+-- conversation; lines within one block stay consecutive.
+--
+-- The omp write-back (skill omp-org-ticket) writes the same block; its header
+-- carries the 🤖 icon in front of the timestamp, which is what marks the
+-- block as the agent's -- decorations.lua draws that header like these.
 --
 -- The rule is a fixed run of dashes in the source (tools that do not render
 -- still read it as a separator); helpers/org/decorations.lua overflows it to
@@ -42,11 +50,13 @@ end
 --- Append `lines` at the end of `hl`'s body -- after the last non-blank body
 --- line, so a new note reads after the older ones and the subtree stays a
 --- chronological log (the capture that created the entry first, then the
---- notes in the order they were taken). A blank separator before the next
---- headline is left where it is. Indented like the entry's existing body when
---- it has one (captures and Emacs wrote theirs indented; org.nvim would
---- otherwise drop the note to column 0), else by `org.edit.body_indent`.
---- Returns the line number the first inserted line landed on.
+--- notes in the order they were taken). A blank separator is put before the
+--- new block, so consecutive blocks read as separate conversations; a blank
+--- separator before the next headline is left where it is. Indented like the
+--- entry's existing body when it has one (captures and Emacs wrote theirs
+--- indented; org.nvim would otherwise drop the note to column 0), else by
+--- `org.edit.body_indent`. Returns the line number the block's header landed
+--- on (past the blank separator).
 ---@param bufnr integer
 ---@param hl org.Headline
 ---@param lines string[]
@@ -61,18 +71,22 @@ local function append_block(bufnr, hl, lines)
     at = at - 1
   end
   local indent = edit.body_indent(hl.level)
+  local out = {}
+  local first = at + 1
   if at > floor then
     local existing = body[at]:match '^(%s*)'
     if #existing > #indent then
       indent = existing
     end
+    -- blank line between the previous block and this one
+    out[#out + 1] = ''
+    first = first + 1
   end
-  local out = {}
   for _, l in ipairs(lines) do
     out[#out + 1] = indent .. l
   end
   vim.api.nvim_buf_set_lines(bufnr, at, at, false, out)
-  return at + 1
+  return first
 end
 
 --- org-add-note: prompt for the note, then store it at the end of the entry

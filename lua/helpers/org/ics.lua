@@ -139,22 +139,28 @@ function M.setup()
     end
   end, { desc = 'iCalendar event details of the agenda entry at the cursor' })
 
-  -- <CR> (agenda.switch_to) on a calendar line opens the scratch instead of
-  -- failing with "Command not allowed in this line"; on anything else it
-  -- keeps its usual meaning.
-  local switch_to_wrapped = false
+  -- <CR> (agenda.entry_scratch) and <Space> (agenda.switch_to) on a calendar
+  -- line open the scratch instead of failing with "Command not allowed in
+  -- this line" -- a calendar line has no entry to view either, so
+  -- entry_scratch would do nothing; on anything else both keep their usual
+  -- meaning.
+  local wrapped = false
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'orgagenda',
     callback = function()
-      if switch_to_wrapped then
+      if wrapped then
         return
       end
-      switch_to_wrapped = true
+      wrapped = true
       local view = require 'org.agenda.view'
-      local switch_to = view.actions.switch_to
-      view.actions.switch_to = function()
-        if not peek(view.item_at_cursor()) then
-          return switch_to()
+      for _, name in ipairs { 'entry_scratch', 'switch_to' } do
+        local action = view.actions[name]
+        if action then
+          view.actions[name] = function(...)
+            if not peek(view.item_at_cursor()) then
+              return action(...)
+            end
+          end
         end
       end
     end,

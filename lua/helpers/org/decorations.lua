@@ -10,9 +10,11 @@
 --     renderer computes is rewritten here into a conceal of the three box
 --     columns with the icon character, so the line renders exactly as the
 --     markdown plugin's.
---   * Note headers written by helpers/org/notes.lua: `[ts] ------` gets the
---     timestamp highlighted and the dash run replaced by a rule that reaches
---     the window edge, like the markdown plugin's `---`.
+--   * Note headers written by helpers/org/notes.lua and the omp write-back:
+--     `[ts] ------` -- or `🤖 [ts] ------`, the agent's block, whose header
+--     carries the icon -- gets the timestamp highlighted and the dash run
+--     replaced by a rule that reaches the window edge, like the markdown
+--     plugin's `---`.
 --   * Tables, drawn like the markdown plugin's pipe_table (style "full"):
 --     the `|` separators become `│`, the `|---+---|` rule the matching
 --     `├───┼───┤`, and a top/bottom border frames the first and last row.
@@ -23,10 +25,11 @@
 -- renderer stays out of startup.
 local M = {}
 
--- Draw the `[timestamp] <dashes>` header of a note (helpers/org/notes.lua):
--- highlight the bracketed timestamp and overlay the dash run with a rule of
--- `─` reaching the window edge. A long virtual text is clipped at the edge,
--- so it fills any window width and survives a resize without recomputing.
+-- Draw the `[timestamp] <dashes>` header of a note (helpers/org/notes.lua, and
+-- the omp write-back with its 🤖 block icon in front): highlight the bracketed
+-- timestamp and overlay the dash run with a rule of `─` reaching the window
+-- edge. A long virtual text is clipped at the edge, so it fills any window
+-- width and survives a resize without recomputing.
 local RULE = string.rep('─', 400)
 
 local function note_headers(bufnr, first, last, rows)
@@ -34,7 +37,9 @@ local function note_headers(bufnr, first, last, rows)
   for i, line in ipairs(lines) do
     local ts_s, ts_e = line:find '%[[^%]]+%]'
     local d_s = line:find '%-%-%-+%s*$'
-    if ts_s and d_s and d_s > ts_e and line:sub(1, ts_s - 1):match '^%s*$' then
+    -- before the timestamp: the indent, and on an agent block the icon (🤖,
+    -- written by the omp write-back) -- any non-ASCII glyph, never a word
+    if ts_s and d_s and d_s > ts_e and line:sub(1, ts_s - 1):match '^%s*[\128-\255]*%s*$' then
       local row = first + i - 1
       local r = rows[row]
       if not r then

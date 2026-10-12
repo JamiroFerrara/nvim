@@ -1,7 +1,9 @@
 -- Agenda-side customizations for org.nvim (wired in
 -- lua/terminal_plugins/org.nvim.lua): the `D` toggle_done action, the
 -- one-key tag/priority toggles (helpers/org/tagging.lua), the fold state
--- left behind by entering an entry, the insert mode a terminal window would
+-- left behind by entering an entry, the editable scratch view `<CR>` opens
+-- with only that entry (wrapped by default, written back into its file on
+-- save), the insert mode a terminal window would
 -- otherwise leave in the agenda, the re-render after a capture filed from
 -- it (with the subtree range of a headline project's `°` view kept in step,
 -- else the entry it just wrote falls outside it), and the 1..3 switch
@@ -86,6 +88,107 @@ local function setup_entry_folds()
   end)
 end
 
+-- <CR> on an entry opens only that entry in the view's own window, so a
+-- long project file's other headlines stay out of the way; the old <CR>
+-- behaviour -- switch_to, the entry opened in its file -- moves to <Space>
+-- and <S-CR> (mappings.agenda.switch_to below, with the default `show`
+-- unbound to free the key). The buffer is a scratch: acwrite (so `:w` runs
+-- the write hook below instead of touching a file), wiped when
+-- left, `q` puts the view back (`buffer #`, the hidden agenda). It takes the
+-- entry's own lines from its file -- headline through the end of its
+-- subtree -- so it shows what the file holds now, unsaved edits included. It
+-- is editable: `:w` splices the buffer back into its file in place of the
+-- entry and writes it. The entry's start is marked with an extmark in the
+-- source buffer, so a write after edits elsewhere in the file still lands on
+-- the entry; the subtree range is recomputed at the mark each time. The
+-- window wraps by default, its previous wrap value restored when the scratch
+-- goes. Leaving the scratch never asks to save it -- `q` is forced and `:q`
+-- / window-close paths drop the modified flag first, so only `:w` writes it.
+-- Registered as an agenda action named in the spec, the way toggle_done is
+-- above.
+local function setup_entry_scratch()
+  require('org.lazy').on_load('org.agenda.view', 'entry_scratch', function(view)
+    local ns = vim.api.nvim_create_namespace 'org_entry_scratch'
+    view.actions.entry_scratch = function()
+      local item = view.item_at_cursor()
+      if not (item and item.headline) then
+        return
+      end
+      local target = view.resolve_target(item)
+      if not target then
+        return
+      end
+      local src = target.bufnr
+      local hl = require('org.files').get_buffer(src):headline_at(target.lnum)
+      if not hl then
+        return
+      end
+      local lines = vim.api.nvim_buf_get_lines(src, hl.line - 1, hl.end_line, false)
+      local span = hl.end_line - hl.line + 1
+      local mark = vim.api.nvim_buf_set_extmark(src, ns, hl.line - 1, 0, { right_gravity = false })
+
+      local win = vim.api.nvim_get_current_win()
+      local prev_wrap = vim.wo[win].wrap
+      local buf = vim.api.nvim_create_buf(false, true)
+      vim.bo[buf].buftype = 'acwrite'
+      vim.bo[buf].bufhidden = 'wipe'
+      vim.bo[buf].swapfile = false
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+      vim.bo[buf].filetype = 'org'
+      local name = (hl.title and hl.title ~= '' and hl.title or 'entry'):gsub('[%s/\\]', '_')
+      pcall(vim.api.nvim_buf_set_name, buf, 'org-entry://' .. name)
+      vim.api.nvim_win_set_buf(win, buf)
+      vim.wo[win].wrap = true
+      -- Leaving the scratch never asks to save it (`confirm` is on): `q` is
+      -- forced, and `:q` / window-close paths drop the modified flag first.
+      -- `:w` still runs the write hook below (BufWriteCmd fires on an
+      -- unmodified acwrite buffer).
+      vim.keymap.set('n', 'q', function()
+        vim.cmd 'buffer! #'
+      end, { buffer = buf, desc = 'org: close the entry view' })
+      vim.api.nvim_create_autocmd('QuitPre', {
+        buffer = buf,
+        callback = function()
+          vim.bo[buf].modified = false
+        end,
+      })
+      vim.api.nvim_create_autocmd('BufWriteCmd', {
+        buffer = buf,
+        callback = function()
+          if not vim.api.nvim_buf_is_valid(src) then
+            vim.bo[buf].modified = false
+            return
+          end
+          local pos = vim.api.nvim_buf_get_extmark_by_id(src, ns, mark, {})
+          local line = (pos[1] or (hl.line - 1)) + 1
+          local cur = require('org.files').get_buffer(src):headline_at(line)
+          local from = cur and cur.line or line
+          local to = cur and cur.end_line or (from + span - 1)
+          vim.api.nvim_buf_set_lines(src, from - 1, to, false, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+          vim.api.nvim_buf_set_extmark(src, ns, from - 1, 0, { id = mark, right_gravity = false })
+          if vim.api.nvim_buf_get_name(src) ~= '' then
+            vim.api.nvim_buf_call(src, function()
+              vim.cmd 'silent! write'
+            end)
+          end
+          vim.bo[buf].modified = false
+        end,
+      })
+      vim.api.nvim_create_autocmd('BufWipeout', {
+        buffer = buf,
+        callback = function()
+          if vim.api.nvim_win_is_valid(win) then
+            vim.wo[win].wrap = prev_wrap
+          end
+          if vim.api.nvim_buf_is_valid(src) then
+            pcall(vim.api.nvim_buf_del_extmark, src, ns, mark)
+          end
+        end,
+      })
+    end
+  end)
+end
+
 -- The agenda -- and the TODO view, which renders into the same buffer -- is
 -- read-only, so it must be in Normal mode: anything that lands insert or
 -- terminal mode in it is left again. Two ways it lands:
@@ -124,20 +227,33 @@ end
 -- capture or by the AI sync (helpers/org/ai.lua), can leave the cursor off the
 -- entries. Re-assert "first item" on every entry into a TODO-style view -- on
 -- an agenda view it does nothing, so today's header stays.
+--
+-- The re-assert lands on the current window, so it only runs while that window
+-- still shows the view: the deferred call below can be queued by the entry
+-- into the view and run after the window has already moved on -- a capture
+-- opening from the view queues it and takes over the window before the
+-- callback fires (a big board defers it by seconds) -- and driving another
+-- buffer's window with the view's item lines moves it: `^` from the view
+-- typed the entry on the date header, one line under the `%?` the template
+-- put the cursor on.
 local function focus_first_item(buf)
   local view = require 'org.agenda.view'
   local state = view.state_of(buf)
   if not (state and is_todo_view(state.view)) then
     return
   end
+  local win = vim.api.nvim_get_current_win()
+  if vim.api.nvim_win_get_buf(win) ~= buf then
+    return
+  end
   local items = state.line_items or {}
-  if items[vim.api.nvim_win_get_cursor(0)[1]] then
+  if items[vim.api.nvim_win_get_cursor(win)[1]] then
     return
   end
   local lines = vim.tbl_keys(items)
   table.sort(lines)
   if lines[1] then
-    pcall(vim.api.nvim_win_set_cursor, 0, { lines[1], 0 })
+    pcall(vim.api.nvim_win_set_cursor, win, { lines[1], 0 })
   end
 end
 
@@ -540,6 +656,7 @@ function M.setup()
   setup_toggle_done()
   setup_one_key()
   setup_entry_folds()
+  setup_entry_scratch()
   setup_open()
   setup_custom_views()
   setup_board_sections()
