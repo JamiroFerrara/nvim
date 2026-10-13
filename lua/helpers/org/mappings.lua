@@ -181,10 +181,14 @@ function M.setup()
 
       -- <leader>ai starts an `omp` instance for the headline at point in a
       -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp
-      -- terminal key in org buffers.
+      -- terminal key in org buffers. <leader>aj jumps to that instance's pane
+      -- when it is already running, resuming its session when it is not.
       vim.keymap.set('n', '<leader>ai', function()
         require('helpers.org.ai').launch()
       end, { buffer = args.buf, desc = 'org: OMP on the headline at point' })
+      vim.keymap.set('n', '<leader>aj', function()
+        require('helpers.org.ai').jump()
+      end, { buffer = args.buf, desc = 'org: jump to the running OMP for the headline' })
 
       -- One-key tagging and priorities (helpers/org/tagging.lua): B/F/C
       -- toggle :bug:/:feat:/:chore:, <M-a>/<M-b>/<M-c> priority A/B/C on

@@ -1,12 +1,14 @@
 -- Agenda-side customizations for org.nvim (wired in
--- lua/terminal_plugins/org.nvim.lua): the `D` toggle_done action, the
--- one-key tag/priority toggles (helpers/org/tagging.lua), the fold state
+-- lua/terminal_plugins/org.nvim.lua): the `D` toggle_done action (and the
+-- cursor it leaves on the line it acted on), the one-key tag/priority
+-- toggles (helpers/org/tagging.lua), the fold state
 -- left behind by entering an entry, the editable scratch view `<CR>` opens
 -- with only that entry (wrapped by default, written back into its file on
 -- save), the insert mode a terminal window would
 -- otherwise leave in the agenda, the re-render after a capture filed from
 -- it (with the subtree range of a headline project's `°` view kept in step,
--- else the entry it just wrote falls outside it), and the 1..3 switch
+-- else the entry it just wrote falls outside it), the `§` / `°` launch keys
+-- hiding the view they already opened (toggle_view), and the 1..3 switch
 -- between the custom views of
 -- agenda.custom_commands. All of them plug into modules
 -- the plugin loads on first use, so they go through org.lazy.on_load and
@@ -26,9 +28,25 @@ local M = {}
 -- plugin spec points `D` at it. The hook runs inside `require
 -- 'org.agenda.view'`, before view.open builds the agenda mappings from that
 -- table.
+--
+-- `D` is pressed in runs, and the state change's write-back rebuilds the
+-- view: the view saves the file (org.nvim's agenda.save_after_edit), the
+-- tree watcher sees the save (helpers/org/watch.lua) and helpers/org/ai.lua
+-- M.sync calls view.redo. redo keeps the cursor on the entry it was on, so it
+-- follows the entry just marked -- into the board's Done section, or off a
+-- list that filters done entries -- while the entries still to mark move out
+-- from under the cursor. The action records the line it acted on and the redo
+-- wrapper below puts the cursor back on that line, where the next entry has
+-- moved up, so the next `D` hits it.
+local stay
+
 local function setup_toggle_done()
   require('org.lazy').on_load('org.agenda.view', 'toggle_done', function(view)
     view.actions.toggle_done = view.on_item(function(target)
+      local win = view.state.win
+      if win and vim.api.nvim_win_is_valid(win) then
+        stay = { line = vim.api.nvim_win_get_cursor(win)[1], deadline = (vim.uv or vim.loop).now() + 1000 }
+      end
       local bufnr, file, hl = require('org.edit').resolve_headline(target)
       if not bufnr then
         return
@@ -36,6 +54,36 @@ local function setup_toggle_done()
       local done = file.settings.todo:is_done(hl.todo)
       return require('org.todo').change_state({ bufnr = bufnr, lnum = hl.line }, done and 'TODO' or 'DONE')
     end, 'lines')
+  end)
+end
+
+-- Keep the cursor where it was for the rebuild a `D` causes (see
+-- setup_toggle_done above): the wrapped redo restores the recorded line --
+-- clamped when the view came out shorter -- in place of its own
+-- follow-the-entry rule. The record covers only the rebuild the `D`'s own
+-- save triggers, so it is dropped once used or once its window (the tree
+-- watcher's debounce) is past. It also only applies while the cursor is
+-- still on the line the `D` acted on: a cursor moved in the meantime (a `j`
+-- between the `D` and the rebuild) is left to redo's follow rule. `N`
+-- cycling a keyword, and a write-back from outside, keep that rule too.
+local function setup_redo_stay()
+  require('org.lazy').on_load('org.agenda.view', 'redo_stay', function(view)
+    local redo = view.redo
+    view.redo = function(...)
+      local s = stay
+      stay = nil
+      local win = view.state.win
+      local restore = s
+        and (vim.uv or vim.loop).now() <= s.deadline
+        and win
+        and vim.api.nvim_win_is_valid(win)
+        and vim.api.nvim_win_get_cursor(win)[1] == s.line
+      redo(...)
+      if restore and win and vim.api.nvim_win_is_valid(win) then
+        local last = view.state.buf and vim.api.nvim_buf_line_count(view.state.buf) or s.line
+        pcall(vim.api.nvim_win_set_cursor, win, { math.min(s.line, last), 0 })
+      end
+    end
   end)
 end
 
@@ -218,6 +266,27 @@ local function is_todo_view(view)
     end
   end
   return true
+end
+
+-- Opening a view takes the focused window over (agenda.window = 'current'),
+-- so a view already on screen stays there until something puts its buffer
+-- back. Pressing the key that opened it should do that: hide it, the same
+-- as `q` (view/window.lua quit -- the agenda buffer stays loaded, hidden,
+-- and the buffer the view took over comes back). `§` opens the date views
+-- and `°` the entry lists, and the two render into the same orgagenda
+-- buffer, so the view's own blocks say which is on screen (is_todo_view
+-- above): the key hides only its own kind -- from the other one it opens,
+-- which reads as switching between the views.
+---@param kind 'agenda'|'todo' what the key opens
+---@param open fun() the view's open function
+function M.toggle_view(kind, open)
+  local view = require 'org.agenda.view'
+  local state = view.state_of(vim.api.nvim_get_current_buf())
+  if state and state.view and is_todo_view(state.view) == (kind == 'todo') then
+    view.quit(false)
+    return
+  end
+  open()
 end
 
 -- org.nvim puts the cursor on the first item of a TODO list when it opens one
@@ -581,6 +650,8 @@ end
 -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp terminal
 -- key in the agenda and in the TODO view, which renders into the same
 -- buffer. Buffer-local, so it lands after org.nvim's own mappings.
+-- <leader>aj focuses the pane of that ticket's already-running instance,
+-- resuming its session when none is running.
 local function setup_ai()
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'orgagenda',
@@ -588,6 +659,9 @@ local function setup_ai()
       vim.keymap.set('n', '<leader>ai', function()
         require('helpers.org.ai').launch()
       end, { buffer = args.buf, desc = 'org: OMP on the ticket at point' })
+      vim.keymap.set('n', '<leader>aj', function()
+        require('helpers.org.ai').jump()
+      end, { buffer = args.buf, desc = 'org: jump to the running OMP for the ticket' })
     end,
   })
 end
@@ -654,6 +728,7 @@ end
 
 function M.setup()
   setup_toggle_done()
+  setup_redo_stay()
   setup_one_key()
   setup_entry_folds()
   setup_entry_scratch()

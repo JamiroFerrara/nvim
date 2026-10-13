@@ -228,9 +228,23 @@ return {
     ['<leader>j'] = { '}', desc = 'Next paragraph' },
     ['<leader>k'] = { '{', desc = 'Prev paragraph' },
     ['ç'] = { 'J', desc = 'Join lines' },
-    ['§'] = { function() require('org').agenda('a') end, desc = 'Org agenda' },
+    ['§'] = {
+      function()
+        require('helpers.org.agenda').toggle_view('agenda', function()
+          require('org').agenda('a')
+        end)
+      end,
+      desc = 'Org agenda',
+    },
     ['<leader>ot'] = { function() require('org').agenda('t') end, desc = 'Org todo (all)' },
-    ['°'] = { function() require('helpers.org.project').todo_view() end, desc = 'Org todo (project)' },
+    ['°'] = {
+      function()
+        require('helpers.org.agenda').toggle_view('todo', function()
+          require('helpers.org.project').todo_view()
+        end)
+      end,
+      desc = 'Org todo (project)',
+    },
     ['^'] = { function() require('org').capture('t') end, desc = 'Org capture (project)' },
     ['£'] = { function() require('org').action('pick_project_todo') end, desc = 'Org TODO (project)' },
     ['?'] = { '2', desc = 'Digit 2' },
@@ -432,8 +446,22 @@ return {
     ['<C-q>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<C-t>'] = { '<C-\\><C-n>:q<cr>', desc = 'Quit' },
     ['<M-w>'] = { '<C-\\><C-n><cmd>q<cr>', desc = 'Quit' },
-    ['§'] = { function() require('org').agenda('a') end, desc = 'Org agenda' },
-    ['°'] = { function() require('helpers.org.project').todo_view() end, desc = 'Org todo (project)' },
+    ['§'] = {
+      function()
+        require('helpers.org.agenda').toggle_view('agenda', function()
+          require('org').agenda('a')
+        end)
+      end,
+      desc = 'Org agenda',
+    },
+    ['°'] = {
+      function()
+        require('helpers.org.agenda').toggle_view('todo', function()
+          require('helpers.org.project').todo_view()
+        end)
+      end,
+      desc = 'Org todo (project)',
+    },
     ['^'] = { function() require('org').capture('t') end, desc = 'Org capture (project)' },
     ['£'] = { function() require('org').action('pick_project_todo') end, desc = 'Org TODO (project)' },
     ['<C-u>'] = {

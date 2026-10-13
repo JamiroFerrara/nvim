@@ -412,10 +412,15 @@ return {
         pick_project_todo = '<prefix>s',
       },
       agenda = {
-        -- next/previous span; J/K too. `f` is left to the global
-        -- `f = /` mapping (lua/mappings.lua) so search works in the agenda
-        later = 'J',
-        earlier = { 'b', 'K' },
+        -- next/previous span. `J` / `K` are left to the global half-page
+        -- scroll (lua/mappings.lua: J = <C-d>, K = <C-u>) so pagination
+        -- works in the agenda and the TODO view -- both render into the
+        -- same orgagenda buffer -- the same as in any other buffer. The
+        -- span keys move to `)` / `(` (free here) with the plugin's `b`
+        -- for earlier. `f` stays on the global `f = /` mapping
+        -- (lua/mappings.lua) so search works in the agenda.
+        later = ')',
+        earlier = { 'b', '(' },
         clock_goto = '<C-c><C-x><C-j>',
         capture = '<C-c>k',
         -- <leader>n adds a timestamped note under the entry at point
@@ -423,8 +428,10 @@ return {
         add_note = { 'z', '<leader>n' },
         -- `D` toggles the entry's state between DONE and TODO (the action
         -- is registered by helpers/org/agenda.lua in the config function
-        -- below). It takes the place of the default `D` (toggle the Emacs
-        -- diary), unbound here.
+        -- below) and leaves the cursor on the line it acted on, so a run of
+        -- entries can be marked done without the cursor following each into
+        -- the Done section. It takes the place of the default `D` (toggle
+        -- the Emacs diary), unbound here.
         toggle_done = 'D',
         toggle_diary = false,
         -- `N` cycles the TO-DO keyword of the entry at point (TODO -> NEXT
@@ -666,5 +673,6 @@ return {
     require('helpers.org.cookies').setup()
     require('helpers.org.ics').setup()
     require('helpers.org.ai').setup()
+    require('helpers.org.retro').setup()
   end,
 }
