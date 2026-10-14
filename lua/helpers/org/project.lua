@@ -365,6 +365,34 @@ function M.current()
   return { name = name, file = norm(projects_dir .. '/' .. name .. '.org'), root = root, source = 'git' }
 end
 
+--- Name of the sub-project an agenda entry belongs to: the headline claim
+--- (`:PROJECT_DIRS:` on a headline, drawer or shorthand) whose subtree holds
+--- `hl`. A file may host several projects, one per top-level headline
+--- (`allitude.org`'s "Classificazioni EVO" / "PMS", this vault's nvim.org and
+--- its "Org-Roam"); an entry under one is that project's, and the todo view
+--- labels it so instead of the file's own category ("nvim"). Nil outside
+--- every headline claim -- the entry then keeps its file's category, and a
+--- file-level `#+PROJECT_DIRS:` never overrides it. The innermost enclosing
+--- claim wins when they nest.
+---@param hl table|nil org headline
+---@return string|nil
+function M.item_name(hl)
+  if not hl or not hl.file then
+    return nil
+  end
+  refresh()
+  local file = norm(hl.file.filename)
+  local best
+  for _, e in ipairs(index) do
+    if e.line and e.file == file and hl.line >= e.line and hl.line <= (e.end_line or e.line) then
+      if not best or e.line > best.line then
+        best = e
+      end
+    end
+  end
+  return best and best.name or nil
+end
+
 --- The directories the project file `path` claims that cover `lnum`: its
 --- file-level `#+PROJECT_DIRS:` always, plus a headline's `:PROJECT_DIRS:`
 --- only when `lnum` is inside that headline's subtree (so one file hosting

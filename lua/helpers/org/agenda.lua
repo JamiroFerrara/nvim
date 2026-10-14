@@ -958,6 +958,34 @@ local function setup_board_view()
   end)
 end
 
+-- An entry under a headline project of its file (project.M.item_name) is
+-- labelled with that project's name instead of the file's own category: the
+-- "Nvim" board lists "Org-Roam"'s entries under "Org-Roam:", not "nvim".
+-- item_parts is the one place a line is built -- it reads item.category both
+-- for the prefix (`%c`) and for the face it gives the category span -- so the
+-- override is set for that build and put back afterwards, leaving the item as
+-- the plugin built it (the sort and filter that read its category elsewhere
+-- are untouched).
+local function setup_item_category()
+  require('org.lazy').on_load('org.agenda.render', 'item_category', function(render)
+    local item_parts = render.item_parts
+    render.item_parts = function(item, ctx)
+      local name = require('helpers.org.project').item_name(item.headline)
+      if not name or name == item.category then
+        return item_parts(item, ctx)
+      end
+      local category = item.category
+      item.category = name
+      local ok, parts = pcall(item_parts, item, ctx)
+      item.category = category
+      if not ok then
+        error(parts, 0)
+      end
+      return parts
+    end
+  end)
+end
+
 -- <leader>ai on an entry launches an `omp` instance for that ticket in a
 -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp terminal
 -- key in the agenda and in the TODO view, which renders into the same
@@ -1049,6 +1077,7 @@ function M.setup()
   setup_custom_views()
   setup_board_sections()
   setup_board_view()
+  setup_item_category()
   setup_restrict_refresh()
   setup_capture_refresh()
   setup_ai()
