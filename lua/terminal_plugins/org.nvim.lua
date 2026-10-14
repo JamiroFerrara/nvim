@@ -735,7 +735,10 @@ return {
         ics_import = '<prefix>ci',
         -- archive every top-level tree without an open TODO (on a
         -- headline: its children). Emacs reach is 4<prefix>$ (C-u C-c $);
-        -- <prefix>$ alone still archives just the subtree at point.
+        -- <prefix>$ alone still archives just the subtree at point. The
+        -- action is overridden in config() (helpers/org/archive.lua): the
+        -- key archives the matches at once, without org.nvim's per-entry
+        -- "Move subtree to archive?" confirmation.
         archive_all_done = '<prefix>D',
       },
       org_insert = {
@@ -811,7 +814,9 @@ return {
       -- obsidian.nvim vault before a knowledge base is built on it. Every
       -- `.org` below `directory` is indexed; the keys are under
       -- <leader>om and the index under stdpath("data")/org/roam-index.json.
-      roam = { directory = '~/org/roam/playground' },
+      -- The backlinks window (`<leader>oml`, and `<leader>e` in a roam file)
+      -- opens on the left rather than the default right.
+      roam = { directory = '~/org/roam/playground', buffer = { position = 'left' } },
       -- ql = {},
     },
   },
@@ -836,6 +841,14 @@ return {
       'helpers.org.cycle',
       'global_cycle',
       desc = "Fold to the buffer's #+STARTUP visibility (else cycle globally)",
+    }
+    -- `<prefix>D` archives every headline without an open TODO: the action
+    -- is replaced so it runs without org.nvim's per-entry confirmation
+    -- (helpers/org/archive.lua), the way the config's other archive keys do.
+    require('org.actions').list.archive_all_done = {
+      'helpers.org.archive',
+      'archive_all_done',
+      desc = 'Archive children without open TODOs',
     }
     require('org').setup(opts)
 

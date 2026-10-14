@@ -9,6 +9,18 @@
 -- buffer mappings.
 local M = {}
 
+--- Whether `bufnr` is a file of the roam extension (under its directory).
+---@param bufnr integer
+---@return boolean
+local function is_roam(bufnr)
+  local ok, db = pcall(require, 'org.extensions.roam.db')
+  if not ok then
+    return false
+  end
+  local ok_file, roam = pcall(db.is_roam_file, vim.api.nvim_buf_get_name(bufnr))
+  return ok_file and roam or false
+end
+
 function M.setup()
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'org',
@@ -219,6 +231,18 @@ function M.setup()
       vim.keymap.set('n', '<Space><Space>', function()
         require('org').action 'roam_node_find'
       end, { buffer = args.buf, desc = 'org: roam node find (<leader>omf)' })
+
+      -- In a roam file <leader>e toggles the backlinks window (the same
+      -- action as <leader>oml) instead of org.nvim's export dispatcher the
+      -- key would otherwise reach there: the side window is the note's
+      -- context, while export is a rare one-off. Bound only in roam files,
+      -- so the other org buffers keep the export default, and the window is
+      -- on the left (extensions.roam.buffer.position in org.nvim.lua).
+      if is_roam(buf) then
+        vim.keymap.set('n', '<leader>e', function()
+          require('org').action 'roam_buffer_toggle'
+        end, { buffer = buf, desc = 'org: roam backlinks window (<leader>oml)' })
+      end
 
       -- One-key tagging and priorities (helpers/org/tagging.lua): B/F/C
       -- toggle :bug:/:feat:/:chore:, <M-a>/<M-b>/<M-c> priority A/B/C on
