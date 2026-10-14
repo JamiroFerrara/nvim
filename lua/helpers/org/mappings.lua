@@ -79,6 +79,14 @@ function M.setup()
         set_line(lnum, indent .. '- [ ] ' .. rest)
       end, { buffer = buf, desc = 'org: follow link / toggle / make checkbox, cycle visibility' })
 
+      -- Visual-mode <CR>: insert a link to a roam node, the same action as
+      -- <leader>omi (org-roam-node-insert). The selection is the node's
+      -- default title and the inserted link's description, and is replaced
+      -- by the link; a title with no existing node runs the roam capture.
+      vim.keymap.set('x', '<CR>', function()
+        require('org').action 'roam_node_insert'
+      end, { buffer = buf, desc = 'org: roam node insert (<leader>omi)' })
+
       -- Insert-mode <CR> after bullets.vim: on a list item at the end of
       -- the line, continue the list with the same bullet (a checkbox item
       -- continues as `- [ ] `), an empty item is emptied instead, and a
