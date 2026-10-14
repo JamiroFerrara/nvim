@@ -1,8 +1,9 @@
 -- Subtrees in the TODO views (wired in lua/terminal_plugins/org.nvim.lua).
 --
--- A TODO view -- the `o` / digit-2 board / `°` lists, anything rendering a
--- `todo`, `tags_todo` or `search` block -- shows an entry's sublevels as a
--- tree, folded at level 1, matching the org file. `agenda.todo_list_sublevels`
+-- A TODO view -- the `o` list, the board (digit 3 / `°`, and the digit-2
+-- group view over a whole file), anything rendering a `todo`, `tags_todo`
+-- or `search` block -- shows an entry's sublevels as a tree, folded at level
+-- 1, matching the org file. `agenda.todo_list_sublevels`
 -- / `tags_match_list_sublevels` are off (lua/terminal_plugins/org.nvim.lua),
 -- so org.nvim lists only the top-level entries; this helper adds the
 -- subheadlines back, under their ancestor:

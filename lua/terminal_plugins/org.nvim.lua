@@ -14,9 +14,10 @@
 --   capture.lua     capture-task destination (level-1 project headlines)
 --   ics.lua         iCalendar subscriptions + event-detail scratch viewer
 --   cookies.lua     automatic statistics cookies and checkbox auto-DONE
---   agenda.lua      `D` toggle_done action, the fold state after entering
---                   an entry from the list, and the insert mode a terminal
---                   window would leave in the agenda
+--   agenda.lua      `D` toggle_done action, the `<CR>` entry scratch and
+--                   the `L` preview pane beside the view, the fold state
+--                   after entering an entry from the list, and the insert
+--                   mode a terminal window would leave in the agenda
 --   tagging.lua     one-key tag/priority toggles (B/F/C, <M-a>/<M-b>/<M-c>)
 --                   in org buffers and, via agenda.lua, in the view
 --   decorations.lua checkbox icons (conceal, like the markdown config)
@@ -50,6 +51,10 @@
 --                   tree guides, folded at level 1, <Tab>/<S-Tab> fold like
 --                   an org file, and `c` / <leader>aC capture a child of the
 --                   entry at point
+--   callouts.lua    entry lines of the TODO views as callout blocks: a bar
+--                   and a full-width band in the state's color (from the
+--                   keyword face), so the list reads as stacked blocks
+
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
 local notes = require 'helpers.org.notes'
@@ -77,8 +82,8 @@ local BOARD_STATE_ORDER = { 'TEST', 'NEXT', 'TODO', 'PEND', 'WARN' }
 -- across tags, so in the classification sections those two keywords match
 -- nothing and their subsections are dropped -- the derivation is kept whole
 -- so a new open keyword still lands in one. helpers/org/agenda.lua only
--- reads it -- and, for the blocks marked `state_sections`, swaps the
--- extension's blank-line separator for a rule.
+-- reads it -- and, for the blocks marked `state_sections`, keeps the rule
+-- under the section's header rather than between the subsections.
 local BOARD_SECTIONS = { { discard = { tag = 'someday' } } }
 do
   local rank = {}
@@ -107,9 +112,10 @@ end
 -- BOARD_SECTIONS and ordered by priority inside each -- A/B/C first, the
 -- default urgency order settling the ties. No priority means the
 -- unprioritized value, so those entries sort after C. helpers/org/agenda.lua
--- reads the two markers: `state_sections` swaps the subsections' blank-line
--- separator for a rule, and `hide_empty` drops the section -- its header
--- included -- when it holds nothing, so an empty one is not shown at all.
+-- reads the two markers: `state_sections` keeps only the rule under the
+-- section's own header, telling the subsections apart by a blank line, and
+-- `hide_empty` drops the section -- its header included -- when it holds
+-- nothing, so an empty one is not shown at all.
 local function board_section(match, header)
   return {
     type = 'tags_todo',
@@ -120,6 +126,17 @@ local function board_section(match, header)
     hide_empty = true,
     sorting = { 'priority-down', 'urgency-down', 'category-keep' },
   }
+end
+
+-- The `p` view below lists the entries carrying a priority cookie, so its
+-- two blocks skip the ones that carry none. A `PRIORITY` match cannot tell
+-- them apart: a cookie-less entry resolves to the file's default priority,
+-- `B` (org-default-priority), in Emacs too -- `org-entry-get` answers "B"
+-- there -- so `PRIORITY="B"/!` claimed every unprioritized open entry and
+-- the old view filled its Priority B section with them. The cookie is what
+-- the user set; `hl.priority` is nil without one (org.parser).
+local function unprioritized(hl)
+  return hl.priority == nil
 end
 
 -- org-agenda-cmp-user-defined for the `d` Done view below (`sorting =
@@ -190,10 +207,11 @@ return {
       -- picker) reads one project, so the tags and priorities the ticket
       -- lines already carry are only visible here. Reached from the
       -- dispatcher menu or `:Org agenda <key>`, which give the whole set;
-      -- the agenda buffer's 1 / 2 / 3 (helpers/org/agenda.lua) open them, 1
-      -- global and the rest narrowed to the cwd's project. `°`
-      -- (helpers/org/project.lua) opens the `w` board the same scoped way,
-      -- so it is an alias for the `2` key. The keys avoid the built-in
+      -- the agenda buffer's 1 / 2 / 3 / 4 (helpers/org/agenda.lua) open
+      -- them, 1 global, 2 the whole file of the cwd's project, and the
+      -- rest narrowed to cwd's project. `°` (helpers/org/project.lua) opens
+      -- the `w` board the same scoped way, so it is an alias for the `3`
+      -- key. The keys avoid the built-in
       -- dispatcher ones (a t T m M s S n # / < > e * ?), so they add rows
       -- instead of replacing. Blocks are `tags_todo`
       -- (tags/property match, TODO entries only) -- the `/!` trailing the
@@ -207,12 +225,13 @@ return {
       -- `tags_todo`, so the finished entries are listed, not filtered out).
       -- The classification sections are the `board_section` helper's, one
       -- subsection per remaining open keyword (TODO, PEND, WARN --
-      -- BOARD_STATE_ORDER) with a rule between and ordered by priority
+      -- BOARD_STATE_ORDER) with a blank line between -- the section's own
+      -- header carries the only rule -- and ordered by priority
       -- inside each, so a ticket also moves between subsections as it
       -- changes state. A section holding nothing is not drawn -- the "In
       -- progress" and Done blocks included -- and the sections are told
-      -- apart by a blank line, not a rule (a rule only splits the
-      -- subsections inside one); `p` the open A/B priorities. A block's
+      -- apart by a blank line, not a rule (a rule only under a section's
+      -- header); `p` the open A/B priorities. A block's
       -- `header` labels the group; a composite command shows its blocks one
       -- after the other, in this order.
       custom_commands = {
@@ -275,9 +294,10 @@ return {
               -- Most recently finished first: user-defined-down reverses
               -- done_recency above, which orders the entries by CLOSED
               -- ascending. Replaces the default todo sorting (urgency-down),
-              -- which says nothing about a finished entry. The digit-2
-              -- board, the dispatcher menu's `w` and `°`
-              -- (helpers/org/project.lua) all deep-copy this block.
+              -- which says nothing about a finished entry. The board
+              -- (digit 3 / `°`, and `2`'s whole-file group view), the
+              -- dispatcher menu's `w` and `°` (helpers/org/project.lua) all
+              -- deep-copy this block.
               sorting = { 'user-defined-down' },
             },
           },
@@ -285,8 +305,8 @@ return {
         p = {
           description = 'Open A/B priorities',
           types = {
-            { type = 'tags_todo', match = 'PRIORITY="A"/!', header = 'Priority A, open' },
-            { type = 'tags_todo', match = 'PRIORITY="B"/!', header = 'Priority B, open' },
+            { type = 'tags_todo', match = 'PRIORITY="A"/!', header = 'Priority A, open', skip = unprioritized },
+            { type = 'tags_todo', match = 'PRIORITY="B"/!', header = 'Priority B, open', skip = unprioritized },
           },
         },
       },
@@ -308,9 +328,10 @@ return {
       todo_list_sublevels = false,
       tags_match_list_sublevels = false,
       -- Line prefix (org-agenda-prefix-format) for the entry lists. The stock
-      -- `" %i %-12:c"` is kept, and the `todo` kind -- the `°` / digit-2
-      -- board and the global `o` -- gains the entry's last-changed
-      -- date before the keyword, the date the entry last moved: helpers/org/
+      -- `" %i %-12:c"` is kept, and the `todo` kind -- the board (digit 3 /
+      -- `°`, `2`'s whole-file group view) and the global `o` -- gains the
+      -- entry's last-changed date before the keyword, the date the entry
+      -- last moved: helpers/org/
       -- changed.lua takes the newest timestamp the entry carries (CLOSED, a
       -- note/capture header, an edited date) and reads it relative while
       -- recent ("today 15:53", "3d ago") and as "9 Oct" past a week.
@@ -569,6 +590,16 @@ return {
         -- view already owns the window, so the default `o`
         -- (delete_other_windows, unbound here) does nothing useful.
         entry_scratch = '<CR>',
+        -- `L` opens the same entry scratch beside the view instead of in it
+        -- (helpers/org/agenda.lua setup_entry_preview): a preview window on
+        -- the right holding the entry at the cursor, reloaded as the cursor
+        -- moves to another entry. `L` again, `q` in the pane, or leaving the
+        -- view closes it. The default `L` (recenter: the entry shown in its
+        -- file, in another window) is unbound to give it the key -- two
+        -- actions on one lhs would leave the winner to the mapping table's
+        -- iteration order.
+        recenter = false,
+        entry_preview = 'L',
         switch_to = { '<Space>', '<S-CR>', 'o' },
         delete_other_windows = false,
         show = false,
@@ -708,7 +739,13 @@ return {
           },
         },
       },
-      -- roam = {},
+      -- org-roam, pointed at a sandbox rather than a real note directory
+      -- (~/org/roam/playground, whose playground.org index says what to
+      -- try), so the extension can be explored and weighed against the
+      -- obsidian.nvim vault before a knowledge base is built on it. Every
+      -- `.org` below `directory` is indexed; the keys are under
+      -- <leader>om and the index under stdpath("data")/org/roam-index.json.
+      roam = { directory = '~/org/roam/playground' },
       -- ql = {},
     },
   },
@@ -743,6 +780,7 @@ return {
     -- org.nvim is required at startup.
     require('helpers.org.agenda').setup()
     require('helpers.org.tree').setup()
+    require('helpers.org.callouts').setup()
     require('helpers.org.decorations').setup()
     require('helpers.org.notes').setup()
     capture.setup()

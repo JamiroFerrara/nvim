@@ -503,12 +503,14 @@ function M.ensure(project)
   return true
 end
 
---- The `°` view: the project's board, i.e. the `w` custom command -- the
---- same view the agenda's `2` key opens (helpers.org.agenda.custom_view),
---- scoped to the cwd's project when there is one and to every agenda file
---- otherwise. A headline claim is restricted to its subtree. The view takes
---- over the focused window (agenda.window = 'current' in the plugin spec)
---- rather than splitting below it; `q` puts the buffer back.
+--- The `°` view: the project's board, i.e. the `w` custom command scoped to
+--- the cwd's project -- the same view the agenda's `3` key opens
+--- (helpers.org.agenda.custom_view), and to every agenda file when there is
+--- no project. A headline claim is restricted to its subtree; the agenda's
+--- `2` group view (helpers/org/agenda.lua) is this same `w` board but over
+--- the cwd project's whole file. The view takes over the focused window
+--- (agenda.window = 'current' in the plugin spec) rather than splitting
+--- below it; `q` puts the buffer back.
 function M.todo_view()
   require('helpers.org.agenda').custom_view 'w'
 end
