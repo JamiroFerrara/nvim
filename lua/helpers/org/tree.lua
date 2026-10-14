@@ -35,11 +35,16 @@
 --     `… (N)` with the `…` while descendants are hidden and plain `(N)`
 --     once they are shown;
 --   * `<Tab>` is fold-only in the view: it cycles the node at point
---     (folded -> children -> subtree -> folded), like org's own <Tab>, and
---     does nothing on a line without a subtree -- it never falls back to
---     org.nvim's `goto`, which opened the entry's source file in a split
---     (`<Space>` / `o` / `<CR>` are what leave the view); `<S-Tab>` cycles
---     every node of the view;
+--     (folded -> children -> subtree -> folded), like org's own <Tab>. On a
+--     line without a subtree it falls back to the group header's own fold
+--     (org-super-agenda's `toggle_group`, which this key would otherwise
+--     shadow) -- never to org.nvim's `goto`, which opened the entry's source
+--     file in a split (`<Space>` / `o` / `<CR>` are what leave the view);
+--     `<S-Tab>` cycles every node of the view;
+--   * `l` unfolds what is folded at point, one direction only: the node's
+--     subtree in a TODO view (one step: folded -> children -> subtree), a
+--     folded group header (`… (N)`) in any agenda view. It takes the key
+--     from log mode, which keeps its `vl` spelling;
 --   * `c` (and its longer spelling `<leader>aC`) captures a new entry as a
 --     child of the entry at point, by pointing the Task template at the
 --     entry's own outline path -- the agenda's default `c`
@@ -59,6 +64,10 @@ local M = {}
 local states = {}
 -- view -> tree of the last render; weak, the view object is rebuilt per open
 local views = setmetatable({}, { __mode = 'k' })
+-- buffer -> { [lnum] = super-agenda group id } of the last render: what a
+-- group header line draws, for `l` to unfold it (the extension exports the
+-- fold state of an id, not the header line -> id map).
+local group_of = {}
 
 local MODE_NEXT = { folded = 'children', children = 'subtree', subtree = 'folded' }
 local HINT = 'OrgTreeFolded'
@@ -596,6 +605,60 @@ local function cycle_node(buf, nd)
   refocus(buf, key)
 end
 
+--- The fold state of the group whose header line is `lnum`: `"folded"` /
+--- `"shown"`, else nil when the line is not a group header (the `… (N)` on
+--- the header shows a folded one). org-super-agenda exports the state of a
+--- group id but keeps the line -> id map private, and `group_of` is that
+--- map, recorded per render.
+local function group_at(buf, lnum)
+  local id = (group_of[buf] or {})[lnum]
+  -- the extension is loaded whenever a header was drawn (its grouper made
+  -- it), so it is read from package.loaded, never required on a keypress
+  local sa = id and package.loaded['org.extensions.super_agenda']
+  if not (sa and sa.folded) then
+    return nil
+  end
+  return sa.folded[id] == true and 'folded' or 'shown'
+end
+
+--- org-super-agenda's own key on a group header: fold it, or unfold it.
+--- False when the line is not a group header.
+local function toggle_group(buf, lnum)
+  if not group_at(buf, lnum) then
+    return false
+  end
+  package.loaded['org.extensions.super_agenda'].toggle_group()
+  return true
+end
+
+--- Unfold the group whose header line is `lnum`, and only that: an unfolded
+--- header is left alone. False when the line is not a folded group header.
+local function unfold_group(buf, lnum)
+  if group_at(buf, lnum) ~= 'folded' then
+    return false
+  end
+  package.loaded['org.extensions.super_agenda'].toggle_group()
+  return true
+end
+
+--- `l`: unfold what is folded at the entry at point -- the node's subtree in
+--- a TODO view (one step, folded -> children -> subtree, never back), else
+--- the group whose header the line is, in an agenda view. Unlike `<Tab>`,
+--- which cycles, it only reveals: on something already unfolded it does
+--- nothing.
+local function unfold(buf, lnum)
+  local nd = node_at(buf, lnum)
+  if nd and #nd.children > 0 then
+    local state = states[nd.key] or nd.state or 'folded'
+    if state ~= 'subtree' then
+      states[nd.key] = state == 'folded' and 'children' or 'subtree'
+      refocus(buf, nd.key)
+    end
+    return
+  end
+  unfold_group(buf, lnum)
+end
+
 local function cycle_all(buf)
   local tree = tree_of(buf)
   if not tree then
@@ -682,6 +745,20 @@ local function setup_cookies()
   end)
 end
 
+--- Record what each group header line of the last render draws (the
+--- builder's `super_headers`, line -> group id), so `l` knows which group a
+--- header is and whether the extension has it folded. A refresh hook, so it
+--- covers the day/week agenda too, which the tree leaves untouched.
+local function recall_group_headers(buf, b)
+  group_of[buf] = b.super_headers
+end
+
+local function setup_groups()
+  require('org.lazy').on_load('org.agenda.view', 'tree_group_headers', function(view)
+    view.refresh_hooks.group_headers = recall_group_headers
+  end)
+end
+
 local function setup_keys()
   -- A TODO view folds like an org buffer: <Tab> cycles the node at point
   -- (folded -> children -> subtree -> folded) and does nothing anywhere
@@ -702,14 +779,29 @@ local function setup_keys()
         return
       end
       vim.keymap.set('n', '<Tab>', function()
-        local nd = node_at(buf, vim.api.nvim_win_get_cursor(0)[1])
+        local lnum = vim.api.nvim_win_get_cursor(0)[1]
+        local nd = node_at(buf, lnum)
         if nd and #nd.children > 0 then
           cycle_node(buf, nd)
+          return
         end
-      end, { buffer = buf, desc = 'org: fold the subtree at point' })
+        -- A group header keeps org-super-agenda's own key: it folds the
+        -- group. The extension binds it during the first refresh, before
+        -- this key, and skips a buffer it already keyed, so without the
+        -- fallback its fold would be shadowed here -- and the fallback of
+        -- its own handler (org.nvim's `goto`) is what must stay off the
+        -- key.
+        toggle_group(buf, lnum)
+      end, { buffer = buf, desc = 'org: fold the subtree or group at point' })
       vim.keymap.set('n', '<S-Tab>', function()
         cycle_all(buf)
       end, { buffer = buf, desc = 'org: fold every subtree of the view' })
+      -- `l` unfolds (never folds): the node's subtree at a folded entry of a
+      -- TODO view, the group at a folded header (`… (N)`) anywhere, the
+      -- agenda included. It takes the key from log mode, which keeps `vl`.
+      vim.keymap.set('n', 'l', function()
+        unfold(buf, vim.api.nvim_win_get_cursor(0)[1])
+      end, { buffer = buf, desc = 'org: unfold the subtree or group at point' })
       -- `c` is the key the capture is pressed from; <leader>aC is the same
       -- action kept as the longer spelling. The default agenda `c`
       -- (org-agenda-calendar) is unbound in the plugin spec to give it the
@@ -731,6 +823,7 @@ function M.setup()
   setup_render()
   setup_keys()
   setup_cookies()
+  setup_groups()
 end
 
 return M

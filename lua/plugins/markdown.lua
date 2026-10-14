@@ -3,10 +3,23 @@ return {
   -- event = 'VeryLazy',
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
   main = 'render-markdown',
-  ft = { 'markdown', 'Avante', 'copilot-chat', 'opencode_output' },
+  -- `org` renders the markdown injected into `#+begin_src markdown` blocks
+  -- (queries/org/injections.scm) exactly like a .md file.
+  ft = { 'markdown', 'Avante', 'copilot-chat', 'opencode_output', 'org' },
   opts = {
     anti_conceal = { enabled = true },
-    file_types = { 'markdown', 'opencode_output' },
+    file_types = { 'markdown', 'opencode_output', 'org' },
+    overrides = {
+      -- org.nvim draws its own hidden text with a replacement character --
+      -- checkbox icons, table borders, links -- and that needs
+      -- 'conceallevel' 2 exactly: at 3 (render-markdown's rendered default)
+      -- the replacement character is dropped and those decorations vanish.
+      -- 'concealcursor' stays at org's "nc" for the same reason: it is what
+      -- keeps the cursor line editable in insert mode.
+      filetype = {
+        org = { win_options = { conceallevel = { default = 2, rendered = 2 }, concealcursor = { default = 'nc', rendered = 'nc' } } },
+      },
+    },
     heading = {
       -- Turn on / off heading icon & background rendering
       enabled = true,
@@ -205,7 +218,7 @@ return {
       highlight = 'RenderMarkdownSign',
     },
   },
-  name = 'render-markdown',                                                      -- Only needed if you have another plugin named markdown.nvim
+  name = 'render-markdown', -- Only needed if you have another plugin named markdown.nvim
   dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.nvim' }, -- if you use the mini.nvim suite
   -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.icons' }, -- if you use standalone mini plugins
   -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons

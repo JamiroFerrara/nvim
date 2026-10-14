@@ -451,15 +451,21 @@ return {
         -- A TODO view (helpers/org/tree.lua) shows an entry's sublevels --
         -- the plain subheadlines included -- as a tree folded at level 1,
         -- and `<Tab>` there is fold-only: it cycles the node at point,
-        -- org-style (folded -> children -> subtree -> folded), and does
-        -- nothing on a line without a subtree -- never org.nvim's `goto`,
-        -- which opened the entry's source file in a split (`<Space>` / `o`
-        -- / `<CR>` are the keys that leave the view). `<S-Tab>` cycles
-        -- every node of the view, and `c` captures a child of the entry at
-        -- point (the longer `<leader>aC` is the same action). All
+        -- org-style (folded -> children -> subtree -> folded), or, on a
+        -- plain line, folds the group of the header there, which this key
+        -- would otherwise shadow -- never org.nvim's `goto`, which opened
+        -- the entry's source file in a split (`<Space>` / `o` / `<CR>` are
+        -- the keys that leave the view). `<S-Tab>` cycles every node of the
+        -- view, `l` unfolds the node at point one step (or the folded group
+        -- header of an agenda view), and `c` captures a child of the entry
+        -- at point (the longer `<leader>aC` is the same action). All
         -- buffer-local, set in helpers/org/tree.lua.
         clock_goto = '<C-c><C-x><C-j>',
         capture = '<C-c>k',
+        -- log mode keeps only its `v` spelling: `l` unfolds the node or
+        -- group at point (helpers/org/tree.lua) and must not be shadowed by
+        -- the default `l`.
+        log_mode = 'vl',
         -- <leader>n adds a timestamped note under the entry at point
         -- (org-add-note); the default `z` stays
         add_note = { 'z', '<leader>n' },

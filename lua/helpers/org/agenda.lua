@@ -4,7 +4,7 @@
 -- toggles (helpers/org/tagging.lua), the fold state
 -- left behind by entering an entry, the editable scratch view `<CR>` opens
 -- with only that entry (wrapped by default, written back into its file on
--- save), the insert mode a terminal window would
+-- save or when it is left), the insert mode a terminal window would
 -- otherwise leave in the agenda, the re-render after a capture filed from
 -- it (with the subtree range of a headline project's `°` view kept in step,
 -- else the entry it just wrote falls outside it), the `§` / `°` launch keys
@@ -150,10 +150,12 @@ end
 -- source buffer, so a write after edits elsewhere in the file still lands on
 -- the entry; the subtree range is recomputed at the mark each time. The
 -- window wraps by default, its previous wrap value restored when the scratch
--- goes. Leaving the scratch never asks to save it -- `q` is forced and `:q`
--- / window-close paths drop the modified flag first, so only `:w` writes it.
--- Registered as an agenda action named in the spec, the way toggle_done is
--- above.
+-- goes. Leaving the scratch never asks to save it (nothing about it looks
+-- unsaved to nvim, see the guard below) and keeps the edits: the buffer is
+-- written back on the way out as well as on `:w`, so `q` and every buffer
+-- command answer nvim's "Save changes to ...?" with yes instead of raising
+-- it. Registered as an agenda action named in the spec, the way toggle_done
+-- is above.
 local function setup_entry_scratch()
   require('org.lazy').on_load('org.agenda.view', 'entry_scratch', function(view)
     local ns = vim.api.nvim_create_namespace 'org_entry_scratch'
@@ -187,39 +189,75 @@ local function setup_entry_scratch()
       pcall(vim.api.nvim_buf_set_name, buf, 'org-entry://' .. name)
       vim.api.nvim_win_set_buf(win, buf)
       vim.wo[win].wrap = true
-      -- Leaving the scratch never asks to save it (`confirm` is on): `q` is
-      -- forced, and `:q` / window-close paths drop the modified flag first.
-      -- `:w` still runs the write hook below (BufWriteCmd fires on an
-      -- unmodified acwrite buffer).
+      -- The preview is a scratch holding a copy of the entry; it is written
+      -- back into the source file in place of the entry (the extmark keeps
+      -- the position across edits elsewhere in the file).
+      local dirty = false
+      local function write_back()
+        if not vim.api.nvim_buf_is_valid(src) or not vim.api.nvim_buf_is_valid(buf) then
+          return
+        end
+        local pos = vim.api.nvim_buf_get_extmark_by_id(src, ns, mark, {})
+        local line = (pos[1] or (hl.line - 1)) + 1
+        local cur = require('org.files').get_buffer(src):headline_at(line)
+        local from = cur and cur.line or line
+        local to = cur and cur.end_line or (from + span - 1)
+        vim.api.nvim_buf_set_lines(src, from - 1, to, false, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+        vim.api.nvim_buf_set_extmark(src, ns, from - 1, 0, { id = mark, right_gravity = false })
+        if vim.api.nvim_buf_get_name(src) ~= '' then
+          vim.api.nvim_buf_call(src, function()
+            vim.cmd 'silent! write'
+          end)
+        end
+        dirty = false
+      end
+
+      -- nvim must never believe the preview holds unsaved work. With
+      -- `confirm` on it checks the modified flag for every command that
+      -- drops a buffer -- `:bdelete`, `:bwipeout`, `:edit`, `:enew`,
+      -- `:close` -- before any buffer autocommand fires, so clearing it in
+      -- QuitPre (which only covers `:q` / `:wq` / `:qa`) left the rest
+      -- asking "Save changes to ...?". The flag is dropped again after
+      -- every change and the buffer is tracked as `dirty` instead: the
+      -- answer to that question is always yes -- `:w` and leaving the
+      -- preview both write the edits back (write_back), so nothing is lost
+      -- and the prompt cannot come back. `:w` still runs the write hook
+      -- (BufWriteCmd fires on an unmodified acwrite buffer).
+      local function unmodify()
+        dirty = true
+        vim.bo[buf].modified = false
+      end
+      vim.bo[buf].modified = false
+      -- on_lines sees every change to the buffer, keystroke or API alike
+      vim.api.nvim_buf_attach(buf, false, {
+        on_lines = function()
+          unmodify()
+        end,
+      })
       vim.keymap.set('n', 'q', function()
         vim.cmd 'buffer! #'
       end, { buffer = buf, desc = 'org: close the entry view' })
-      vim.api.nvim_create_autocmd('QuitPre', {
-        buffer = buf,
-        callback = function()
-          vim.bo[buf].modified = false
-        end,
-      })
       vim.api.nvim_create_autocmd('BufWriteCmd', {
         buffer = buf,
         callback = function()
-          if not vim.api.nvim_buf_is_valid(src) then
-            vim.bo[buf].modified = false
-            return
-          end
-          local pos = vim.api.nvim_buf_get_extmark_by_id(src, ns, mark, {})
-          local line = (pos[1] or (hl.line - 1)) + 1
-          local cur = require('org.files').get_buffer(src):headline_at(line)
-          local from = cur and cur.line or line
-          local to = cur and cur.end_line or (from + span - 1)
-          vim.api.nvim_buf_set_lines(src, from - 1, to, false, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
-          vim.api.nvim_buf_set_extmark(src, ns, from - 1, 0, { id = mark, right_gravity = false })
-          if vim.api.nvim_buf_get_name(src) ~= '' then
-            vim.api.nvim_buf_call(src, function()
-              vim.cmd 'silent! write'
-            end)
-          end
+          write_back()
           vim.bo[buf].modified = false
+        end,
+      })
+      vim.api.nvim_create_autocmd({ 'QuitPre', 'BufHidden', 'BufWipeout' }, {
+        buffer = buf,
+        callback = function()
+          -- leaving the preview is the other "yes": an edited preview is
+          -- written back rather than dropped -- but only while it still
+          -- holds the entry. `:edit` on the scratch reloads the
+          -- (nonexistent) file and empties it, and writing that back would
+          -- wipe the entry out of its file. QuitPre is here for `:q` on the
+          -- last window, where the buffer never gets hidden (nvim exits
+          -- first).
+          local first = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]
+          if dirty and first ~= nil and first:find '^%*+%s' then
+            pcall(write_back)
+          end
         end,
       })
       vim.api.nvim_create_autocmd('BufWipeout', {

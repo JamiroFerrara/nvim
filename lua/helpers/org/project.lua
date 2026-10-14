@@ -4,9 +4,11 @@
 -- A project's home is a file ~/org/projects/<name>.org or a headline inside
 -- one. Both are claims over directories:
 --   * `#+PROJECT_DIRS:` at file level claims for the whole file;
---   * `:PROJECT_DIRS:` in a headline's drawer claims for that headline, so
---     one file can host several projects (a client roll-up, a tangle, or
---     just a shared inbox).
+--   * `:PROJECT_DIRS:` on a headline claims for that headline, so one file
+--     can host several projects (a client roll-up, a tangle, or just a
+--     shared inbox). It reads the property drawer, and also the shorthand
+--     org.nvim's parser ignores there: a `:PROJECT_DIRS:` line written
+--     straight under the headline, no `:PROPERTIES:` drawer around it.
 -- The longest directory prefix covering the cwd wins; org nesting is
 -- irrelevant, and on an equal-length tie a headline claim beats the file's
 -- own. With no claim at all, the nearest ancestor holding a `.git` entry
@@ -92,8 +94,31 @@ local function split_dirs(value)
   return out
 end
 
+--- `:PROJECT_DIRS:` lines written straight under a headline instead of in a
+--- `:PROPERTIES:` drawer. org.nvim parses the drawer only, so these read like
+--- ordinary body text to it; pick them off the raw lines. The run stops at
+--- the first line that is not another `:PROJECT_DIRS:`, so a drawer, a blank
+--- line or prose after them all end the block and a `:PROJECT_DIRS:` quoted
+--- further down the body is not a claim.
+---@param file table
+---@param hl table
+---@return string[]
+local function bare_dirs(file, hl)
+  local out = {}
+  local lines = file.lines or {}
+  local last = hl.body_end or hl.end_line
+  for i = hl.line + 1, last do
+    local value = lines[i] and lines[i]:match '^%s*:PROJECT_DIRS:%s*(.*)$'
+    if not value then
+      break
+    end
+    vim.list_extend(out, split_dirs(value))
+  end
+  return out
+end
+
 --- The claims a project file makes: its file-level keyword, then the
---- `:PROJECT_DIRS:` property of each headline.
+--- `:PROJECT_DIRS:` of each headline, drawer or shorthand.
 ---@param path string
 ---@return table[] { dir, olp?, line?, end_line? }
 local function claims_of(path)
@@ -111,16 +136,23 @@ local function claims_of(path)
     end
   end
   for _, hl in ipairs(file.headlines or {}) do
-    -- own property drawer only: a child headline must not inherit the claim
-    local value = hl:get_property('PROJECT_DIRS', false)
-    if value then
-      local dirs = split_dirs(value)
-      if #dirs == 0 then
-        require('org.utils').warn(string.format('project: empty :PROJECT_DIRS: on %s line %d', vim.fn.fnamemodify(path, ':t'), hl.line))
+    -- own claim only: a child headline must not inherit it -- the drawer, or
+    -- the shorthand lines right under the headline. The same directory
+    -- declared twice (drawer and shorthand, or repeated) is one claim.
+    local drawer = hl:get_property('PROJECT_DIRS', false)
+    local bare = bare_dirs(file, hl)
+    local dirs, seen = {}, {}
+    for _, dir in ipairs(vim.list_extend(split_dirs(drawer or ''), bare)) do
+      if not seen[dir] then
+        seen[dir] = true
+        dirs[#dirs + 1] = dir
       end
-      for _, dir in ipairs(dirs) do
-        out[#out + 1] = { dir = dir, olp = olp_of(hl), line = hl.line, end_line = hl.end_line, name = hl:plain_title(), raw = hl.raw }
-      end
+    end
+    if (drawer or #bare > 0) and #dirs == 0 then
+      require('org.utils').warn(string.format('project: empty :PROJECT_DIRS: on %s line %d', vim.fn.fnamemodify(path, ':t'), hl.line))
+    end
+    for _, dir in ipairs(dirs) do
+      out[#out + 1] = { dir = dir, olp = olp_of(hl), line = hl.line, end_line = hl.end_line, name = hl:plain_title(), raw = hl.raw }
     end
   end
   return out
