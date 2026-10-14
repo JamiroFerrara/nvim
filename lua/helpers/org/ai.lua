@@ -3,6 +3,12 @@
 -- :ID: and file. Over a Visual selection it is that same launch applied to
 -- every entry the selection covers (M.launch_range), one instance each.
 --
+-- In an open capture buffer the same key finishes the capture first -- the
+-- entry is filed at its template's destination and the target file written --
+-- and launches on the entry it just stored, so `<leader>ai` captures and
+-- starts the run in one stroke instead of reading the capture buffer's
+-- scratch text as a headline.
+--
 -- Layout: the first launch splits the nvim pane once with a vertical divider
 -- (`split-window -h`, omp on the right). Once anything already sits beside
 -- nvim, every later launch opens its own tmux window inserted after the
@@ -151,14 +157,69 @@ local function preview_source()
   return src, pos[1] + 1
 end
 
+--- The buffer of the open capture buffer at the cursor, or nil. org.nvim
+--- registers a capture session per buffer (`org.capture.sessions`), for both
+--- capture ways in (the `^` Task capture and the `c` / <leader>aC
+--- capture-under-entry), and clears it once the capture ends, so the entry is
+--- only ever an editor state while the capture is open.
+---@return integer|nil
+local function capture_buffer()
+  local capture = package.loaded['org.capture']
+  local buf = vim.api.nvim_get_current_buf()
+  if capture and capture.sessions[buf] then
+    return buf
+  end
+end
+
+--- Store the capture open in `buf` and return the entry it landed on: the
+--- template's own destination resolution is what places it (the working
+--- directory's project, the picker otherwise), and the target file is written
+--- by the store itself, so the launch that follows reads a real headline on
+--- disk. Returns nil, with a notification, when nothing was stored -- the
+--- capture stays open, with its text, exactly as a failing `<C-c><C-c>`
+--- leaves it.
+---@param buf integer
+---@return integer|nil bufnr
+---@return integer|nil lnum
+local function finalize_capture(buf)
+  local capture = package.loaded['org.capture']
+  local ok, dbuf, dline = pcall(capture.finalize, buf, { jump = false })
+  if not ok then
+    notify('org ai: ' .. tostring(dbuf), vim.log.levels.WARN)
+    return nil
+  end
+  if not (dbuf and dline) then
+    notify('org ai: the capture was not stored', vim.log.levels.WARN)
+    return nil
+  end
+  return dbuf, dline
+end
+
 --- The buffer line of the headline the cursor is on: the entry at point in
 --- the agenda / TODO view, resolved to its source buffer; the headline at
 --- the cursor in an org buffer -- or the real headline behind the
 --- `org-entry` preview scratch. nil, with a notification, when the cursor is
 --- nowhere near a headline.
+---
+--- An open capture buffer is not a ticket: its `* TODO` line looks like a
+--- headline but no file holds it yet. With `store_capture` set (the launch)
+--- the capture is finished first -- filed at its destination, the target file
+--- written -- and the launch acts on the stored headline, so one key captures
+--- and starts the run; the capture stays open, and the launch aborts, when it
+--- could not be stored. Without it (the jump) nothing is written: the entry
+--- to jump to does not exist before the capture is filed.
+---@param store_capture? boolean
 ---@return integer|nil bufnr
 ---@return integer|nil lnum
-local function target_at_cursor()
+local function target_at_cursor(store_capture)
+  local capture_buf = capture_buffer()
+  if capture_buf then
+    if store_capture then
+      return finalize_capture(capture_buf)
+    end
+    notify('org ai: the capture is not stored yet -- <leader>ai stores it and launches', vim.log.levels.WARN)
+    return nil
+  end
   local view = require 'org.agenda.view'
   if vim.bo.filetype == 'orgagenda' then
     local item = view.item_at_cursor()
@@ -241,11 +302,13 @@ local function ticket_at(bufnr, lnum, mutate)
 end
 
 --- The headline at the cursor, in an orgagenda or an org buffer (ticket_at
---- on target_at_cursor).
+--- on target_at_cursor). `mutate` is the launch, and it is also what lets an
+--- open capture buffer be filed (target_at_cursor's `store_capture`): the
+--- jump (`<leader>aj`) never stores a half-typed capture.
 ---@param mutate boolean
 ---@return OrgTicket|nil
 local function ticket_at_cursor(mutate)
-  local bufnr, lnum = target_at_cursor()
+  local bufnr, lnum = target_at_cursor(mutate)
   if not bufnr then
     return nil
   end
@@ -710,7 +773,9 @@ function M.sync()
 end
 
 --- `<leader>ai` in an org or orgagenda buffer: commit the project's pending
---- work (the revert point for the run), then start omp on the headline.
+--- work (the revert point for the run), then start omp on the headline. In an
+--- open capture buffer the capture is finished first (target_at_cursor), so
+--- the ticket is the entry just stored.
 function M.launch()
   local ticket = ticket_at_cursor(true)
   if not ticket then

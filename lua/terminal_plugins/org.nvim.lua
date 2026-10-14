@@ -45,7 +45,9 @@
 --                   the ticket in a tmux pane and follows its write-back
 --                   (watch.lua reloads the changed org files live; the
 --                   FocusGained autocmd covers a change made while nvim
---                   was unfocused)
+--                   was unfocused). In an open capture buffer the same key
+--                   files the capture at its destination first and launches
+--                   on the entry it stored
 --   retro.lua       `<leader>ar`: one omp run over the agent sessions of
 --                   every DONE ticket carrying `:OMP_SESSION:`, the retro
 --                   skill appended; the report lands in a dated file under
@@ -216,6 +218,15 @@ return {
     org_directory = '~/org',
     agenda_files = { '~/org/**/*.org' },
     default_notes_file = '~/org/refile.org',
+    -- An entry cannot be marked DONE while it still has an unfinished child
+    -- (org's org-enforce-todo-dependencies; off in org.nvim's own defaults).
+    -- Only DONE is guarded: the open keywords of this vault's set
+    -- (TODO NEXT PEND TEST WARN) can be set on a parent freely, so a ticket
+    -- handed back as TEST/WARN/PEND is never blocked. A refused change warns
+    -- and opens the entry's tree, so the child that blocks it is on screen
+    -- (helpers/org/reveal.lua); `force` (C-u C-u C-u <C-c><C-t>) and the
+    -- :NOBLOCKING: property change the state anyway.
+    enforce_todo_dependencies = true,
     -- org.nvim can remind you about timed entries: SCHEDULED, DEADLINE and
     -- plain timestamps in the agenda files fire a vim.notify -- and, with
     -- system_notification, a desktop toast -- before they start. It is the
@@ -871,6 +882,7 @@ return {
     require('helpers.org.cookies').setup()
     require('helpers.org.agenda').setup()
     require('helpers.org.tree').setup()
+    require('helpers.org.reveal').setup()
     require('helpers.org.callouts').setup()
     require('helpers.org.decorations').setup()
     -- the group view's `changed-down` sorting strategy: it reads the same

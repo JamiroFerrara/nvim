@@ -214,6 +214,14 @@ function M.setup()
       -- headline the selection covers, the same way, one instance each
       -- (launch_range). <leader>aj jumps to that instance's pane when it is
       -- already running, resuming its session when it is not.
+      --
+      -- In an open capture buffer <leader>ai finishes the capture first and
+      -- launches on the entry it stored (one key: capture, then run); the
+      -- capture stays open when it could not be stored. <leader>aj writes
+      -- nothing there -- there is no ticket until the capture is filed.
+      -- Normal mode only: in insert mode the leader sequence would be typed
+      -- text, and org.nvim's capture buffer already re-enters insert on
+      -- every return to it, so Escape first.
       vim.keymap.set('n', '<leader>ai', function()
         require('helpers.org.ai').launch()
       end, { buffer = args.buf, desc = 'org: OMP on the headline at point' })

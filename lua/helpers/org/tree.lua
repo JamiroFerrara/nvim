@@ -851,6 +851,44 @@ local function setup_keys()
   end)
 end
 
+--- The file name a node's entry lives in (a path, else the buffer number).
+---@param nd table
+---@return string
+local function name_of(nd)
+  local f = nd.headline and nd.headline.file
+  return (f and f.filename) or nd.item.filename or tostring(nd.item.bufnr)
+end
+
+--- Open the subtree of the node on line `lnum` of `buf`, one step like `l`
+--- (folded -> children -> subtree), when that node is the entry `hl` -- same
+--- file and line. A state change refused for the entry's unfinished children
+--- calls this (helpers/org/reveal.lua), so the child that blocks it comes on
+--- screen the way <Tab> would show it. True when a subtree was opened.
+---@param buf integer
+---@param lnum integer
+---@param hl org.Headline|nil the entry the change was about (nil: any node)
+---@return boolean
+function M.reveal(buf, lnum, hl)
+  local nd = node_at(buf, lnum)
+  if not (nd and #nd.children > 0) then
+    return false
+  end
+  if hl then
+    local head = nd.headline
+    local name = hl.file and hl.file.filename
+    if not (head and head.line == hl.line and (not name or name_of(nd) == name)) then
+      return false
+    end
+  end
+  local state = states[nd.key] or nd.state or 'folded'
+  if state == 'subtree' then
+    return false
+  end
+  states[nd.key] = state == 'folded' and 'children' or 'subtree'
+  refocus(buf, nd.key)
+  return true
+end
+
 function M.setup()
   vim.api.nvim_set_hl(0, HINT, { link = 'Comment', default = true })
   setup_render()
