@@ -1,7 +1,8 @@
 -- Buffer-local org mappings for org.nvim (wired in
 -- lua/terminal_plugins/org.nvim.lua): normal-mode <CR> like the markdown
--- config's smart action (obsidian util.toggle_checkbox), insert-mode <CR>
--- continuing lists like bullets.vim, dd deleting a whole subtree, the
+-- config's smart action (obsidian util.toggle_checkbox), plus following
+-- the link under the cursor, insert-mode <CR> continuing lists like
+-- bullets.vim, dd deleting a whole subtree, the
 -- one-key tag/priority toggles (helpers/org/tagging.lua), and the
 -- insert-mode capture keys (org.nvim binds those in normal mode only).
 -- Registered on FileType org so they land after org.nvim attaches its own
@@ -36,14 +37,22 @@ function M.setup()
         return false
       end
 
-      -- Normal-mode <CR>, like obsidian's smart action: cycle a headline
-      -- (fold), toggle a checkbox, or turn the line into a checkbox -- a
-      -- plain list item keeps its text, any other line is prefixed. The
-      -- lines that are not "normal" org lines (headlines, tables,
-      -- keywords/comments, drawers, blocks) keep the old fold behaviour.
+      -- Normal-mode <CR>, like obsidian's smart action: follow the link
+      -- under the cursor, else cycle a headline (fold), toggle a checkbox,
+      -- or turn the line into a checkbox -- a plain list item keeps its
+      -- text, any other line is prefixed. The lines that are not "normal"
+      -- org lines (headlines, tables, keywords/comments, drawers, blocks)
+      -- keep the old fold behaviour.
       vim.keymap.set('n', '<CR>', function()
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         local line = get_line(lnum)
+        -- A link under the cursor wins, wherever it sits (headline, list
+        -- item, plain line): follow it like the default open_at_point.
+        local links = require 'org.links'
+        if links.link_at_cursor() then
+          links.open_at_point()
+          return
+        end
         local lists = require 'org.lists'
         local item = lists.item_at(buf, lnum)
         if item and item.checkbox then
@@ -68,7 +77,7 @@ function M.setup()
           return
         end
         set_line(lnum, indent .. '- [ ] ' .. rest)
-      end, { buffer = buf, desc = 'org: toggle / make checkbox, cycle visibility' })
+      end, { buffer = buf, desc = 'org: follow link / toggle / make checkbox, cycle visibility' })
 
       -- Insert-mode <CR> after bullets.vim: on a list item at the end of
       -- the line, continue the list with the same bullet (a checkbox item
