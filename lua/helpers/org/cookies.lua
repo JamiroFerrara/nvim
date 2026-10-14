@@ -1,7 +1,8 @@
 -- Statistics-cookie maintenance for org.nvim (wired in
 -- lua/terminal_plugins/org.nvim.lua): automatic `[/]` / `[x/y]` cookies, the
--- auto-DONE when an entry's checkboxes are all checked, and the undo hygiene
--- that keeps both out of the user's undo history.
+-- auto-DONE when an entry's checkboxes are all checked, the reopen of a
+-- finished entry that gains an open child (a capture or a typed subtree),
+-- and the undo hygiene that keeps all of it out of the user's undo history.
 local M = {}
 
 local updating = false
@@ -84,14 +85,16 @@ end
 
 --- A new open entry reopens a finished parent: an entry with an open child
 --- is not over, so it goes back to the first open keyword of its sequence
---- (TODO). Emacs leaves this to the user; here it is called twice -- with
---- `lnum`, for the ancestors of a single entry a capture just stored (a
---- programmatic capture writes the target buffer directly, org.capture.
---- session.store, so the debounced TextChanged pass never sees the new
---- entry); without it, over every headline of the buffer, from that same
---- debounced pass (schedule_cookies) so a typed subtree gets the same
---- treatment. The load paths never reach it: OrgFileLoaded's ensure_cookies
---- runs on a fresh buffer, and this is guarded by `not fresh` there.
+--- (TODO). Emacs leaves this to the user; here it is called only where an
+--- entry can appear -- with `lnum`, for the ancestors of a single entry a
+--- capture just stored (a programmatic capture writes the target buffer
+--- directly, org.capture.session.store, so the debounced TextChanged pass
+--- never sees the new entry); without it, over every headline of the
+--- buffer, from that same debounced pass (schedule_cookies) so a typed
+--- subtree gets the same treatment. It is deliberately absent from
+--- ensure_cookies: OrgFileLoaded and OrgTodoStateChange call that alone, so
+--- opening a file changes nothing and a state the user set by hand (or the
+--- checkbox auto-DONE) is not fought on the spot.
 ---@param lnum? integer entry whose ancestors to check (nil: every headline)
 local function reopen_finished(bufnr, lnum)
   if not vim.api.nvim_buf_is_valid(bufnr) or vim.bo[bufnr].filetype ~= 'org' then
@@ -151,7 +154,17 @@ local function ensure_cookies(bufnr)
   -- Later passes merge into the change that triggered them via `:undojoin`
   -- (see `joined`); they must NOT touch 'undolevels', which would discard
   -- the user's undo steps.
-  local fresh = vim.fn.undotree().seq_cur == 0
+  -- queried on `bufnr`: ensure_cookies also runs for a capture target, a
+  -- buffer that is not the current one (undotree() would read the agenda's)
+  local fresh
+  if bufnr == vim.api.nvim_get_current_buf() then
+    fresh = vim.fn.undotree().seq_cur == 0
+  else
+    local ok, seq = pcall(vim.api.nvim_buf_call, bufnr, function()
+      return vim.fn.undotree().seq_cur
+    end)
+    fresh = ok and seq == 0
+  end
   local saved_ul
   if fresh then
     saved_ul = vim.bo[bufnr].undolevels
@@ -204,13 +217,6 @@ local function ensure_cookies(bufnr)
   if saved_ul then
     vim.bo[bufnr].undolevels = saved_ul
   end
-  -- Only past the first pass: a freshly loaded buffer must not be changed
-  -- (see `fresh` above), and opening a file fires ensure_cookies through
-  -- OrgFileLoaded. A later pass is a user or capture edit, where a finished
-  -- entry that just gained an open child should reopen.
-  if ok and not fresh then
-    reopen_finished(bufnr)
-  end
   updating = false
   if not ok then
     require('org.utils').warn('statistics cookies: ' .. tostring(err))
@@ -225,6 +231,10 @@ local function schedule_cookies(bufnr)
   vim.defer_fn(function()
     queued[bufnr] = nil
     ensure_cookies(bufnr)
+    -- a typed subtree reaches the reopen only here; OrgTodoStateChange and
+    -- OrgFileLoaded call ensure_cookies alone, so a state the user set by
+    -- hand (or the checkbox auto-DONE) is not fought
+    reopen_finished(bufnr)
   end, 300)
 end
 
