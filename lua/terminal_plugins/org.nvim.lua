@@ -412,6 +412,17 @@ return {
         end
         return { nf(0x25cf), nf(0xf03a6), nf(0xf03a9), nf(0xf03ac), nf(0xf03ae), nf(0xf03b0) }
       end)(),
+      -- Emphasis markers hidden: `*bold*` shows as bold, `/italic/` as
+      -- italic, and the rest (`_`, `=`, `~`, `+`) likewise, the way the
+      -- markdown plugin hides its own (`**`, `*`, `` ` ``, `~~`). The
+      -- markdown markers are hidden by nvim-treesitter's `markdown_inline`
+      -- query, which the org buffer gets too for the block bodies injected
+      -- by queries/org/injections.scm; org's own markup is vim syntax
+      -- (org.nvim's generated one), so it needs this option. `concealcursor`
+      -- stays "nc" (plugins/markdown.lua's org override), so insert mode
+      -- shows the markers raw, as the markdown plugin does on the cursor
+      -- line.
+      hide_emphasis_markers = true,
       -- Checkboxes replaced with icons, like the markdown checkboxes in
       -- plugins/markdown.lua: unchecked, partial (org's `[-]`), checked.
       checkboxes = (function()
