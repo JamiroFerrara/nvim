@@ -224,6 +224,7 @@ local function setup_entry_scratch()
           end)
         end
         dirty = false
+        vim.b[buf].org_entry_dirty = nil
       end
 
       -- nvim must never believe the preview holds unsaved work. With
@@ -236,9 +237,16 @@ local function setup_entry_scratch()
       -- answer to that question is always yes -- `:w` and leaving the
       -- preview both write the edits back (write_back), so nothing is lost
       -- and the prompt cannot come back. `:w` still runs the write hook
-      -- (BufWriteCmd fires on an unmodified acwrite buffer).
+      -- (BufWriteCmd fires on an unmodified acwrite buffer). `dirty` is kept
+      -- on the buffer as well (`org_entry_dirty`), because the preview pane
+      -- (setup_entry_preview below) replaces the buffer under its caller's
+      -- feet: a buffer swapped out from inside an autocommand is wiped
+      -- without its BufHidden / BufWipeout running, so the pane writes the
+      -- edits back itself before the swap instead of leaving it to the
+      -- handlers below.
       local function unmodify()
         dirty = true
+        vim.b[buf].org_entry_dirty = true
         vim.bo[buf].modified = false
       end
       vim.bo[buf].modified = false
@@ -270,10 +278,7 @@ local function setup_entry_scratch()
           -- first).
           local first = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]
           if dirty and first ~= nil and first:find '^%*+%s' then
-            local ok, err = pcall(write_back)
-            print('TEMPWB', ok, err)
-          else
-            print('TEMPNOWB', dirty, vim.inspect(first))
+            pcall(write_back)
           end
         end,
       })
@@ -304,21 +309,41 @@ end
 -- when the pane is closed, and on `:w`. Registered as an agenda action
 -- named in the spec (`L`), the way toggle_done above is.
 local function setup_entry_preview()
-  local state = { win = nil, key = nil, aug = nil }
+  local state = { win = nil, key = nil, aug = nil, placeholder = nil, pending = false }
 
   local function teardown()
     if state.aug then
       pcall(vim.api.nvim_del_augroup_by_id, state.aug)
     end
-    state.aug, state.win, state.key = nil, nil, nil
+    state.aug, state.win, state.key, state.placeholder = nil, nil, nil, nil
+  end
+
+  --- Splice a dirty scratch back into its file. The scratch's own write-back
+  --- rides on its BufHidden / BufWipeout, which do not run for a buffer
+  --- swapped out from inside an autocommand -- and the pane's swap is one --
+  --- so the pane writes it back itself, before the swap.
+  local function flush(buf)
+    if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == 'acwrite' and vim.b[buf].org_entry_dirty then
+      vim.api.nvim_buf_call(buf, function()
+        vim.cmd 'write'
+      end)
+    end
   end
 
   local function close()
     local win = state.win
     teardown()
     if win and vim.api.nvim_win_is_valid(win) then
+      flush(vim.api.nvim_win_get_buf(win))
       pcall(vim.api.nvim_win_close, win, true)
     end
+  end
+
+  --- Close from an autocommand (the view going away, a window close): the
+  --- flush inside `close` is a `:write`, refused while an autocommand runs,
+  --- so it waits for the main loop.
+  local function close_soon()
+    vim.schedule(close)
   end
 
   --- The entry under the cursor, as a key that changes when it does.
@@ -334,27 +359,47 @@ local function setup_entry_preview()
   --- there. The buffer is built by entry_scratch, aimed at the pane's window;
   --- the pane gets its own `q` / `L` (close it) in place of entry_scratch's
   --- `q`, which would put the view's buffer back in that window.
-  local function refresh()
+  local function fill()
     if not (state.win and vim.api.nvim_win_is_valid(state.win)) then
       return
     end
     local view = require 'org.agenda.view'
     local key = entry_key(view)
-    if not key or key == state.key then
+    if key and key ~= state.key then
+      local before = vim.api.nvim_win_get_buf(state.win)
+      flush(before)
+      view.actions.entry_scratch(state.win)
+      local buf = vim.api.nvim_win_get_buf(state.win)
+      if buf ~= before then
+        state.key = key
+        local desc = 'org: close the entry preview'
+        vim.keymap.set('n', 'q', close, { buffer = buf, desc = desc })
+        vim.keymap.set('n', 'L', close, { buffer = buf, desc = desc })
+        return
+      end
+    end
+    -- Nothing to show: the pane keeps the entry it already holds. If it
+    -- never got one -- `open` saw an entry, entry_scratch could not resolve
+    -- it after all -- the empty split is dropped instead of left behind.
+    if state.key == nil and vim.api.nvim_win_get_buf(state.win) == state.placeholder then
+      close()
+    end
+  end
+
+  --- Ask for a fill. The work runs on the main loop, not in the caller's
+  --- context: the cursor moves that ask for it are autocommands, and both
+  --- the flush above and entry_scratch's own write-back are `:write` calls,
+  --- which nvim refuses there ("No matching autocommands for buftype=acwrite
+  --- buffer", E676). Repeated asks coalesce into one fill.
+  local function refresh()
+    if state.pending then
       return
     end
-    local before = vim.api.nvim_win_get_buf(state.win)
-    view.actions.entry_scratch(state.win)
-    local buf = vim.api.nvim_win_get_buf(state.win)
-    if buf == before then
-      -- nothing to open for this line (a group header, a calendar line):
-      -- the pane keeps the entry it already holds
-      return
-    end
-    state.key = key
-    local desc = 'org: close the entry preview'
-    vim.keymap.set('n', 'q', close, { buffer = buf, desc = desc })
-    vim.keymap.set('n', 'L', close, { buffer = buf, desc = desc })
+    state.pending = true
+    vim.schedule(function()
+      state.pending = false
+      fill()
+    end)
   end
 
   local function open(view)
@@ -377,7 +422,7 @@ local function setup_entry_preview()
     end
     vim.api.nvim_win_set_width(win, width)
     vim.wo[win].winfixwidth = true
-    state.win = win
+    state.win, state.placeholder = win, placeholder
     state.aug = vim.api.nvim_create_augroup('OrgEntryPreview', { clear = true })
     vim.api.nvim_create_autocmd('CursorMoved', {
       group = state.aug,
@@ -388,7 +433,7 @@ local function setup_entry_preview()
     vim.api.nvim_create_autocmd({ 'BufHidden', 'BufWipeout' }, {
       group = state.aug,
       buffer = vbuf,
-      callback = close,
+      callback = close_soon,
       desc = 'org: close the entry preview with the view',
     })
     vim.api.nvim_create_autocmd('WinClosed', {
@@ -398,11 +443,6 @@ local function setup_entry_preview()
       desc = 'org: forget the entry preview when its window closes',
     })
     refresh()
-    -- nothing came up in the pane (the entry could not be resolved after
-    -- all): do not leave an empty split behind
-    if vim.api.nvim_win_get_buf(win) == placeholder then
-      close()
-    end
   end
 
   local function toggle()
