@@ -56,6 +56,11 @@
 --   callouts.lua    entry lines of the TODO views get a callout bar in the
 --                   state's color (from the keyword face), in the left
 --                   gutter only -- no background band behind the line
+--   roam_cmp.lua    the nvim-cmp source for roam `[[` links (wired in
+--                   lua/plugins/cmp.lua, not here): typing `[[` in a roam
+--                   file completes node titles and aliases, and creates the
+--                   node when the typed text is not one -- obsidian.nvim's
+--                   `[[` completion, for the org vault
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'

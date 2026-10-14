@@ -16,6 +16,11 @@ return {
     cmp.register_source('buffer_preview', buffer_preview.new())
     buffer_preview.setup()
 
+    -- org-roam `[[` completion: node titles and aliases, and creating the node
+    -- when the typed text is not one (helpers/org/roam_cmp.lua). Available
+    -- only for org buffers inside the roam directory.
+    cmp.register_source('roam', require('helpers.org.roam_cmp').new())
+
     -- --------------------------------------------------------------------- }}}
     -- {{{ Confirmation options
 
@@ -255,6 +260,7 @@ return {
       nvim_lsp = '[LSP]',
       nvim_lua = '[Lua]',
       path = '[Path]',
+      roam = '[Roam]',
     }
 
     local formatting = {
@@ -277,6 +283,7 @@ return {
       { name = 'nvim_lsp', keyword_length = 1, max_item_count = 10, priority = 900 },
       { name = 'nvim_lua', keyword_length = 1, max_item_count = 10, priority = 800 },
       { name = 'path', keyword_length = 3, max_item_count = 20, prioirty = 250 },
+      { name = 'roam', priority = 950 },
       { name = 'vim-dadbod-completion' },
     }
 
