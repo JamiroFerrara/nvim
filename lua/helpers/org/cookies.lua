@@ -59,6 +59,81 @@ local function finish_when_boxes_done(bufnr, lnum)
   end
 end
 
+--- Keywords this vault treats as finished besides the org DONE ones. The
+--- vocabulary is `TODO NEXT PEND TEST WARN | DONE` (lua/terminal_plugins/
+--- org.nvim.lua): an entry is over in TEST (work done, awaiting validation)
+--- or WARN (could not complete) too, but both sit before the `|`, so
+--- org.todo_keywords reports neither as done.
+local FINISHED = { TEST = true, WARN = true }
+
+--- Is `name` a keyword that means the entry is over?
+local function finished_p(kw, name)
+  return name ~= nil and (kw:is_done(name) or FINISHED[name] == true)
+end
+
+--- Does `hl` have a direct child entry that is still open (carries a TODO
+--- keyword that is neither org-done nor a vault-finished one)?
+local function open_child(hl, kw)
+  for _, c in ipairs(hl.children or {}) do
+    if c.todo and not finished_p(kw, c.todo) then
+      return true
+    end
+  end
+  return false
+end
+
+--- A new open entry reopens a finished parent: an entry with an open child
+--- is not over, so it goes back to the first open keyword of its sequence
+--- (TODO). Emacs leaves this to the user; here it is called twice -- with
+--- `lnum`, for the ancestors of a single entry a capture just stored (a
+--- programmatic capture writes the target buffer directly, org.capture.
+--- session.store, so the debounced TextChanged pass never sees the new
+--- entry); without it, over every headline of the buffer, from that same
+--- debounced pass (schedule_cookies) so a typed subtree gets the same
+--- treatment. The load paths never reach it: OrgFileLoaded's ensure_cookies
+--- runs on a fresh buffer, and this is guarded by `not fresh` there.
+---@param lnum? integer entry whose ancestors to check (nil: every headline)
+local function reopen_finished(bufnr, lnum)
+  if not vim.api.nvim_buf_is_valid(bufnr) or vim.bo[bufnr].filetype ~= 'org' then
+    return
+  end
+  local files = require 'org.files'
+  local todo = require 'org.todo'
+  local file = files.get_buffer(bufnr)
+  local kw = file and file.settings.todo
+  if not kw then
+    return
+  end
+  local targets = {}
+  if lnum then
+    local hl = file:headline_at(lnum)
+    -- only an open stored entry means an open child just appeared
+    if not (hl and hl.todo and not finished_p(kw, hl.todo)) then
+      return
+    end
+    local parent = hl.parent
+    while parent do
+      if finished_p(kw, parent.todo) and open_child(parent, kw) then
+        targets[#targets + 1] = parent.line
+      end
+      parent = parent.parent
+    end
+  else
+    for _, hl in ipairs(file.headlines) do
+      if finished_p(kw, hl.todo) and open_child(hl, kw) then
+        targets[#targets + 1] = hl.line
+      end
+    end
+  end
+  for _, line in ipairs(targets) do
+    local p = files.get_buffer(bufnr):headline_at(line)
+    if p and finished_p(kw, p.todo) and open_child(p, kw) then
+      pcall(vim.cmd, 'silent! undojoin')
+      todo.change_state({ bufnr = bufnr, lnum = line }, kw:first_todo(kw:get(p.todo).seq))
+    end
+  end
+end
+
 --- Automatic statistics cookies. Emacs and org.nvim only keep a `[/]` /
 --- `[x/y]` cookie up to date if it is already there (org.lists
 --- update_section rewrites only lines with a cookie); nothing inserts one.
@@ -129,6 +204,13 @@ local function ensure_cookies(bufnr)
   if saved_ul then
     vim.bo[bufnr].undolevels = saved_ul
   end
+  -- Only past the first pass: a freshly loaded buffer must not be changed
+  -- (see `fresh` above), and opening a file fires ensure_cookies through
+  -- OrgFileLoaded. A later pass is a user or capture edit, where a finished
+  -- entry that just gained an open child should reopen.
+  if ok and not fresh then
+    reopen_finished(bufnr)
+  end
   updating = false
   if not ok then
     require('org.utils').warn('statistics cookies: ' .. tostring(err))
@@ -191,6 +273,24 @@ function M.setup()
     if data.bufnr then
       ensure_cookies(data.bufnr)
     end
+  end)
+  -- A capture stores its entry programmatically and saves the target before
+  -- this event fires, so nothing else refreshes the target: no TextChanged
+  -- (nvim_buf_set_lines raises none) and no OrgFileLoaded (the listener
+  -- above skips a buffer that is not on screen, which a capture target
+  -- loaded hidden is). Reopen a finished parent the new open entry sits
+  -- under and give the parent its statistics cookie, then save -- the store
+  -- already wrote the file, but these edits come after it. Registered before
+  -- the agenda's own OrgCaptureAfterFinalize listener (helpers/org/agenda.lua
+  -- setup_capture_refresh, the setup order in lua/terminal_plugins/org.nvim.lua)
+  -- so the view it re-renders reflects both.
+  on_event('OrgCaptureAfterFinalize', function(data)
+    if not (data.bufnr and data.line) then
+      return
+    end
+    reopen_finished(data.bufnr, data.line)
+    ensure_cookies(data.bufnr)
+    require('org.utils').save_buffer(data.bufnr)
   end)
 
   vim.api.nvim_create_user_command('OrgEnsureCookies', function()

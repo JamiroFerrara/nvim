@@ -13,7 +13,9 @@
 --                   project-scoped views and the `^` write side use it
 --   capture.lua     capture-task destination (level-1 project headlines)
 --   ics.lua         iCalendar subscriptions + event-detail scratch viewer
---   cookies.lua     automatic statistics cookies and checkbox auto-DONE
+--   cookies.lua     automatic statistics cookies, the checkbox auto-DONE,
+--                   and the reopen of a finished parent when a capture
+--                   files an open entry under it
 --   agenda.lua      `D` toggle_done action, the `<CR>` entry scratch and
 --                   the `L` preview pane beside the view, the fold state
 --                   after entering an entry from the list, and the insert
@@ -778,6 +780,12 @@ return {
     -- cheap: the helpers plug into org modules the plugin loads on first
     -- use through org.lazy.on_load (or plain autocmds), so no part of
     -- org.nvim is required at startup.
+    --
+    -- cookies first of all: its OrgCaptureAfterFinalize listener (reopen a
+    -- finished parent, refresh the target's statistics cookies) must run
+    -- before the agenda's own listener on that event, so the view agenda
+    -- re-renders there shows both.
+    require('helpers.org.cookies').setup()
     require('helpers.org.agenda').setup()
     require('helpers.org.tree').setup()
     require('helpers.org.callouts').setup()
@@ -787,7 +795,6 @@ return {
     require('helpers.org.mappings').setup()
     require('helpers.org.folding').setup()
     require('helpers.org.refile').setup()
-    require('helpers.org.cookies').setup()
     require('helpers.org.ics').setup()
     require('helpers.org.ai').setup()
     require('helpers.org.retro').setup()
