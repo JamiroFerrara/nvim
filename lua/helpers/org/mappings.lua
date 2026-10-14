@@ -190,14 +190,27 @@ function M.setup()
 
       -- <leader>ai starts an `omp` instance for the headline at point in a
       -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp
-      -- terminal key in org buffers. <leader>aj jumps to that instance's pane
-      -- when it is already running, resuming its session when it is not.
+      -- terminal key in org buffers. On a Visual selection it launches every
+      -- headline the selection covers, the same way, one instance each
+      -- (launch_range). <leader>aj jumps to that instance's pane when it is
+      -- already running, resuming its session when it is not.
       vim.keymap.set('n', '<leader>ai', function()
         require('helpers.org.ai').launch()
       end, { buffer = args.buf, desc = 'org: OMP on the headline at point' })
+      vim.keymap.set('x', '<leader>ai', function()
+        require('helpers.org.ai').launch_range()
+      end, { buffer = args.buf, desc = 'org: OMP on the selected headlines' })
       vim.keymap.set('n', '<leader>aj', function()
         require('helpers.org.ai').jump()
       end, { buffer = args.buf, desc = 'org: jump to the running OMP for the headline' })
+
+      -- <Space><Space> (the leader twice) is the roam node finder, the
+      -- same action as <leader>omf: a quick switcher for the roam sandbox
+      -- without reaching into the <leader>om prefix. Buffer-local, so the
+      -- plain leader sequence stays the way it is outside org files.
+      vim.keymap.set('n', '<Space><Space>', function()
+        require('org').action 'roam_node_find'
+      end, { buffer = args.buf, desc = 'org: roam node find (<leader>omf)' })
 
       -- One-key tagging and priorities (helpers/org/tagging.lua): B/F/C
       -- toggle :bug:/:feat:/:chore:, <M-a>/<M-b>/<M-c> priority A/B/C on

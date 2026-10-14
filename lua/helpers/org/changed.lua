@@ -1,7 +1,9 @@
 -- "Last changed" column of the TODO views (org.nvim), wired in
 -- lua/terminal_plugins/org.nvim.lua: the `todo` kind's `prefix_format` ends in
 -- a `%(lua expression)` element calling M.label(hl), so every entry line opens
--- with when its entry last changed.
+-- with when its entry last changed. The same module's M.setup() registers the
+-- `changed-up` / `changed-down` sorting strategies on org.agenda.items, which
+-- order a list by that date (the group view's per-state sections).
 --
 -- org stores no per-headline modification time, so the newest timestamp of the
 -- entry stands in for it -- and in this vault the entry's own markers are
@@ -15,16 +17,27 @@
 -- Recent dates read relative -- today, yest, "3d ago" -- the day's time
 -- appended where the timestamp has one; past a week they are a plain "9 Oct",
 -- with the year once it is not this one.
+--
+-- The same date is an org.nvim sorting strategy, `changed-up` /
+-- `changed-down`, registered by M.setup(): the group view (`2` in
+-- lua/terminal_plugins/org.nvim.lua) orders each of its per-state sections by
+-- it, so the column and the list agree on what "recent" means. An entry with
+-- no timestamp at all sinks below the dated ones, whichever direction the
+-- list runs.
 local M = {}
 
 local date = require 'org.date'
 
---- Newest timestamp of an entry, or nil. Title timestamps, CLOSED and the
---- timestamps of the entry's own section (notes, clocks, ranges) count; the
---- planning line is skipped so its SCHEDULED/DEADLINE do not.
----@param hl org.Headline
+--- Newest timestamp of an entry, or nil when it carries none. Title
+--- timestamps, CLOSED and the timestamps of the entry's own section (notes,
+--- clocks, ranges) count; the planning line is skipped so its
+--- SCHEDULED/DEADLINE do not.
+---@param hl org.Headline|nil
 ---@return org.Date|nil
-local function latest(hl)
+function M.latest(hl)
+  if not hl then
+    return nil
+  end
   local best
   local function consider(d)
     if d and (not best or d:minutes() > best:minutes()) then
@@ -50,7 +63,7 @@ function M.label(hl)
   if not hl then
     return ''
   end
-  local d = latest(hl)
+  local d = M.latest(hl)
   if not d then
     return ''
   end
@@ -66,6 +79,45 @@ function M.label(hl)
     return d:strftime '%-d %b'
   end
   return d:strftime '%-d %b %Y'
+end
+
+--- The `changed-up` / `changed-down` comparators (org-entries-lessp: -1 puts
+--- its first argument first, 1 its second, false leaves the pair to the next
+--- strategy). `down` is not the other's reversal: an undated entry sinks --
+--- is ordered after a dated one -- whichever direction the list runs, and a
+--- plain reversal would flip that with the dates (an `up` rule that puts the
+--- undated first would put them last in a `down` list).
+---@param older_first boolean
+---@param a org.AgendaItem
+---@param b org.AgendaItem
+local function changed_cmp(older_first, a, b)
+  local da, db = M.latest(a.headline), M.latest(b.headline)
+  if da == nil then
+    return db == nil and false or 1
+  elseif db == nil then
+    return -1
+  end
+  local ma, mb = da:minutes(), db:minutes()
+  if ma == mb then
+    return false
+  end
+  local r = ma < mb and -1 or 1
+  return older_first and r or -r
+end
+
+--- Register the two strategies on org.agenda.items (they are looked up by
+--- name, so the plugin's own validation accepts them), once it loads -- the
+--- module defines the strategy table, and requiring it here would load the
+--- whole agenda at startup.
+function M.setup()
+  require('org.lazy').on_load('org.agenda.items', 'changed_strategies', function(items)
+    items.strategies['changed-up'] = function(a, b)
+      return changed_cmp(true, a, b)
+    end
+    items.strategies['changed-down'] = function(a, b)
+      return changed_cmp(false, a, b)
+    end
+  end)
 end
 
 return M

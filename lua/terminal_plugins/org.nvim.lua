@@ -14,8 +14,9 @@
 --   capture.lua     capture-task destination (level-1 project headlines)
 --   ics.lua         iCalendar subscriptions + event-detail scratch viewer
 --   cookies.lua     automatic statistics cookies, the checkbox auto-DONE,
---                   and the reopen of a finished parent when a capture
---                   files an open entry under it
+--                   the auto-DONE of an entry whose child headlines are all
+--                   finished, and the reopen of a finished parent when a
+--                   capture files an open entry under it
 --   agenda.lua      `D` toggle_done action, the `<CR>` entry scratch and
 --                   the `L` preview pane beside the view, the fold state
 --                   after entering an entry from the list, and the insert
@@ -37,7 +38,9 @@
 --                   so an entry reads as a chronological log, and saving
 --                   the note buffer stores it
 --   changed.lua     the "last changed" date column of the TODO-entry lists,
---                   read per entry through the todo `prefix_format` below
+--                   read per entry through the todo `prefix_format` below,
+--                   plus the `changed-up` / `changed-down` sorting strategies
+--                   (the group view's sections)
 --   ai.lua          <leader>ai on an entry launches an `omp` instance for
 --                   the ticket in a tmux pane and follows its write-back
 --                   (watch.lua reloads the changed org files live; the
@@ -82,21 +85,24 @@ local TODO_KEYWORDS = { 'TODO NEXT PEND TEST WARN | DONE' }
 -- sequence.
 local BOARD_STATE_ORDER = { 'TEST', 'NEXT', 'TODO', 'PEND', 'WARN' }
 
--- The classification sections' state list: one section per open keyword,
--- named with just the keyword, plus the `someday` discard every custom view
--- keeps. Ordered by BOARD_STATE_ORDER (the `°` view, which used to carry its
--- own org-super-agenda `auto_todo` ordering, is the board itself now). The
--- board blocks below share the table (the grouper copies it); the "In
--- progress" block sets `super_groups = false` and lists NEXT/TEST mixed
--- across tags, so in the classification sections those two keywords match
--- nothing and their subsections are dropped -- the derivation is kept whole
--- so a new open keyword still lands in one. helpers/org/agenda.lua only
--- reads it -- and, for the blocks marked `state_sections`, keeps the rule
--- under the section's header rather than between the subsections.
-local BOARD_SECTIONS = { { discard = { tag = 'someday' } } }
-do
+-- The order the group view's (`2`) per-state sections read in: the states
+-- asking for action first -- TEST, the entry waiting on validation, then
+-- NEXT, the one being worked on -- the parked PEND and the problematic WARN
+-- after them, and TODO last: the untouched rest is what the view is read
+-- for, not what it opens on. Same escape hatch as BOARD_STATE_ORDER: a
+-- keyword absent from the list sorts after the listed ones, in keyword
+-- sequence.
+local GROUP_STATE_ORDER = { 'TEST', 'NEXT', 'PEND', 'WARN', 'TODO' }
+
+--- The per-state sections a state-split block groups by: one section per
+--- open keyword, named with just the keyword, in `order`'s sequence (see
+--- BOARD_STATE_ORDER / GROUP_STATE_ORDER above), plus the `someday` discard
+--- every custom view keeps.
+---@param order string[]
+---@return table[]
+local function state_sections(order)
   local rank = {}
-  for i, kw in ipairs(BOARD_STATE_ORDER) do
+  for i, kw in ipairs(order) do
     rank[kw] = i
   end
   local states = {}
@@ -109,10 +115,34 @@ do
     end
     return a.pos < b.pos
   end)
+  local out = { { discard = { tag = 'someday' } } }
   for i, s in ipairs(states) do
-    BOARD_SECTIONS[#BOARD_SECTIONS + 1] = { name = s.kw, todo = s.kw, order = i }
+    out[#out + 1] = { name = s.kw, todo = s.kw, order = i }
   end
+  return out
 end
+
+-- The classification sections' state list, ordered by BOARD_STATE_ORDER (the
+-- `°` view, which used to carry its own org-super-agenda `auto_todo`
+-- ordering, is the board itself now). The board blocks below share the table
+-- (the grouper copies it); the "In progress" block sets `super_groups =
+-- false` and lists NEXT/TEST mixed across tags, so in the classification
+-- sections those two keywords match nothing and their subsections are
+-- dropped -- the derivation is kept whole so a new open keyword still lands
+-- in one. helpers/org/agenda.lua only reads it -- and, for the blocks marked
+-- `state_sections`, keeps the rule under the section's header rather than
+-- between the subsections.
+local BOARD_SECTIONS = state_sections(BOARD_STATE_ORDER)
+
+-- The group view's state list (the `g` block below, key `2`): the open
+-- entries of the cwd project's whole file, one section per keyword, in
+-- GROUP_STATE_ORDER. Inside a section the entries are ordered by their
+-- last-changed date -- the one helpers/org/changed.lua prints in the column,
+-- newest first (`changed-down`) -- instead of by priority, so what the column
+-- says is what the list is read in. The sections are drawn the default way
+-- (a blank line before each header), not as a `state_sections` block: the
+-- view is one flat block, with no section header to underline with a rule.
+local GROUP_SECTIONS = state_sections(GROUP_STATE_ORDER)
 
 -- The board's three classification sections (the `w` blocks below; the
 -- "In progress" one above them is a plain keyword block and the Done one is
@@ -155,8 +185,11 @@ end
 -- inactive one from the section, and the planning line is not part of either
 -- (org.parser keeps CLOSED in leading.planning, out of headline.timestamps).
 -- The comparator orders ascending by minute (older first); user-defined-down
--- reverses it. An entry that was never logged (no CLOSED) has no date and
--- sinks below the dated ones, whichever direction the strategy runs.
+-- reverses it. An entry that was never logged (no CLOSED) has no date: its
+-- rule cannot ride on the direction, since `user-defined-down` only swaps the
+-- arguments, so such an entry leads the Done list rather than sinking under
+-- the dated ones (helpers/org/changed.lua, whose own strategies sink it, is
+-- where a direction-independent rule lives).
 local function done_recency(a, b)
   local ha, hb = a.headline, b.headline
   local da = ha and ha.planning and ha.planning.closed
@@ -217,8 +250,8 @@ return {
       -- lines already carry are only visible here. Reached from the
       -- dispatcher menu or `:Org agenda <key>`, which give the whole set;
       -- the agenda buffer's 1 / 2 / 3 / 4 (helpers/org/agenda.lua) open
-      -- them, 1 global, 2 the whole file of the cwd's project (the `o` list,
-      -- its entries split by the project each sits under), and the rest
+      -- them, 1 global, 2 the whole file of the cwd's project (the `g` list,
+      -- its entries split per open keyword), and the rest
       -- narrowed to cwd's project. `°` (helpers/org/project.lua) opens
       -- the `w` board the same scoped way, so it is an alias for the `3`
       -- key. The keys avoid the built-in
@@ -249,6 +282,26 @@ return {
           description = 'All open TODOs',
           types = {
             { type = 'todo', header = 'All open TODOs' },
+          },
+        },
+        -- Key `2`'s view: the `o` list of the cwd project's whole file --
+        -- every headline of it, the projects a shared file hosts included --
+        -- split into one section per open keyword (GROUP_SECTIONS,
+        -- NEXT/PEND/WARN/TODO), each ordered by the entry's last-changed date
+        -- rather than by category. What used to head these sections -- the
+        -- top-level headline each entry sits under -- the entry lines carry
+        -- themselves, as the category column (helpers/org/project.lua
+        -- item_name labels a headline project's entries with its name).
+        g = {
+          description = 'All open TODOs of the file, by state',
+          types = {
+            {
+              type = 'todo',
+              header = 'All open TODOs',
+              super_groups = GROUP_SECTIONS,
+              hide_empty = true,
+              sorting = { 'changed-down' },
+            },
           },
         },
         w = {
@@ -344,6 +397,8 @@ return {
       -- changed.lua takes the newest timestamp the entry carries (CLOSED, a
       -- note/capture header, an edited date) and reads it relative while
       -- recent ("today 15:53", "3d ago") and as "9 Oct" past a week.
+      -- The same date is what the group view (`2`) sorts its sections by
+      -- (`changed-down`, registered by that module's setup).
       -- `%?-13(...)` is the `%(lua expression)` element: an entry with no
       -- timestamp drops the field instead of leaving a gap. The other kinds
       -- (agenda, tags, search) keep their default formats -- a table here
@@ -602,11 +657,12 @@ return {
         -- `L` opens the same entry scratch beside the view instead of in it
         -- (helpers/org/agenda.lua setup_entry_preview): a preview window on
         -- the right holding the entry at the cursor, reloaded as the cursor
-        -- moves to another entry. `L` again, `q` in the pane, or leaving the
-        -- view closes it. The default `L` (recenter: the entry shown in its
-        -- file, in another window) is unbound to give it the key -- two
-        -- actions on one lhs would leave the winner to the mapping table's
-        -- iteration order.
+        -- moves to another entry and when the entry it already holds changes
+        -- (a note added with `z` under it, say). `L` again, `q` in the pane,
+        -- or leaving the view closes it. The default `L` (recenter: the entry
+        -- shown in its file, in another window) is unbound to give it the key
+        -- -- two actions on one lhs would leave the winner to the mapping
+        -- table's iteration order.
         recenter = false,
         entry_preview = 'L',
         switch_to = { '<Space>', '<S-CR>', 'o' },
@@ -655,12 +711,13 @@ return {
         meta_down = '<M-Down>',
         -- link/footnote/date opening stays on gx / <prefix>o
         open_at_point = { 'gx', '<prefix>o' },
-        -- <C-p> opens the project/TODO picker (helpers/org_todo.pick, the
-        -- global <leader>os action -- which <prefix>s shadows with
-        -- `schedule` in org buffers). Buffer-local, so it shadows the
-        -- global fff <C-p> file finder in org files only; the agenda and
-        -- the TODO view keep only <leader>os for this action.
-        pick_project_todo = '<C-p>',
+        -- No pick_project_todo key here (false): the picker was on <C-p>,
+        -- but <C-p> must stay the global fff file finder in org files too,
+        -- as it is everywhere else. The picker keeps its global <leader>os
+        -- (helpers/org_todo.pick), the only key the agenda and the TODO
+        -- view have for it, and a double-tap of the leader opens the roam
+        -- node finder instead (helpers/org/mappings.lua).
+        pick_project_todo = false,
         -- promote/demote on <C-h>/<C-l> instead of <M-h>/<M-l>
         meta_left = { '<C-h>', '<M-Left>' },
         meta_right = { '<C-l>', '<M-Right>' },
@@ -797,6 +854,10 @@ return {
     require('helpers.org.tree').setup()
     require('helpers.org.callouts').setup()
     require('helpers.org.decorations').setup()
+    -- the group view's `changed-down` sorting strategy: it reads the same
+    -- last-changed date the column shows (helpers/org/changed.lua), so it
+    -- goes in with the view's own pieces
+    require('helpers.org.changed').setup()
     require('helpers.org.notes').setup()
     capture.setup()
     require('helpers.org.mappings').setup()

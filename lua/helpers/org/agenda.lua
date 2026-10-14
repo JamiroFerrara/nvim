@@ -5,7 +5,8 @@
 -- left behind by entering an entry, the editable scratch view `<CR>` opens
 -- with only that entry (wrapped by default, written back into its file on
 -- save or when it is left), the `L` preview pane that keeps that scratch
--- beside the view and reloads it as the cursor moves (setup_entry_preview),
+-- beside the view and reloads it as the cursor moves or the entry under it
+-- changes (setup_entry_preview),
 -- the insert mode a terminal window would
 -- otherwise leave in the agenda, the re-render after a capture filed from
 -- it (with the subtree range of a headline project's `°` view kept in step,
@@ -190,8 +191,28 @@ local function setup_entry_scratch()
       vim.bo[buf].bufhidden = 'wipe'
       vim.bo[buf].swapfile = false
       vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-      local name = (hl.title and hl.title ~= '' and hl.title or 'entry'):gsub('[%s/\\]', '_')
-      pcall(vim.api.nvim_buf_set_name, buf, 'org-entry://' .. name)
+      local base = (hl.title and hl.title ~= '' and hl.title or 'entry'):gsub('[%s/\\]', '_')
+      -- A scratch of the same entry -- or of one sharing its title -- can
+      -- still be alive when this one is built: the `L` pane rebuilds its
+      -- scratch when the entry it holds changes under it
+      -- (setup_entry_preview). nvim refuses to give two buffers one name, so
+      -- take the first free one rather than leave the new scratch unnamed
+      -- (its name is how the pane and `:ls` tell it apart).
+      local name = 'org-entry://' .. base
+      local n = 1
+      local function taken(nm)
+        for _, b in ipairs(vim.api.nvim_list_bufs()) do
+          if vim.api.nvim_buf_get_name(b) == nm then
+            return true
+          end
+        end
+        return false
+      end
+      while taken(name) do
+        n = n + 1
+        name = 'org-entry://' .. base .. '#' .. n
+      end
+      pcall(vim.api.nvim_buf_set_name, buf, name)
       -- Remember where the copy came from. The buffer is a preview of one
       -- source entry, so entry commands that read the buffer under the
       -- cursor (helpers/org/ai.lua's <leader>ai) must resolve to `src` --
@@ -307,7 +328,10 @@ end
 -- scratch window to the right, the same lines `<CR>` shows (headline
 -- through the end of its subtree), so a long list can be read through
 -- without leaving it. While the pane is open, moving the cursor onto
--- another entry reloads it; `L` again, `q` in the pane, or leaving the view
+-- another entry reloads it, and so does an edit to the entry it already
+-- holds -- a note added with `z` under the cursor, say -- which would
+-- otherwise leave the pane showing the lines it was built with
+-- (copy_stale below); `L` again, `q` in the pane, or leaving the view
 -- closes it. The pane holds the very scratch `<CR>` opens, aimed at the
 -- pane's own window instead of the view's (entry_scratch above takes a
 -- target window), so it is editable and writes back the same way: an entry
@@ -361,17 +385,46 @@ local function setup_entry_preview()
     return (item.filename or tostring(item.bufnr)) .. ':' .. tostring(item.lnum)
   end
 
+  --- Whether the pane's copy has fallen behind its source. The pane holds one
+  --- entry's lines as they were when it was built, so a note added to that
+  --- entry (`z` in the view, `<leader>n` in its file) -- or any other edit
+  --- landing in it -- leaves the copy showing the older text while the entry's
+  --- key (file and headline line) is unchanged, and `fill` below would keep
+  --- it. Compare the copy to the entry's lines as they are now. A copy with an
+  --- edit of its own is left alone: the pane writes that back on the next move
+  --- (flush), so the user's text is never dropped under them.
+  local function copy_stale(view)
+    local buf = vim.api.nvim_win_get_buf(state.win)
+    if vim.b[buf].org_entry_dirty then
+      return false
+    end
+    local item = view.item_at_cursor()
+    local target = item and item.headline and view.resolve_target(item)
+    local src = target and target.bufnr
+    if not src or src ~= vim.b[buf].org_entry_source then
+      return false
+    end
+    local hl = require('org.files').get_buffer(src):headline_at(target.lnum)
+    if not hl then
+      return false
+    end
+    local now = vim.api.nvim_buf_get_lines(src, hl.line - 1, hl.end_line, false)
+    return not vim.deep_equal(now, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+  end
+
   --- Put the entry at the cursor in the pane, when it is not the one already
   --- there. The buffer is built by entry_scratch, aimed at the pane's window;
   --- the pane gets its own `q` / `L` (close it) in place of entry_scratch's
-  --- `q`, which would put the view's buffer back in that window.
+  --- `q`, which would put the view's buffer back in that window. A copy left
+  --- behind by an edit to the same entry (copy_stale above) is rebuilt the
+  --- same way, so a note added to the entry under the cursor shows up.
   local function fill()
     if not (state.win and vim.api.nvim_win_is_valid(state.win)) then
       return
     end
     local view = require 'org.agenda.view'
     local key = entry_key(view)
-    if key and key ~= state.key then
+    if key and (key ~= state.key or copy_stale(view)) then
       local before = vim.api.nvim_win_get_buf(state.win)
       flush(before)
       view.actions.entry_scratch(state.win)
@@ -617,7 +670,7 @@ end
 -- Number keys open the custom views configured in
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
 -- TODOs across every project, 2 the group view -- the whole project file,
--- split by project, not just the headline cwd's project resolved to -- 3 the
+-- split by state, not just the headline cwd's project resolved to -- 3 the
 -- board (in progress, bugs, features, chores, untagged, done), 4 priorities.
 -- Buffer-local to orgagenda -- the TODO view renders into the same buffer,
 -- so it switches from there too -- which is why the keys are the plain
@@ -633,22 +686,26 @@ end
 -- resolves to the one headline covering it, and that is a sub-header of a
 -- file holding the whole group. `2` lists the whole file -- every headline
 -- of it -- by keeping the file scope (`files`, so no other project leaks
--- in) but dropping the subtree restriction; it reuses the `o` list and only
--- changes the division (view_groups below) and the block header
--- (open_custom_view), so each project inside the file gets its own section
--- under the file's name, the way `1` heads each file. 3 and 4 (and `°`,
--- which opens the same `w` board through M.custom_view) are scoped to the
--- project of the working directory the way `°` was: each block's `files`
--- becomes the project's file and a headline claim adds its subtree
--- restriction. A cwd that names no project -- or one whose file does not
--- exist yet -- opens the full view, the same one the dispatcher menu's `w` /
--- `p` give. Resolution runs per key press (project.current reads getcwd, or
--- the job cwd of a terminal buffer), so a `cd` moves the scope with it. 1 is
--- global: it never scopes, so it lists the open TODOs of every project.
+-- in) but dropping the subtree restriction, and by running the `g` command
+-- (lua/terminal_plugins/org.nvim.lua): one section per open keyword
+-- (NEXT/PEND/WARN/TODO), each ordered by the last-changed date the column
+-- shows, under the file's own name (open_custom_view heads a file-scope
+-- block with it). What the old division -- a section per project inside the
+-- file -- said, the entry lines now say themselves: the category column
+-- carries the sub-project's name (helpers/org/project.lua item_name). 3 and
+-- 4 (and `°`, which opens the same `w` board through M.custom_view) are
+-- scoped to the project of the working directory the way `°` was: each
+-- block's `files` becomes the project's file and a headline claim adds its
+-- subtree restriction. A cwd that names no project -- or one whose file
+-- does not exist yet -- opens the full view, the same one the dispatcher
+-- menu's `w` / `p` give. Resolution runs per key press (project.current
+-- reads getcwd, or the job cwd of a terminal buffer), so a `cd` moves the
+-- scope with it. 1 is global: it never scopes, so it lists the open TODOs
+-- of every project.
 local CUSTOM_VIEWS = {
   -- key, custom_commands key, desc, scope (see open_custom_view)
   { '1', 'o', 'all open TODOs', 'global' },
-  { '2', 'o', 'the whole project file, split by project', 'file' },
+  { '2', 'g', 'the whole project file, by state', 'file' },
   { '3', 'w', 'in progress, bugs, features, chores, untagged and done', 'project' },
   { '4', 'p', 'open A/B priorities', 'project' },
 }
@@ -660,21 +717,16 @@ local CUSTOM_VIEWS = {
 -- agenda, no header at all (the entries follow the last named group). The
 -- map depends on the scope:
 --   * `'global'` (key 1) heads every file's entries with the file title;
---   * `'file'` (key 2, the group view) heads them with the top-level
---     headline each entry sits under -- the project inside the file, since a
---     file may host several (allitude.org's "Classificazioni EVO" /
---     "Controlla EVO" / "PMS") -- so one file's entries split per project
---     the way key 1 splits per file;
 --   * `'project'` (the board, priorities) returns '' (an empty section name
 --     draws no header, and every item still lands in a section, so the
 --     "Other items" heading does not appear either): the category is the
 --     same under every section -- "Category: nvim" repeated -- and each
 --     block header already names the project ("Nvim - Bugs, open").
 -- A block that brings its own `super_groups` -- the board's Bugs / Features
--- / Chores / Untagged sections, which split by state -- keeps them
--- (open_custom_view below); the group view's command (`o`) sets none, so it
--- takes the map above. The "In progress" block sets `super_groups = false`
--- and is not grouped at all.
+-- / Chores / Untagged sections and the group view's per-state ones, which
+-- both split by state -- keeps them (open_custom_view below); key 1's `o`
+-- block sets none, so it takes the map above. The "In progress" block sets
+-- `super_groups = false` and is not grouped at all.
 -- The list is read and copied at open time, so the agenda's own groups --
 -- the day view keeps the globals -- are untouched.
 local function view_groups(scope)
@@ -683,17 +735,7 @@ local function view_groups(scope)
   for _, group in ipairs(require('org.extensions').opts('super_agenda').groups or {}) do
     if group.auto_map then
       local replacement = vim.deepcopy(group)
-      if scope == 'file' then
-        -- the top-level headline an entry sits under: its outline path's
-        -- first element, or its own title when it is itself level 1
-        replacement.auto_map = function(item)
-          local h = item.headline
-          if not h then
-            return nil
-          end
-          return h:outline_path()[1] or h:plain_title()
-        end
-      elseif scope == 'project' then
+      if scope == 'project' then
         replacement.auto_map = function()
           return ''
         end
@@ -711,9 +753,9 @@ local function view_groups(scope)
 end
 
 ---@param scope 'global'|'file'|'project' 'global' lists every agenda file;
----  'file' lists the cwd project's file whole, split by the projects it
----  hosts; 'project' narrows it to cwd's project (a headline claim's subtree
----  included)
+---  'file' lists the cwd project's file whole (the command it opens brings
+---  its own groups); 'project' narrows it to cwd's project (a headline
+---  claim's subtree included)
 local function open_custom_view(key, label, scope)
   local command = (require('org.config').opts.agenda.custom_commands or {})[key]
   if not command then
@@ -750,8 +792,8 @@ local function open_custom_view(key, label, scope)
       if title then
         block.header = block.header and (title .. ' - ' .. block.header) or title
       elseif group then
-        -- the group view's top title: the whole file's name, the projects it
-        -- hosts heading the sections below it (view_groups)
+        -- the group view's top title: the whole file's name, its per-state
+        -- sections below it (the `g` command's GROUP_SECTIONS)
         block.header = group
       end
     end
@@ -770,8 +812,9 @@ end
 --- Open a `custom_commands` view by its key, the same the agenda buffer's
 --- number keys run (helpers.org.project.todo_view opens the `w` board this
 --- way). Scoped to the cwd's project like the `3` / `4` keys; `global`
---- (`1`) skips the scope, and `file` (the `2` group view) lists the cwd
---- project's whole file. The `label` the keymaps pass is only their `desc`,
+--- (`1`) skips the scope, and `file` lists the cwd
+--- project's whole file (the `2` group view's command brings the per-state
+--- groups itself). The `label` the keymaps pass is only their `desc`,
 --- so the key stands in for it.
 ---@param key string a key of agenda.custom_commands
 ---@param scope 'global'|'file'|nil scope (see open_custom_view); nil is 'project'
@@ -989,7 +1032,9 @@ end
 -- <leader>ai on an entry launches an `omp` instance for that ticket in a
 -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp terminal
 -- key in the agenda and in the TODO view, which renders into the same
--- buffer. Buffer-local, so it lands after org.nvim's own mappings.
+-- buffer. Buffer-local, so it lands after org.nvim's own mappings. On a
+-- Visual selection it launches every entry the selection covers, the same
+-- way, one instance each (launch_range).
 -- <leader>aj focuses the pane of that ticket's already-running instance,
 -- resuming its session when none is running.
 local function setup_ai()
@@ -999,6 +1044,9 @@ local function setup_ai()
       vim.keymap.set('n', '<leader>ai', function()
         require('helpers.org.ai').launch()
       end, { buffer = args.buf, desc = 'org: OMP on the ticket at point' })
+      vim.keymap.set('x', '<leader>ai', function()
+        require('helpers.org.ai').launch_range()
+      end, { buffer = args.buf, desc = 'org: OMP on the selected tickets' })
       vim.keymap.set('n', '<leader>aj', function()
         require('helpers.org.ai').jump()
       end, { buffer = args.buf, desc = 'org: jump to the running OMP for the ticket' })

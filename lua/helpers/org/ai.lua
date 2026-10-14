@@ -1,6 +1,7 @@
 -- OMP on an org ticket: `<leader>ai` in the TODO view (or an org buffer)
 -- opens an `omp` instance for the headline at point, seeded with the ticket's
--- :ID: and file.
+-- :ID: and file. Over a Visual selection it is that same launch applied to
+-- every entry the selection covers (M.launch_range), one instance each.
 --
 -- Layout: the first launch splits the nvim pane once with a vertical divider
 -- (`split-window -h`, omp on the right). Once anything already sits beside
@@ -150,15 +151,15 @@ local function preview_source()
   return src, pos[1] + 1
 end
 
---- The headline at the cursor, in an orgagenda or an org buffer. With
---- `mutate` set (the launch) a missing :ID: is created, the state is forced
---- to NEXT and the buffer saved; without it (the jump) nothing is written --
---- the headline is only read.
----@param mutate boolean
----@return OrgTicket|nil
-local function ticket_at_cursor(mutate)
+--- The buffer line of the headline the cursor is on: the entry at point in
+--- the agenda / TODO view, resolved to its source buffer; the headline at
+--- the cursor in an org buffer -- or the real headline behind the
+--- `org-entry` preview scratch. nil, with a notification, when the cursor is
+--- nowhere near a headline.
+---@return integer|nil bufnr
+---@return integer|nil lnum
+local function target_at_cursor()
   local view = require 'org.agenda.view'
-  local bufnr, lnum
   if vim.bo.filetype == 'orgagenda' then
     local item = view.item_at_cursor()
     if not item then
@@ -169,18 +170,27 @@ local function ticket_at_cursor(mutate)
     if not target then
       return nil
     end
-    bufnr, lnum = target.bufnr, target.lnum
-  elseif vim.bo.filetype == 'org' then
-    bufnr, lnum = preview_source()
-    if not bufnr then
-      bufnr = vim.api.nvim_get_current_buf()
-      lnum = vim.api.nvim_win_get_cursor(0)[1]
-    end
-  else
-    notify('org ai: not an org or agenda buffer', vim.log.levels.WARN)
-    return nil
+    return target.bufnr, target.lnum
   end
+  if vim.bo.filetype == 'org' then
+    local bufnr, lnum = preview_source()
+    if bufnr then
+      return bufnr, lnum
+    end
+    return vim.api.nvim_get_current_buf(), vim.api.nvim_win_get_cursor(0)[1]
+  end
+  notify('org ai: not an org or agenda buffer', vim.log.levels.WARN)
+end
 
+--- The ticket for the headline at `lnum` of `bufnr`, in an orgagenda or an
+--- org buffer. With `mutate` set (the launch) a missing :ID: is created, the
+--- state is forced to NEXT and the buffer saved; without it (the jump)
+--- nothing is written -- the headline is only read.
+---@param bufnr integer
+---@param lnum integer
+---@param mutate boolean
+---@return OrgTicket|nil
+local function ticket_at(bufnr, lnum, mutate)
   local file = require('org.files').get_buffer(bufnr)
   local hl = file:headline_on(lnum)
   if not hl then
@@ -228,6 +238,18 @@ local function ticket_at_cursor(mutate)
     file = vim.fs.normalize(path),
     title = hl:plain_title(),
   }
+end
+
+--- The headline at the cursor, in an orgagenda or an org buffer (ticket_at
+--- on target_at_cursor).
+---@param mutate boolean
+---@return OrgTicket|nil
+local function ticket_at_cursor(mutate)
+  local bufnr, lnum = target_at_cursor()
+  if not bufnr then
+    return nil
+  end
+  return ticket_at(bufnr, lnum, mutate)
 end
 
 --- Run `git` in `root` — the rest of `args` its argv — without a shell.
@@ -609,6 +631,60 @@ local function open_window(ticket)
   })
 end
 
+--- The lines of the Visual selection, leaving Visual mode. The mapping runs
+--- while the region is still active: `'v'` is its start and the cursor its
+--- end (the plugin's own take_visual, org.agenda.view.mappings).
+---@return integer first
+---@return integer last
+local function take_visual()
+  local a, b = vim.fn.line 'v', vim.fn.line '.'
+  vim.cmd 'normal! \27'
+  return math.min(a, b), math.max(a, b)
+end
+
+--- The headlines covered by lines [first, last] of the current buffer, as
+--- { bufnr, lnum } in the order they appear. In the agenda / TODO view a
+--- rendered entry line is an item, resolved to its source headline; in an
+--- org buffer every headline whose line falls in the range — the real
+--- headlines behind them when the range is in the `org-entry` preview
+--- scratch, whose lines are the entry's own.
+---@param first integer
+---@param last integer
+---@return { bufnr: integer, lnum: integer }[]
+local function targets_in_range(first, last)
+  local targets = {}
+  if vim.bo.filetype == 'orgagenda' then
+    local view = require 'org.agenda.view'
+    local items = (view.state or {}).line_items or {}
+    local seen = {}
+    for l = first, last do
+      local item = items[l]
+      if item and not seen[item] then
+        seen[item] = true
+        local target = view.resolve_target(item)
+        if target then
+          targets[#targets + 1] = { bufnr = target.bufnr, lnum = target.lnum }
+        end
+      end
+    end
+    return targets
+  end
+  if vim.bo.filetype == 'org' then
+    local bufnr, base = vim.api.nvim_get_current_buf(), 0
+    local src, src_line = preview_source()
+    if src then
+      bufnr, base = src, src_line - 1
+    end
+    local file = require('org.files').get_buffer(bufnr)
+    for _, hl in ipairs(file.headlines) do
+      if hl.line >= base + first and hl.line <= base + last then
+        targets[#targets + 1] = { bufnr = bufnr, lnum = hl.line }
+      end
+    end
+  end
+  return targets
+end
+
 --- Reload org files changed on disk under the loaded buffers and re-render
 --- the agenda view. The agent writes to the file while nvim holds the
 --- buffer, so a reload is what makes the write-back visible.
@@ -645,6 +721,45 @@ function M.launch()
     open_pane(ticket)
   else
     open_window(ticket)
+  end
+  M.sync()
+end
+
+--- `<leader>ai` over a Visual selection: the Visual-mode shape of M.launch.
+--- Every entry the selection covers is launched exactly as it would be on
+--- its own — its own :ID: / :OMP_SESSION: link, its NEXT state, its
+--- checkpoint and its own omp pane. The entries are launched bottom-up, so
+--- the property drawer the launcher writes on one entry cannot shift the
+--- lines of another still to come.
+function M.launch_range()
+  local first, last = take_visual()
+  local targets = targets_in_range(first, last)
+  if #targets == 0 then
+    notify('org ai: no entries in the selection', vim.log.levels.WARN)
+    return
+  end
+  table.sort(targets, function(a, b)
+    if a.bufnr == b.bufnr then
+      return a.lnum > b.lnum
+    end
+    return a.bufnr < b.bufnr
+  end)
+
+  local launched = 0
+  for _, target in ipairs(targets) do
+    local ticket = ticket_at(target.bufnr, target.lnum, true)
+    if ticket then
+      checkpoint(ticket)
+      if in_tmux() then
+        open_pane(ticket)
+      else
+        open_window(ticket)
+      end
+      launched = launched + 1
+    end
+  end
+  if launched > 1 then
+    notify(('org ai: launched %d tickets'):format(launched))
   end
   M.sync()
 end

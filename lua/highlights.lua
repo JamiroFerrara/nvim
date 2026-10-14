@@ -33,6 +33,11 @@ vim.api.nvim_create_autocmd('BufEnter', {
     vim.cmd 'highlight link RenderMarkdownDash Comment'
 
     vim.cmd 'highlight @markup.link.label guifg=#c6a0f6' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    -- org.nvim's links (`[[target]]`, `[[target][description]]`, `org:`,
+    -- `id:`, ...) default to `@markup.link` (lavender), while the vault's
+    -- `[[wikilinks]]` render as `@markup.link.label` (mauve). Point org's
+    -- link group at the same one so the two read the same color.
+    vim.cmd 'highlight! link OrgLink @markup.link.label'
     vim.cmd 'highlight @markup.raw.block guibg=#292f45' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
 
     vim.cmd 'highlight RenderMarkdownCode guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
@@ -41,4 +46,3 @@ vim.api.nvim_create_autocmd('BufEnter', {
     vim.cmd 'highlight Folded guibg=none guifg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
   end,
 })
-

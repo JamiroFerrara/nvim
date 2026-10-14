@@ -1,8 +1,9 @@
 -- Statistics-cookie maintenance for org.nvim (wired in
 -- lua/terminal_plugins/org.nvim.lua): automatic `[/]` / `[x/y]` cookies, the
--- auto-DONE when an entry's checkboxes are all checked, the reopen of a
--- finished entry that gains an open child (a capture or a typed subtree),
--- and the undo hygiene that keeps all of it out of the user's undo history.
+-- auto-DONE when an entry's checkboxes are all checked, the auto-DONE of an
+-- entry whose child headlines are all finished, the reopen of a finished
+-- entry that gains an open child (a capture or a typed subtree), and the
+-- undo hygiene that keeps all of it out of the user's undo history.
 local M = {}
 
 local updating = false
@@ -83,6 +84,22 @@ local function open_child(hl, kw)
   return false
 end
 
+--- Are all of `hl`'s direct child entries over? A child without a TODO
+--- keyword does not count -- there is nothing to finish -- so an entry with
+--- no keyworded child at all is not "all done": there was nothing to close.
+local function children_done(hl, kw)
+  local n = 0
+  for _, c in ipairs(hl.children or {}) do
+    if c.todo then
+      if not finished_p(kw, c.todo) then
+        return false
+      end
+      n = n + 1
+    end
+  end
+  return n > 0
+end
+
 --- A new open entry reopens a finished parent: an entry with an open child
 --- is not over, so it goes back to the first open keyword of its sequence
 --- (TODO). Emacs leaves this to the user; here it is called only where an
@@ -133,6 +150,52 @@ local function reopen_finished(bufnr, lnum)
     if p and finished_p(kw, p.todo) and open_child(p, kw) then
       pcall(vim.cmd, 'silent! undojoin')
       todo.change_state({ bufnr = bufnr, lnum = line }, kw:first_todo(kw:get(p.todo).seq))
+    end
+  end
+end
+
+--- The last child of an entry being finished finishes the entry: a headline
+--- that carries a live TODO keyword and whose child headlines are all over
+--- moves to its sequence's first DONE keyword -- the mirror of
+--- reopen_finished, so an entry is over exactly while its children are. It
+--- cascades: the change it makes fires OrgTodoStateChange again, which runs
+--- it on the entry's own ancestors, closing an all-done subtree to the top.
+--- Called only from that event, so opening a file or a hand-set state is
+--- never fought (the same reason reopen_finished is absent from
+--- ensure_cookies).
+---@param bufnr integer
+---@param lnum integer the entry that just changed
+local function finish_when_children_done(bufnr, lnum)
+  if not vim.api.nvim_buf_is_valid(bufnr) or vim.bo[bufnr].filetype ~= 'org' then
+    return
+  end
+  local files = require 'org.files'
+  local todo = require 'org.todo'
+  local file = files.get_buffer(bufnr)
+  local kw = file and file.settings.todo
+  if not kw then
+    return
+  end
+  local hl = lnum and file:headline_at(lnum)
+  if not hl then
+    return
+  end
+  local targets = {}
+  local parent = hl.parent
+  while parent do
+    if parent.todo and not finished_p(kw, parent.todo) and children_done(parent, kw) then
+      targets[#targets + 1] = parent.line
+    end
+    parent = parent.parent
+  end
+  for _, line in ipairs(targets) do
+    local p = files.get_buffer(bufnr):headline_at(line)
+    if p and p.todo and not finished_p(kw, p.todo) and children_done(p, kw) then
+      local target = kw:first_done(p.todo)
+      if target then
+        pcall(vim.cmd, 'silent! undojoin')
+        todo.change_state({ bufnr = bufnr, lnum = line }, target)
+      end
     end
   end
 end
@@ -282,6 +345,11 @@ function M.setup()
   on_event('OrgTodoStateChange', function(data)
     if data.bufnr then
       ensure_cookies(data.bufnr)
+      -- finishing the last open child finishes the parent (cascades up);
+      -- a reopen (data.done false) is the other direction, handled below
+      if data.done and data.lnum then
+        finish_when_children_done(data.bufnr, data.lnum)
+      end
     end
   end)
   -- A capture stores its entry programmatically and saves the target before
