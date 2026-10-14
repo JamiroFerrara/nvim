@@ -26,6 +26,18 @@
 -- the Task template's date header directly under the captured entry's
 -- headline (see its docstring), and `hook` is the Task template's `hook`: it
 -- keeps the capture buffer itself in that order as the entry is typed.
+--
+-- `capture_tags`, the other store filter, is the file/header scope of default
+-- tags: whatever the destination inherits -- the target headline's whole set
+-- (`#+FILETAGS:` of its file, its ancestors' tags, its own), or the file's
+-- `#+FILETAGS:` alone for a capture landing at file level -- is appended to
+-- the captured entry's headline. A project file carrying `#+FILETAGS:
+-- allitude` and a `PMS` headline tagged `:pms:` therefore captures
+-- `:allitude:pms:`, the same set the agenda would have shown the entry anyway
+-- through org tag inheritance; the tags are written, not merely inherited.
+-- Both capture paths that reach this store (the `^` Task capture and the
+-- `c` / <leader>aC capture-under-entry of helpers/org/tree.lua) go through
+-- the filter, so the setting covers either way in.
 local M = {}
 
 local dest
