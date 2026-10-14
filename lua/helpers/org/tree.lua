@@ -35,6 +35,11 @@
 --     listed parent show, and a node's line carries the size of its subtree,
 --     `… (N)` with the `…` while descendants are hidden and plain `(N)`
 --     once they are shown;
+--   * an expanded node's subtree is followed by a gap row -- the sibling
+--     continuation bar alone (`│`, nothing else) -- when another sibling
+--     follows: one row of air between the subtrees, the tree's vertical
+--     line running through it. Nothing after the last child of a run, and
+--     nothing under a folded node;
 --   * `<Tab>` is fold-only in the view: it cycles the node at point
 --     (folded -> children -> subtree -> folded), like org's own <Tab>. On a
 --     line without a subtree it falls back to the group header's own fold
@@ -476,10 +481,19 @@ local function transform(view, b, render, ctx)
       return out, nh
     end
 
+    --- The gap row that follows an expanded node's children: the sibling
+    --- continuation bar alone (`│`, `│  │`), with nothing else on it. It
+    --- carries no item, so the view's cursor keys skip it like a body line.
+    local function gap(base, bars)
+      return { text = pad(base) .. (bars:gsub('%s+$', '')), hls = {} }
+    end
+
     --- `base` is the root's content column (its agenda prefix width); a
     --- child's text starts there, one `guide` (and `bars`) deeper, with no
-    --- agenda prefix of its own.
-    local function walk(nd, base, guide, bars)
+    --- agenda prefix of its own. `last_sibling` is whether `nd` closes its
+    --- parent's child list, which decides whether a gap row is drawn under
+    --- its subtree.
+    local function walk(nd, base, guide, bars, last_sibling)
       if not visible(nd) then
         return
       end
@@ -506,16 +520,27 @@ local function transform(view, b, render, ctx)
           end
         end
       end
+      local shown = false
       for i, ch in ipairs(nd.children) do
         local last = i == #nd.children
-        walk(ch, base, bars .. (last and '└─ ' or '├─ '), bars .. (last and '   ' or '│  '))
+        if visible(ch) then
+          shown = true
+        end
+        walk(ch, base, bars .. (last and '└─ ' or '├─ '), bars .. (last and '   ' or '│  '), last)
+      end
+      -- One row of air between a node's subtree and the sibling below it,
+      -- so the bar runs on through the gap. Only when something is shown
+      -- (a folded node's children stay hidden) and only between siblings:
+      -- after the last child, or a root, there is nothing to link to.
+      if shown and not last_sibling then
+        order[#order + 1] = gap(base, bars)
       end
     end
     for _, nd in ipairs(run_roots) do
       local c = nd.unit.ctx or ctx
       local kind = c.kind or (c.agenda and 'agenda' or 'todo')
       local prefix = render.prefix(nd.item, kind)
-      walk(nd, vim.fn.strdisplaywidth(prefix), '', '')
+      walk(nd, vim.fn.strdisplaywidth(prefix), '', '', true)
     end
     run = {}
   end
