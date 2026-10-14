@@ -208,8 +208,9 @@ return {
       -- lines already carry are only visible here. Reached from the
       -- dispatcher menu or `:Org agenda <key>`, which give the whole set;
       -- the agenda buffer's 1 / 2 / 3 / 4 (helpers/org/agenda.lua) open
-      -- them, 1 global, 2 the whole file of the cwd's project, and the
-      -- rest narrowed to cwd's project. `°` (helpers/org/project.lua) opens
+      -- them, 1 global, 2 the whole file of the cwd's project (the `o` list,
+      -- its entries split by the project each sits under), and the rest
+      -- narrowed to cwd's project. `°` (helpers/org/project.lua) opens
       -- the `w` board the same scoped way, so it is an alias for the `3`
       -- key. The keys avoid the built-in
       -- dispatcher ones (a t T m M s S n # / < > e * ?), so they add rows
@@ -295,9 +296,8 @@ return {
               -- done_recency above, which orders the entries by CLOSED
               -- ascending. Replaces the default todo sorting (urgency-down),
               -- which says nothing about a finished entry. The board
-              -- (digit 3 / `°`, and `2`'s whole-file group view), the
-              -- dispatcher menu's `w` and `°` (helpers/org/project.lua) all
-              -- deep-copy this block.
+              -- (digit 3 / `°`), the dispatcher menu's `w` and `°`
+              -- (helpers/org/project.lua) all deep-copy this block.
               sorting = { 'user-defined-down' },
             },
           },
@@ -329,9 +329,9 @@ return {
       tags_match_list_sublevels = false,
       -- Line prefix (org-agenda-prefix-format) for the entry lists. The stock
       -- `" %i %-12:c"` is kept, and the `todo` kind -- the board (digit 3 /
-      -- `°`, `2`'s whole-file group view) and the global `o` -- gains the
-      -- entry's last-changed date before the keyword, the date the entry
-      -- last moved: helpers/org/
+      -- `°`) and the global `o` (digit 1, and `2`'s whole-file group view)
+      -- gains the entry's last-changed date before the keyword, the date
+      -- the entry last moved: helpers/org/
       -- changed.lua takes the newest timestamp the entry carries (CLOSED, a
       -- note/capture header, an edited date) and reads it relative while
       -- recent ("today 15:53", "3d ago") and as "9 Oct" past a week.

@@ -22,19 +22,26 @@ local M = {}
 
 local NS = vim.api.nvim_create_namespace 'org_agenda_callouts'
 
--- Left gutter bar, and the band's blend: how much of the state color is
--- mixed into the background (100 = none of it).
+-- Left gutter bar, and how much of the state's color the band mixes into the
+-- background. The color is blended here rather than left to the highlight's
+-- own `blend` attribute: a `line_hl_group` -- the full-width band -- is drawn
+-- with the group's color as it stands, `blend` and all.
 local BAR = '▋'
-local BLEND = 80
+local BAND_MIX = 0.18
 
 -- The band sits under the plugin's own line highlights -- OrgAgendaClocking,
 -- a dimmed blocked entry -- which are drawn at 90.
 local BAND_PRIORITY = 50
 
--- bar/band group of a source face -> the color they were last defined from,
--- so nothing is rewritten while the color stands (a colorscheme change, or a
--- `todo_keyword_faces` edit, moves it).
+-- bar/band group -> the color they were last defined from, so nothing is
+-- rewritten while it stands. The band is cached on the *mixed* color, so a
+-- colorscheme change (a new background to mix into) rewrites it too.
 local defined = {}
+
+-- The pairs as last drawn (key -> the face they were derived from), so a
+-- colorscheme change can re-derive them: the view is not re-rendered for it,
+-- and the extmarks pick the new definitions up on the redraw.
+local drawn = {}
 
 --- A TODO-style view lists entries (a `todo`, `tags_todo`, `search`, ...
 --- block); an agenda view draws the day grid, where there are no entry lines.
@@ -58,16 +65,38 @@ local function color_of(name)
   return hl.bg or hl.fg
 end
 
---- Bar and band highlight groups of the face `source`: the bar is drawn in
---- `source`'s color, the band is that color blended into the background.
-local function groups_of(source)
-  local bar = 'OrgCalloutBar' .. source:gsub('%W', '')
-  local band = 'OrgCalloutBand' .. source:gsub('%W', '')
+--- `color` mixed into the background by `weight` (0 = background, 1 =
+--- `color`), the band's own color: a `line_hl_group` ignores the highlight's
+--- `blend`, so the mix is done here. LuaJIT has no bitwise operators, so the
+--- channels are cut by division.
+local function mix(color, weight)
+  local base = vim.api.nvim_get_hl(0, { name = 'Normal' }).bg or 0x000000
+  local out = 0
+  local scale = 1
+  for _ = 1, 3 do
+    local f = math.floor(color / scale) % 256
+    local b = math.floor(base / scale) % 256
+    out = out + math.floor(b + (f - b) * weight + 0.5) * scale
+    scale = scale * 256
+  end
+  return out
+end
+
+--- Bar and band highlight groups of an entry's face `source` (`key` names
+--- them): the bar is drawn in `source`'s color, the band in that color mixed
+--- into the background.
+local function groups_of(key, source)
+  local bar = 'OrgCalloutBar' .. key
+  local band = 'OrgCalloutBand' .. key
   local color = color_of(source) or color_of('Comment')
-  if color and defined[bar] ~= color then
-    defined[bar] = color
+  if not color then
+    return bar, band
+  end
+  local mixed = mix(color, BAND_MIX)
+  if defined[bar] ~= color or defined[band] ~= mixed then
+    defined[bar], defined[band] = color, mixed
     vim.api.nvim_set_hl(0, bar, { fg = color })
-    vim.api.nvim_set_hl(0, band, { bg = color, blend = BLEND })
+    vim.api.nvim_set_hl(0, band, { bg = mixed })
   end
   return bar, band
 end
@@ -84,11 +113,11 @@ local function draw(buf, b, S)
   local render = require 'org.agenda.render'
   local seen = {}
   for row, item in pairs(b.items or {}) do
-    local source = item.todo and render.todo_group(item) or 'Comment'
-    local pair = seen[source]
+    local key = item.todo and item.todo:gsub('%W', '') or 'Plain'
+    local pair = seen[key]
     if not pair then
-      pair = { groups_of(source) }
-      seen[source] = pair
+      pair = { groups_of(key, item.todo and render.todo_group(item) or 'Comment') }
+      seen[key] = pair
     end
     local bar, band = pair[1], pair[2]
     local line = row - 1

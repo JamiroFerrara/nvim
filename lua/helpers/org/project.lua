@@ -426,6 +426,28 @@ function M.file_title(path)
   return vim.fn.fnamemodify(path, ':t:r')
 end
 
+--- Display name of the whole file a group view spans (helpers/org/agenda.lua
+--- key 2). A file that is one project ("Nvim [30/35]", the file's single
+--- level-1 headline) keeps that name; a file hosting several projects, one
+--- per top-level headline (allitude.org's "Classificazioni EVO" /
+--- "Controlla EVO" / "PMS"), is a group, and its basename names the whole --
+--- the "allitude" of the category column.
+---@param path string
+---@return string
+function M.group_title(path)
+  local ok, file = pcall(function()
+    return require('org.files').get(path)
+  end)
+  local children = ok and file and file.children or {}
+  if #children == 1 then
+    local title = children[1]:plain_title()
+    if title and title ~= '' then
+      return title
+    end
+  end
+  return vim.fn.fnamemodify(path, ':t:r')
+end
+
 --- Outline path the capture for `project` lands under. Both branches rely on
 --- the node existing: a `.git`-derived file is written with its level-1
 --- headline by `ensure`, and a headline claim resolves exactly.
@@ -507,8 +529,9 @@ end
 --- the cwd's project -- the same view the agenda's `3` key opens
 --- (helpers.org.agenda.custom_view), and to every agenda file when there is
 --- no project. A headline claim is restricted to its subtree; the agenda's
---- `2` group view (helpers/org/agenda.lua) is this same `w` board but over
---- the cwd project's whole file. The view takes over the focused window
+--- `2` group view (helpers/org/agenda.lua) is instead the `o` open-TODO list
+--- over the cwd project's whole file, split into a section per project it
+--- hosts. The view takes over the focused window
 --- (agenda.window = 'current' in the plugin spec) rather than splitting
 --- below it; `q` puts the buffer back.
 function M.todo_view()

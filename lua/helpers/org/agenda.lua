@@ -270,7 +270,10 @@ local function setup_entry_scratch()
           -- first).
           local first = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]
           if dirty and first ~= nil and first:find '^%*+%s' then
-            pcall(write_back)
+            local ok, err = pcall(write_back)
+            print('TEMPWB', ok, err)
+          else
+            print('TEMPNOWB', dirty, vim.inspect(first))
           end
         end,
       })
@@ -565,8 +568,8 @@ end
 -- Number keys open the custom views configured in
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
 -- TODOs across every project, 2 the group view -- the whole project file,
--- not just the headline cwd's project resolved to -- 3 the board (in
--- progress, bugs, features, chores, untagged, done), 4 priorities.
+-- split by project, not just the headline cwd's project resolved to -- 3 the
+-- board (in progress, bugs, features, chores, untagged, done), 4 priorities.
 -- Buffer-local to orgagenda -- the TODO view renders into the same buffer,
 -- so it switches from there too -- which is why the keys are the plain
 -- digits and not the `<leader>o` ones: a count typed in the agenda
@@ -581,19 +584,22 @@ end
 -- resolves to the one headline covering it, and that is a sub-header of a
 -- file holding the whole group. `2` lists the whole file -- every headline
 -- of it -- by keeping the file scope (`files`, so no other project leaks
--- in) but dropping the subtree restriction. 3 and 4 (and `°`, which opens
--- the same `w` board through M.custom_view) are scoped to the project of
--- the working directory the way `°` was: each block's `files` becomes the
--- project's file and a headline claim adds its subtree restriction. A cwd
--- that names no project -- or one whose file does not exist yet -- opens
--- the full view, the same one the dispatcher menu's `w` / `p` give.
--- Resolution runs per key press (project.current reads getcwd, or the job
--- cwd of a terminal buffer), so a `cd` moves the scope with it. 1 is
+-- in) but dropping the subtree restriction; it reuses the `o` list and only
+-- changes the division (view_groups below) and the block header
+-- (open_custom_view), so each project inside the file gets its own section
+-- under the file's name, the way `1` heads each file. 3 and 4 (and `°`,
+-- which opens the same `w` board through M.custom_view) are scoped to the
+-- project of the working directory the way `°` was: each block's `files`
+-- becomes the project's file and a headline claim adds its subtree
+-- restriction. A cwd that names no project -- or one whose file does not
+-- exist yet -- opens the full view, the same one the dispatcher menu's `w` /
+-- `p` give. Resolution runs per key press (project.current reads getcwd, or
+-- the job cwd of a terminal buffer), so a `cd` moves the scope with it. 1 is
 -- global: it never scopes, so it lists the open TODOs of every project.
 local CUSTOM_VIEWS = {
   -- key, custom_commands key, desc, scope (see open_custom_view)
   { '1', 'o', 'all open TODOs', 'global' },
-  { '2', 'w', 'the whole project file', 'file' },
+  { '2', 'o', 'the whole project file, split by project', 'file' },
   { '3', 'w', 'in progress, bugs, features, chores, untagged and done', 'project' },
   { '4', 'p', 'open A/B priorities', 'project' },
 }
@@ -602,27 +608,43 @@ local CUSTOM_VIEWS = {
 -- (lua/terminal_plugins/org.nvim.lua) with the nameless catch-all swapped
 -- for a title map, so the entries are headed by the project file's title
 -- (the "Nvim" of "Nvim [30/35]") instead of "Category: nvim" -- and, in the
--- agenda, no header at all (the entries follow the last named group). Scoped
--- to the cwd's project file -- the board, the group view -- the map returns
--- '' (an empty section name draws no header, and every item still lands in a
--- section, so the "Other items" heading does not appear either): the
--- category is the same under every section --
--- "Category: nvim" repeated -- and, in the project-scoped board, each block
--- header already names the title ("Nvim - Bugs, open"; the group view leaves
--- the configured headers alone, so it names no one headline). A block that
--- brings its own `super_groups` -- the
--- board's Bugs / Features / Chores / Untagged sections, which split by state
--- -- keeps them (open_custom_view below). The "In progress" block sets
--- `super_groups = false` and is not grouped at all.
+-- agenda, no header at all (the entries follow the last named group). The
+-- map depends on the scope:
+--   * `'global'` (key 1) heads every file's entries with the file title;
+--   * `'file'` (key 2, the group view) heads them with the top-level
+--     headline each entry sits under -- the project inside the file, since a
+--     file may host several (allitude.org's "Classificazioni EVO" /
+--     "Controlla EVO" / "PMS") -- so one file's entries split per project
+--     the way key 1 splits per file;
+--   * `'project'` (the board, priorities) returns '' (an empty section name
+--     draws no header, and every item still lands in a section, so the
+--     "Other items" heading does not appear either): the category is the
+--     same under every section -- "Category: nvim" repeated -- and each
+--     block header already names the project ("Nvim - Bugs, open").
+-- A block that brings its own `super_groups` -- the board's Bugs / Features
+-- / Chores / Untagged sections, which split by state -- keeps them
+-- (open_custom_view below); the group view's command (`o`) sets none, so it
+-- takes the map above. The "In progress" block sets `super_groups = false`
+-- and is not grouped at all.
 -- The list is read and copied at open time, so the agenda's own groups --
 -- the day view keeps the globals -- are untouched.
-local function view_groups(scoped)
+local function view_groups(scope)
   local project = require 'helpers.org.project'
   local out = {}
   for _, group in ipairs(require('org.extensions').opts('super_agenda').groups or {}) do
     if group.auto_map then
       local replacement = vim.deepcopy(group)
-      if scoped then
+      if scope == 'file' then
+        -- the top-level headline an entry sits under: its outline path's
+        -- first element, or its own title when it is itself level 1
+        replacement.auto_map = function(item)
+          local h = item.headline
+          if not h then
+            return nil
+          end
+          return h:outline_path()[1] or h:plain_title()
+        end
+      elseif scope == 'project' then
         replacement.auto_map = function()
           return ''
         end
@@ -640,8 +662,9 @@ local function view_groups(scoped)
 end
 
 ---@param scope 'global'|'file'|'project' 'global' lists every agenda file;
----  'file' lists the cwd project's file whole; 'project' narrows it to
----  cwd's project (a headline claim's subtree included)
+---  'file' lists the cwd project's file whole, split by the projects it
+---  hosts; 'project' narrows it to cwd's project (a headline claim's subtree
+---  included)
 local function open_custom_view(key, label, scope)
   local command = (require('org.config').opts.agenda.custom_commands or {})[key]
   if not command then
@@ -652,12 +675,14 @@ local function open_custom_view(key, label, scope)
   local project = require 'helpers.org.project'
   local current = scope ~= 'global' and project.current() or nil
   local in_project = current ~= nil and vim.uv.fs_stat(current.file) ~= nil
-  local groups = view_groups(in_project)
-  local files, title
+  local groups = view_groups(scope)
+  local files, title, group
   if in_project then
     files = project.files(current)
     if scope == 'project' then
       title = project.title(current)
+    else
+      group = project.group_title(current.file)
     end
   end
   for _, block in ipairs(spec.types or { spec }) do
@@ -675,6 +700,10 @@ local function open_custom_view(key, label, scope)
       block.files = files
       if title then
         block.header = block.header and (title .. ' - ' .. block.header) or title
+      elseif group then
+        -- the group view's top title: the whole file's name, the projects it
+        -- hosts heading the sections below it (view_groups)
+        block.header = group
       end
     end
   end
