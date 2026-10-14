@@ -36,6 +36,17 @@ snippet task "TODO entry: tag, properties drawer, body"
 	:END:
 	$0
 
+# Header-scope default tags for captures (helpers/org/capture.lua
+# `capture_tags`): a headline's tags are inherited by its whole subtree, so
+# every capture under it lands with them written on the new entry. A file
+# `#+FILETAGS: allitude` plus `:pms:` on the `PMS` headline tags a PMS capture
+# `:allitude:pms:`. `tagged` starts such a headline; `htags` adds the tags to
+# the headline at point (append at its end).
+snippet tagged "Tagged headline (header-scope default tags)"
+	* ${1:Title} :${2:tag}:
+snippet htags "Add tags to the headline at point"
+	 `" "`:${1:tag}:
+
 snippet pri "Headline priority (A, B or C)"
 	[#${1:A}]
 
@@ -166,6 +177,9 @@ snippet options
 	#+options: $0
 snippet startup
 	#+startup: $0
+# File-scope default tags for captures (helpers/org/capture.lua
+# `capture_tags`): a capture landing in this file gets these written on its
+# headline. It is org's own file tag list, so the agenda inherits it too.
 snippet filetags
 	#+filetags: :${1:tag}:
 # The file-level `#+PROJECT_DIRS:` claim (helpers/org/project.lua): every cwd

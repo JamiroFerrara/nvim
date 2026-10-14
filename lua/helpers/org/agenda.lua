@@ -836,23 +836,23 @@ local function setup_custom_views()
   })
 end
 
--- A full-width `─` rule line, what the extension's `add_separator` draws for
--- a one-character `header_separator`. It splices a line into the builder at
--- `pos` (1-based, before the line already there) and shifts the line-indexed
--- tables the builder carries with it -- the highlight rows (0-based), the
--- `items` / `line_hls` / `line_ctx` / `entry_text_lines` / `day_lines` /
--- `super_headers` maps keyed by line, and `block_starts` (render.view) -- so
--- the block that already wrote its header keeps it. Used for the board's
--- Done section, which carries `rule_above`.
-local function insert_rule(b, pos, width)
-  local text = string.rep('─', math.max((width or 80) - 1, 10))
+-- Splice `text` into the builder at `pos` (1-based, before the line already
+-- there) and shift the line-indexed tables the builder carries with it --
+-- the highlight rows (0-based), the `items` / `line_hls` / `line_ctx` /
+-- `entry_text_lines` / `day_lines` / `super_headers` maps keyed by line, and
+-- `block_starts` (render.view) -- so the block that already wrote its header
+-- keeps it. `group` highlights the new row; nil leaves it plain, which is
+-- what a blank line gets.
+local function insert_line(b, pos, text, group)
   table.insert(b.lines, pos, text)
   for _, h in ipairs(b.hls) do
     if h[1] >= pos - 1 then
       h[1] = h[1] + 1
     end
   end
-  b.hls[#b.hls + 1] = { pos - 1, 0, #text, 'OrgSuperAgendaSeparator' }
+  if group then
+    b.hls[#b.hls + 1] = { pos - 1, 0, #text, group }
+  end
   for _, key in ipairs { 'items', 'line_hls', 'line_ctx', 'entry_text_lines', 'day_lines', 'super_headers' } do
     local t = b[key]
     if t then
@@ -869,6 +869,19 @@ local function insert_rule(b, pos, width)
     end
   end
 end
+
+-- A full-width `─` rule line, what the extension's `add_separator` draws for
+-- a one-character `header_separator`. Used for the board's Done section,
+-- which carries `rule_above`.
+local function insert_rule(b, pos, width)
+  insert_line(b, pos, string.rep('─', math.max((width or 80) - 1, 10)), 'OrgSuperAgendaSeparator')
+end
+
+-- True while `render.view` is drawing a board (setup_board_view below), the
+-- one thing the grouper needs to know about the view it is called from: the
+-- board is where the between-block separator is off, so every section must
+-- carry the blank line that tells it apart from the next (see render.grouper).
+local board_render = false
 
 -- A board state section is one block whose `super_groups` split it into the
 -- per-state subsections (TODO / PEND / ...): the section reads as its header
@@ -912,6 +925,21 @@ local function setup_board_sections()
           table.remove(b.block_starts)
         end
         return true
+      end
+      -- On the board the between-block separator is off (setup_board_view),
+      -- so each section carries the blank line that tells it apart from the
+      -- next: the grouped ones end with one (`final_group_separator`), a flat
+      -- block -- the "In progress" list -- writes none, and its entries would
+      -- run straight into the next header. That blank is put above this
+      -- section's header instead (insert_header has just written it, at the
+      -- block's start): nothing is added when the line above is blank
+      -- already (a grouped section left its own) or when there is nothing
+      -- above (the first section on screen).
+      if board_render and block and b.block_starts and #b.block_starts > 0 and header_lines(block) > 0 then
+        local pos = b.block_starts[#b.block_starts]
+        if pos > 1 and b.lines[pos - 1] ~= '' then
+          insert_line(b, pos, '')
+        end
       end
       if block and block.rule_above and b.block_starts and #b.block_starts > 0 then
         local pos = b.block_starts[#b.block_starts]
@@ -968,9 +996,12 @@ end
 -- a rule belongs inside a section -- it splits the per-state subsections the
 -- grouper draws -- so the between-block one is turned off: each section
 -- leaves the blank line from the final separator above, and that is what
--- separates them. The option is the view-wide default, read when the view is
--- rendered; a `block_separator` a block sets itself is untouched
--- (with_block_options restores it around the block anyway).
+-- separates them. The flat sections -- "In progress", which draws no
+-- separator of its own -- get theirs from the grouper (setup_board_sections),
+-- which puts it above the header of the section that follows. The option is
+-- the view-wide default, read when the view is rendered; a `block_separator`
+-- a block sets itself is untouched (with_block_options restores it around the
+-- block anyway). `board_render` tells the grouper which render it is in.
 local function setup_board_view()
   require('org.lazy').on_load('org.agenda.render', 'board_block_separator', function(render)
     local view = render.view
@@ -991,7 +1022,9 @@ local function setup_board_view()
       local acfg = require('org.config').opts.agenda
       local separator = acfg.block_separator
       acfg.block_separator = false
+      board_render = true
       local ok, result = pcall(view, v, ctx)
+      board_render = false
       acfg.block_separator = separator
       if not ok then
         error(result, 0)
@@ -1009,22 +1042,48 @@ end
 -- override is set for that build and put back afterwards, leaving the item as
 -- the plugin built it (the sort and filter that read its category elsewhere
 -- are untouched).
+--
+-- render.prefix is wrapped the same way, and for the same reason: the TODO
+-- view's tree (helpers/org/tree.lua) measures the prefix off `render.prefix`
+-- -- to trim it from a child line and to indent a subtree under its ancestor
+-- -- so it has to read the prefix the line actually carries, the project name
+-- included. Left unwrapped it reads the entry's file category instead, a
+-- shorter string, and trims that much too little: the child line keeps the
+-- tail of the prefix (`24  `, `om: `) and the subtree is indented by the
+-- difference.
 local function setup_item_category()
   require('org.lazy').on_load('org.agenda.render', 'item_category', function(render)
     local item_parts = render.item_parts
-    render.item_parts = function(item, ctx)
+    local prefix = render.prefix
+    --- Run `fn` with `item.category` the sub-project's name, then put it back,
+    --- whatever `fn` returns or raises.
+    local function with_project(item, fn)
       local name = require('helpers.org.project').item_name(item.headline)
+      local f=io.open('/tmp/cat.log','a') f:write('  with_project name='..tostring(name)..' cat='..tostring(item and item.category)..'\n') f:close()
       if not name or name == item.category then
-        return item_parts(item, ctx)
+        return fn()
       end
       local category = item.category
       item.category = name
-      local ok, parts = pcall(item_parts, item, ctx)
+      local r = table.pack(pcall(fn))
+      do local f=io.open('/tmp/cat.log','a') f:write('  RESULT ok='..tostring(r[1])..' err='..tostring(r[2])..' item='..tostring(item and (item.title or item.raw))..'\n') f:close() end
       item.category = category
-      if not ok then
-        error(parts, 0)
+      if not r[1] then
+        error(r[2], 0)
       end
-      return parts
+      return table.unpack(r, 2, r.n)
+    end
+    render.item_parts = function(item, ctx)
+      local f=io.open('/tmp/cat.log','a') f:write('item_parts called\n') f:close()
+      return with_project(item, function()
+        return item_parts(item, ctx)
+      end)
+    end
+    render.prefix = function(item, kind)
+      local f=io.open('/tmp/cat.log','a') f:write('prefix called kind='..tostring(kind)..'\n') f:close()
+      return with_project(item, function()
+        return prefix(item, kind)
+      end)
     end
   end)
 end
