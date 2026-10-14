@@ -31,10 +31,10 @@
 -- tags: whatever the destination inherits -- the target headline's whole set
 -- (`#+FILETAGS:` of its file, its ancestors' tags, its own), or the file's
 -- `#+FILETAGS:` alone for a capture landing at file level -- is appended to
--- the captured entry's headline. A project file carrying `#+FILETAGS:
--- allitude` and a `PMS` headline tagged `:pms:` therefore captures
--- `:allitude:pms:`, the same set the agenda would have shown the entry anyway
--- through org tag inheritance; the tags are written, not merely inherited.
+-- the captured entry's headline. A project file carrying `#+FILETAGS: allitude`
+-- and a `PMS` headline tagged `:pms:` therefore captures `:allitude:pms:`, the
+-- same set the agenda would have shown the entry anyway through org tag
+-- inheritance; the tags are written, not merely inherited.
 -- Both capture paths that reach this store (the `^` Task capture and the
 -- `c` / <leader>aC capture-under-entry of helpers/org/tree.lua) go through
 -- the filter, so the setting covers either way in.
@@ -168,6 +168,86 @@ function M.header_first(tpl, lines)
   return changed and res or nil
 end
 
+--- The tags the destination hands down to a captured entry: the target
+--- headline's whole set -- its file's `#+FILETAGS:`, its ancestors' tags, its
+--- own (org tag inheritance) -- or, for a capture landing at file level
+--- (no target headline), the file's `#+FILETAGS:` alone. Empty when the
+--- destination is unknown or claims none.
+---@param ctx table
+---@return string[]
+local function inherited_tags(ctx)
+  local file = ctx.target_file
+  if not file then
+    return {}
+  end
+  if ctx.target_hl then
+    return ctx.target_hl:get_tags()
+  end
+  return vim.deepcopy(file.settings and file.settings.filetags or {})
+end
+
+--- Index of the captured entry's headline (its first `*` line) in `lines`.
+---@param lines string[]
+---@return integer|nil
+local function headline_line(lines)
+  local parser = require 'org.parser'
+  for i, l in ipairs(lines) do
+    if parser.headline_level(l) then
+      return i
+    end
+  end
+end
+
+--- org.nvim store filter: append the tags the destination inherits (see
+--- `inherited_tags`) to the captured entry's headline, so a capture under
+--- `allitude` lands `:allitude:pms:` instead of bare even though the agenda
+--- would have shown it those tags anyway. Entry captures only; tags the
+--- template already carries are kept (a tag is appended once), and the line
+--- is realigned like org-align-tags (`org.edit.build_headline`). Returns nil
+--- when nothing changed.
+---@param tpl table
+---@param lines string[]
+---@param ctx table
+---@return string[]|nil
+function M.capture_tags(tpl, lines, ctx)
+  if (tpl.type or 'entry') ~= 'entry' then
+    return nil
+  end
+  local tags = inherited_tags(ctx or {})
+  if #tags == 0 then
+    return nil
+  end
+  local at = headline_line(lines)
+  if not at then
+    return nil
+  end
+  local parser = require 'org.parser'
+  local p = parser.parse_headline_line(lines[at], ctx.target_file.settings and ctx.target_file.settings.todo)
+  if not p then
+    return nil
+  end
+  local have, own = {}, {}
+  for _, t in ipairs(p.tags) do
+    have[t] = true
+    own[#own + 1] = t
+  end
+  local added = false
+  for _, t in ipairs(tags) do
+    if not have[t] then
+      have[t] = true
+      own[#own + 1] = t
+      added = true
+    end
+  end
+  if not added then
+    return nil
+  end
+  p.tags = own
+  local out = vim.deepcopy(lines)
+  out[at] = require('org.edit').build_headline(p)
+  return out
+end
+
 --- Template `hook`: keep the capture buffer itself in that order as the entry
 --- is typed. Without it the header sits below the description while the
 --- capture is open -- the cursor types *above* the date line -- and only the
@@ -209,6 +289,7 @@ end
 function M.setup()
   require('org.lazy').on_load('org.capture', 'helper_capture', function(capture)
     capture.store_filters.capture_header = M.header_first
+    capture.store_filters.capture_tags = M.capture_tags
   end)
 end
 

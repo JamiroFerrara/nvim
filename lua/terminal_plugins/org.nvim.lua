@@ -436,6 +436,12 @@ return {
     -- the description, and the cursor, below it -- and the store filter there
     -- finishes the same reorder (title, header, description) and indents the
     -- description like it, for a buffer that was not kept in order.
+    --
+    -- The tags a capture inherits are appended to its headline by the second
+    -- store filter there (`capture_tags`): the destination headline's own and
+    -- inherited tags, or its file's `#+FILETAGS:` -- so a `#+FILETAGS:
+    -- allitude` file with a `PMS :pms:` headline captures `:allitude:pms:`,
+    -- the same default tags the agenda shows through org tag inheritance.
     capture = {
       templates = {
         t = {
