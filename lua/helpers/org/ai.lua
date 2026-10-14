@@ -19,7 +19,12 @@
 --
 -- The launcher owns the start of the run: it puts an :ID: on the headline
 -- (reusing one already there), sets the state to NEXT, saves the file, and
--- only then starts omp. `<leader>aj` is the other direction: it jumps to the
+-- only then starts omp. Before that hand-off it also commits whatever the
+-- ticket's project leaves pending (helpers/org/project.lua's
+-- `#+PROJECT_DIRS:` claims, one commit per repo, never a push): that commit
+-- is the revert point, so a run that goes wrong is undone with
+-- `git reset --hard` back to it instead of unpicking a dirty tree.
+-- `<leader>aj` is the other direction: it jumps to the
 -- pane of the ticket's already-running instance (the tmux `<prefix> i`
 -- panel's jump); when nothing runs it, it resumes the ticket's session
 -- interactively in a new window and lands there. Neither touches the
@@ -122,6 +127,29 @@ end
 ---@field file string absolute org file path
 ---@field title string
 
+--- The source entry of the entry preview: `<CR>` in the agenda (the
+--- `entry_scratch` action, helpers/org/agenda.lua) shows a copy of one entry
+--- in a scratch org buffer, which carries its source buffer and the extmark
+--- on the entry's first line in `org_entry_source` / `org_entry_mark`. A
+--- launch from the preview must act on that real headline -- the scratch's
+--- `org-entry://` name is not a file omp could read -- so resolve the pair
+--- here, the way write_back reads it. Returns nil when the current buffer is
+--- not such a preview.
+---@return integer|nil bufnr
+---@return integer|nil lnum
+local function preview_source()
+  local src = vim.b.org_entry_source
+  local mark = vim.b.org_entry_mark
+  if not (src and mark and vim.api.nvim_buf_is_valid(src)) then
+    return nil
+  end
+  local pos = vim.api.nvim_buf_get_extmark_by_id(src, vim.api.nvim_create_namespace 'org_entry_scratch', mark, {})
+  if not pos[1] then
+    return nil
+  end
+  return src, pos[1] + 1
+end
+
 --- The headline at the cursor, in an orgagenda or an org buffer. With
 --- `mutate` set (the launch) a missing :ID: is created, the state is forced
 --- to NEXT and the buffer saved; without it (the jump) nothing is written --
@@ -143,8 +171,11 @@ local function ticket_at_cursor(mutate)
     end
     bufnr, lnum = target.bufnr, target.lnum
   elseif vim.bo.filetype == 'org' then
-    bufnr = vim.api.nvim_get_current_buf()
-    lnum = vim.api.nvim_win_get_cursor(0)[1]
+    bufnr, lnum = preview_source()
+    if not bufnr then
+      bufnr = vim.api.nvim_get_current_buf()
+      lnum = vim.api.nvim_win_get_cursor(0)[1]
+    end
   else
     notify('org ai: not an org or agenda buffer', vim.log.levels.WARN)
     return nil
@@ -197,6 +228,85 @@ local function ticket_at_cursor(mutate)
     file = vim.fs.normalize(path),
     title = hl:plain_title(),
   }
+end
+
+--- Run `git` in `root` — the rest of `args` its argv — without a shell.
+---@param root string
+---@param args string[]
+---@return vim.SystemCompleted
+local function git(root, args)
+  local cmd = { 'git', '-C', root }
+  vim.list_extend(cmd, args)
+  return vim.system(cmd, { text = true }):wait()
+end
+
+--- git's own words for a failed run, one line, or its exit code when it
+--- said nothing (a pre-commit hook that fails silently).
+---@param res vim.SystemCompleted
+---@return string
+local function git_error(res)
+  local msg = vim.trim((res.stderr or '') .. ' ' .. (res.stdout or '')):gsub('%s+', ' ')
+  return msg ~= '' and msg or ('exit ' .. res.code)
+end
+
+--- One commit of everything pending in `root`, never a push. `true` when it
+--- committed, `false` when the tree was already clean, nil plus the error
+--- when git failed (bad repo, a rejected hook, nothing to commit).
+---@param root string
+---@param subject string
+---@return boolean|nil committed, string|nil err
+local function snapshot(root, subject)
+  local status = git(root, { 'status', '--porcelain' })
+  if status.code ~= 0 then
+    return nil, git_error(status)
+  end
+  if not status.stdout:match '%S' then
+    return false
+  end
+  git(root, { 'add', '-A' })
+  local commit = git(root, { 'commit', '--quiet', '-m', subject })
+  if commit.code ~= 0 then
+    return nil, git_error(commit)
+  end
+  return true
+end
+
+--- Commit the pending work of every repo the ticket's project claims — the
+--- repository as the user left it, before the agent touches it. This is the
+--- revert point: a run that goes wrong is undone with `git reset --hard` to
+--- it, so it costs little. Never a push, and never a commit on a clean tree.
+--- The ticket's file names the repos through its `#+PROJECT_DIRS:` claims
+--- (helpers/org/project.lua); a repo that will not commit is reported and
+--- the launch goes on.
+---@param ticket OrgTicket
+local function checkpoint(ticket)
+  local dirs = require('helpers.org.project').dirs(ticket.file, ticket.lnum)
+  local seen, roots = {}, {}
+  for _, dir in ipairs(dirs) do
+    local root = vim.fs.root(dir, '.git')
+    if root and not seen[root] then
+      seen[root] = true
+      roots[#roots + 1] = root
+    end
+  end
+
+  local subject = 'checkpoint before omp: ' .. ticket.title
+  local done, failed = {}, {}
+  for _, root in ipairs(roots) do
+    local name = vim.fn.fnamemodify(root, ':t')
+    local committed, err = snapshot(root, subject)
+    if committed == nil then
+      failed[#failed + 1] = name .. ' (' .. vim.trim(err or 'git failed') .. ')'
+    elseif committed then
+      done[#done + 1] = name
+    end
+  end
+  if #done > 0 then
+    notify('org ai: checkpointed ' .. table.concat(done, ', '))
+  end
+  if #failed > 0 then
+    notify('org ai: no checkpoint in ' .. table.concat(failed, '; '), vim.log.levels.WARN)
+  end
 end
 
 --- The message omp starts with: the ticket's identity, the state the
@@ -523,12 +633,14 @@ function M.sync()
   end
 end
 
---- `<leader>ai` in an org or orgagenda buffer.
+--- `<leader>ai` in an org or orgagenda buffer: commit the project's pending
+--- work (the revert point for the run), then start omp on the headline.
 function M.launch()
   local ticket = ticket_at_cursor(true)
   if not ticket then
     return
   end
+  checkpoint(ticket)
   if in_tmux() then
     open_pane(ticket)
   else

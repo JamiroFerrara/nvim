@@ -365,6 +365,27 @@ function M.current()
   return { name = name, file = norm(projects_dir .. '/' .. name .. '.org'), root = root, source = 'git' }
 end
 
+--- The directories the project file `path` claims that cover `lnum`: its
+--- file-level `#+PROJECT_DIRS:` always, plus a headline's `:PROJECT_DIRS:`
+--- only when `lnum` is inside that headline's subtree (so one file hosting
+--- several projects yields just the ticket's). Absolute and de-duplicated.
+--- The launch snapshots these repos before handing the ticket to omp
+--- (helpers/org/ai.lua); `lnum` nil keeps the file-level claims only.
+---@param path string
+---@param lnum integer|nil
+---@return string[]
+function M.dirs(path, lnum)
+  local out, seen = {}, {}
+  for _, claim in ipairs(claims_of(path)) do
+    local covered = claim.line == nil or (lnum and lnum >= claim.line and lnum <= (claim.end_line or claim.line))
+    if covered and not seen[claim.dir] then
+      seen[claim.dir] = true
+      out[#out + 1] = claim.dir
+    end
+  end
+  return out
+end
+
 --- Display name of `project`: a headline claim keeps its headline title, a
 --- file project uses its level-1 headline when it has one.
 ---@param project table

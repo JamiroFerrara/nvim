@@ -187,6 +187,14 @@ local function setup_entry_scratch()
       vim.bo[buf].filetype = 'org'
       local name = (hl.title and hl.title ~= '' and hl.title or 'entry'):gsub('[%s/\\]', '_')
       pcall(vim.api.nvim_buf_set_name, buf, 'org-entry://' .. name)
+      -- Remember where the copy came from. The buffer is a preview of one
+      -- source entry, so entry commands that read the buffer under the
+      -- cursor (helpers/org/ai.lua's <leader>ai) must resolve to `src` --
+      -- and to the entry's first line, kept by the extmark as the file is
+      -- edited -- instead of treating the scratch's `org-entry://` name as a
+      -- file. Write_back reads the same pair.
+      vim.b[buf].org_entry_source = src
+      vim.b[buf].org_entry_mark = mark
       vim.api.nvim_win_set_buf(win, buf)
       vim.wo[win].wrap = true
       -- The preview is a scratch holding a copy of the entry; it is written
