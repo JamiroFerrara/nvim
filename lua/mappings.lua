@@ -45,6 +45,8 @@ return {
     ['<leader>e'] = { '<cmd>Neotree toggle<cr>', desc = 'Toggle Neotree' },
     -- ['<C-e>'] = { '<cmd>lua require("snacks").explorer()<cr>', desc = 'Toggle Neotree' },
     ['<leader>lg'] = { '<cmd>lua os.execute("tmux neww lazygit")<cr>', desc = 'Open lazygit in a new tmux window' },
+    ['<leader>em'] = { '<cmd>Himalaya<cr>', desc = 'Open Himalaya email' },
+    ['<leader>eM'] = { '<cmd>Himalaya stiwiemayday@gmail.com<cr>', desc = 'Open Himalaya (personal email)' },
     ['<leader>dB'] = { '<cmd>DBUI<cr>', desc = 'Open DBUI' },
     ['<leader>b'] = { ':b ', desc = 'List buffers' },
     ['mt'] = { '<cmd>e TODO.md<cr>', desc = 'Open TODO.md' },

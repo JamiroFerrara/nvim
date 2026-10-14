@@ -18,7 +18,8 @@
 --
 -- The omp write-back (skill omp-org-ticket) writes the same block; its header
 -- carries the 🤖 icon in front of the timestamp, which is what marks the
--- block as the agent's -- decorations.lua draws that header like these.
+-- block as the agent's -- decorations.lua draws that header like these. Its
+-- text is written in Markdown, wrapped in an org `markdown` source block.
 --
 -- The rule is a fixed run of dashes in the source (tools that do not render
 -- still read it as a separator); helpers/org/decorations.lua overflows it to

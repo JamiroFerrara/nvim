@@ -380,7 +380,7 @@ end
 -- Number keys open the custom views configured in
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
 -- TODOs across every project, 2 the board (in progress, bugs, features,
--- untagged, done), 3 priorities. Buffer-local to orgagenda -- the TODO view
+-- chores, untagged, done), 3 priorities. Buffer-local to orgagenda -- the TODO view
 -- renders into the same buffer, so it switches from there too -- which
 -- is why the keys are the plain digits and not the `<leader>o` ones: a count
 -- typed in the agenda (`<C-u>` style) no longer starts with 1 or 2, and
@@ -399,31 +399,31 @@ end
 -- lists the open TODOs of every project.
 local CUSTOM_VIEWS = {
   { '1', 'o', 'all open TODOs', true },
-  { '2', 'w', 'in progress, bugs, features, untagged and done' },
+  { '2', 'w', 'in progress, bugs, features, chores, untagged and done' },
   { '3', 'p', 'open A/B priorities' },
 }
 
 -- The group headers the custom views draw: the global super_agenda groups
--- (lua/terminal_plugins/org.nvim.lua) with `auto_category` swapped for a
--- title group, so the entries are headed by the project file's title (the
--- "Nvim" of "Nvim [30/35]") instead of "Category: nvim". Scoped to one
--- project the group becomes a nameless catch-all (an empty section name
--- draws no header, and every item still lands in a section, so the "Other
--- items" heading does not appear either): the category is the same under
--- every section -- "Category: nvim" repeated -- and each block header
--- already names the title ("Nvim - Bugs, open"). A block that brings its
--- own `super_groups` -- the board's Bugs / Features / Untagged sections,
--- which split by state -- keeps them (open_custom_view below). The "In
--- progress" block sets `super_groups = false` and is not grouped at all.
+-- (lua/terminal_plugins/org.nvim.lua) with the nameless catch-all swapped
+-- for a title map, so the entries are headed by the project file's title
+-- (the "Nvim" of "Nvim [30/35]") instead of "Category: nvim" -- and, in the
+-- agenda, no header at all (the entries follow the last named group). Scoped
+-- to one project the map returns '' (an empty section name draws no header,
+-- and every item still lands in a section, so the "Other items" heading does
+-- not appear either): the category is the same under every section --
+-- "Category: nvim" repeated -- and each block header already names the title
+-- ("Nvim - Bugs, open"). A block that brings its own `super_groups` -- the
+-- board's Bugs / Features / Chores / Untagged sections, which split by state
+-- -- keeps them (open_custom_view below). The "In progress" block sets
+-- `super_groups = false` and is not grouped at all.
 -- The list is read and copied at open time, so the agenda's own groups --
 -- the day view keeps the globals -- are untouched.
 local function view_groups(scoped)
   local project = require 'helpers.org.project'
   local out = {}
   for _, group in ipairs(require('org.extensions').opts('super_agenda').groups or {}) do
-    if group.auto_category then
+    if group.auto_map then
       local replacement = vim.deepcopy(group)
-      replacement.auto_category = nil
       if scoped then
         replacement.auto_map = function()
           return ''

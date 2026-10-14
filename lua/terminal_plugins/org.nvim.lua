@@ -4,6 +4,13 @@
 --
 -- This file is only the plugin spec: options and the setup order of the
 -- custom pieces, which live in lua/helpers/org/:
+--   project.lua     cwd -> the project it belongs to: directories are claimed
+--                   by a `#+PROJECT_DIRS:` file keyword and by the
+--                   `:PROJECT_DIRS:` property of a headline, so one file can
+--                   host several projects; the longest covering prefix wins
+--                   (a headline claim beating the file's on a tie), else the
+--                   nearest `.git` root. The capture destination, the
+--                   project-scoped views and the `^` write side use it
 --   capture.lua     capture-task destination (level-1 project headlines)
 --   ics.lua         iCalendar subscriptions + event-detail scratch viewer
 --   cookies.lua     automatic statistics cookies and checkbox auto-DONE
@@ -31,9 +38,18 @@
 --                   (watch.lua reloads the changed org files live; the
 --                   FocusGained autocmd covers a change made while nvim
 --                   was unfocused)
+--   retro.lua       `<leader>ar`: one omp run over the agent sessions of
+--                   every DONE ticket carrying `:OMP_SESSION:`, the retro
+--                   skill appended; the report lands in a dated file under
+--                   the nvim data directory
 --   watch.lua       fs_event watcher over the org tree: reloads changed
 --                   org buffers and re-renders the agenda view whenever an
 --                   org file changes on disk, focus aside
+--   tree.lua        TODO views as trees: an entry's listed sublevels and its
+--                   plain (not TODO) subheadlines are nested under it with
+--                   tree guides, folded at level 1, <Tab>/<S-Tab> fold like
+--                   an org file, and `c` / <leader>aC capture a child of the
+--                   entry at point
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
 local notes = require 'helpers.org.notes'
@@ -185,9 +201,9 @@ return {
       -- `-NEXT-TEST` after it excludes those keywords. `o` is every open
       -- TODO (`type = 'todo'`, org's `alltodo`); `w` is the board --
       -- the "In progress" block (every NEXT and TEST entry, any tag), then
-      -- the classification sections -- bug tag, feat tag, the untagged
-      -- rest -- and DONE last, in that order, so a ticket moves between
-      -- sections as it changes state (`DONE` is a `todo` block, not
+      -- the classification sections -- bug tag, feat tag, chore tag, the
+      -- untagged rest -- and DONE last, in that order, so a ticket moves
+      -- between sections as it changes state (`DONE` is a `todo` block, not
       -- `tags_todo`, so the finished entries are listed, not filtered out).
       -- The classification sections are the `board_section` helper's, one
       -- subsection per remaining open keyword (TODO, PEND, WARN --
@@ -207,7 +223,7 @@ return {
           },
         },
         w = {
-          description = 'In progress, bugs, features, untagged and done',
+          description = 'In progress, bugs, features, chores, untagged and done',
           types = {
             -- Every NEXT and TEST entry, whatever its classification tag, in
             -- one block at the top of the board: the states that ask for
@@ -236,10 +252,11 @@ return {
             -- (`hide_empty`).
             board_section('bug/!-NEXT-TEST', 'Bugs, open'),
             board_section('feat/!-NEXT-TEST', 'Features, open'),
-            -- the open entries carrying neither classification tag: the
-            -- section new captures land in before they are sorted into
-            -- bug / feature
-            board_section('-bug-feat/!-NEXT-TEST', 'Untagged, open'),
+            board_section('chore/!-NEXT-TEST', 'Chores, open'),
+            -- the open entries carrying no classification tag: the section
+            -- new captures land in before they are sorted into
+            -- bug / feature / chore
+            board_section('-bug-feat-chore/!-NEXT-TEST', 'Untagged, open'),
             {
               type = 'todo',
               match = 'DONE',
@@ -280,6 +297,16 @@ return {
       -- may use a user-defined strategy or it would sort by completion date
       -- too.
       cmp_user_defined = done_recency,
+      -- The entry lists show the top level only: a TODO / tag block lists a
+      -- matched top-level entry and skips its subtree
+      -- (org-agenda-todo-list-sublevels / org-tags-match-list-sublevels
+      -- off), so a sub-task never appears as a line of its own. In a TODO
+      -- view helpers/org/tree.lua re-adds a listed entry's subheadlines --
+      -- the sub-TODOs included -- nested under it, folded at level 1: a
+      -- sub-task shows only when its entry is expanded. The date views
+      -- (agenda_block) don't list entries this way and are untouched.
+      todo_list_sublevels = false,
+      tags_match_list_sublevels = false,
       -- Line prefix (org-agenda-prefix-format) for the entry lists. The stock
       -- `" %i %-12:c"` is kept, and the `todo` kind -- the `°` / digit-2
       -- board and the global `o` -- gains the entry's last-changed
@@ -421,6 +448,16 @@ return {
         -- (lua/mappings.lua) so search works in the agenda.
         later = ')',
         earlier = { 'b', '(' },
+        -- A TODO view (helpers/org/tree.lua) shows an entry's sublevels --
+        -- the plain subheadlines included -- as a tree folded at level 1,
+        -- and `<Tab>` there is fold-only: it cycles the node at point,
+        -- org-style (folded -> children -> subtree -> folded), and does
+        -- nothing on a line without a subtree -- never org.nvim's `goto`,
+        -- which opened the entry's source file in a split (`<Space>` / `o`
+        -- / `<CR>` are the keys that leave the view). `<S-Tab>` cycles
+        -- every node of the view, and `c` captures a child of the entry at
+        -- point (the longer `<leader>aC` is the same action). All
+        -- buffer-local, set in helpers/org/tree.lua.
         clock_goto = '<C-c><C-x><C-j>',
         capture = '<C-c>k',
         -- <leader>n adds a timestamped note under the entry at point
@@ -474,6 +511,11 @@ return {
         toggle_priority_a = '<M-a>',
         toggle_priority_b = '<M-b>',
         toggle_priority_c = '<M-c>',
+        -- `c` captures a TODO as a child (subtree) of the entry at point
+        -- (helpers/org/tree.lua binds it, alongside <leader>aC). It takes
+        -- over the default `c` (org-agenda-calendar, the calendar buffer),
+        -- unbound here.
+        calendar = false,
         -- `|` quits like `q`, taking over the default `|` (remove the
         -- filter at point), unbound here
         quit = { 'q', '`' },
@@ -506,10 +548,20 @@ return {
         -- entry; the whole file stays out of the way of a long project file.
         -- The old <CR> behaviour (switch_to: the entry opened in its file,
         -- the view left behind) moves here to <Space> and <S-CR>, which open
-        -- the `show` default to make room.
+        -- the `show` default to make room. `o` reaches the same action: the
+        -- view already owns the window, so the default `o`
+        -- (delete_other_windows, unbound here) does nothing useful.
         entry_scratch = '<CR>',
-        switch_to = { '<Space>', '<S-CR>' },
+        switch_to = { '<Space>', '<S-CR>', 'o' },
+        delete_other_windows = false,
         show = false,
+        -- `?` opens the full keymap help, the float `g?` already opens, in
+        -- the agenda and in the TODO view (both render into the same
+        -- orgagenda buffer). It takes over the default `?`
+        -- (org-agenda-show-the-flagging-note, the mobile-flag note -- unused
+        -- here, where an unflagged entry only warned "No note"), unbound.
+        help = { 'g?', '?' },
+        show_flagging_note = false,
       },
       -- Capture buffer keys. The defaults stay: finalize <C-c><C-c> /
       -- <prefix>w, kill <C-c><C-k> / <prefix>k, refile <C-c><C-w> /
@@ -621,13 +673,22 @@ return {
           { name = 'Due soon', deadline = 'future', order = 2 },
           { name = 'Work', tag = { 'work', 'office' }, order = 1 },
           { discard = { tag = 'someday' } },
-          -- the catch-all heading. The custom views (helpers/org/agenda.lua
-          -- view_groups) swap it for a title one -- the project file's
-          -- level-1 headline, "Nvim" not "Category: nvim" -- and, scoped to
-          -- one project, for a nameless catch-all: the category would be
-          -- the same under all of a board's sections and the block header
-          -- ("Nvim - Bugs, open") already names it once.
-          { auto_category = true, order = 9 },
+          -- the catch-all. Nameless (`auto_map` returning ''): the extension
+          -- draws no header for an empty section name, so the entries the
+          -- named groups above leave simply follow the last one -- a day's
+          -- deadline and scheduled reminders read as one list, not one
+          -- "Category: <project>" split per category. The custom views
+          -- (helpers/org/agenda.lua view_groups) swap it for a title map --
+          -- the project file's level-1 headline, "Nvim" not "Category:
+          -- nvim" -- and, scoped to one project, back for a nameless one:
+          -- the category is the same under all of a board's sections and
+          -- the block header ("Nvim - Bugs, open") already names it once.
+          {
+            auto_map = function()
+              return ''
+            end,
+            order = 9,
+          },
         },
       },
       -- roam = {},
@@ -664,6 +725,7 @@ return {
     -- use through org.lazy.on_load (or plain autocmds), so no part of
     -- org.nvim is required at startup.
     require('helpers.org.agenda').setup()
+    require('helpers.org.tree').setup()
     require('helpers.org.decorations').setup()
     require('helpers.org.notes').setup()
     capture.setup()

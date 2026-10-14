@@ -26,8 +26,8 @@
 -- headline. Everything after that is the omp-org-ticket skill
 -- appended to omp's system prompt: answer the `AI:` lines, resolve the
 -- ticket, leave TEST/WARN/PEND (the user promotes TEST to DONE once they have
--- validated the change), write the <=2 line 🤖-headed summary, and remove a
--- temporary :ID:.
+-- validated the change), write the <=2 line 🤖-headed summary -- its text in
+-- an org `markdown` source block -- and remove a temporary :ID:.
 --
 -- Each ticket is also linked to its omp session: the launcher writes an
 -- `:OMP_SESSION:` key on the headline (the :ID: at the first launch, kept

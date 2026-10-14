@@ -14,7 +14,9 @@
 --     `[ts] ------` -- or `🤖 [ts] ------`, the agent's block, whose header
 --     carries the icon -- gets the timestamp highlighted and the dash run
 --     replaced by a rule that reaches the window edge, like the markdown
---     plugin's `---`.
+--     plugin's `---`. The agent's header is painted with the `OrgAgent*`
+--     groups (icon and timestamp together, rule likewise), so a 🤖 turn reads
+--     apart from the plain notes at a glance.
 --   * Tables, drawn like the markdown plugin's pipe_table (style "full"):
 --     the `|` separators become `│`, the `|---+---|` rule the matching
 --     `├───┼───┤`, and a top/bottom border frames the first and last row.
@@ -39,15 +41,22 @@ local function note_headers(bufnr, first, last, rows)
     local d_s = line:find '%-%-%-+%s*$'
     -- before the timestamp: the indent, and on an agent block the icon (🤖,
     -- written by the omp write-back) -- any non-ASCII glyph, never a word
-    if ts_s and d_s and d_s > ts_e and line:sub(1, ts_s - 1):match '^%s*[\128-\255]*%s*$' then
+    local head = ts_s and line:sub(1, ts_s - 1) or ''
+    if ts_s and d_s and d_s > ts_e and head:match '^%s*[\128-\255]*%s*$' then
+      -- the icon marks the block as the agent's: paint the icon and the
+      -- timestamp (and the rule) with the OrgAgent* groups, apart from the
+      -- plain notes' OrgTimestampInactive/OrgHorizontalRule
+      local icon = head:find '[\128-\255]'
+      local ts_group = icon and 'OrgAgentTimestamp' or 'OrgTimestampInactive'
+      local rule_group = icon and 'OrgAgentRule' or 'OrgHorizontalRule'
       local row = first + i - 1
       local r = rows[row]
       if not r then
         r = {}
         rows[row] = r
       end
-      r[#r + 1] = { ts_s - 1, { end_col = ts_e, hl_group = 'OrgTimestampInactive', priority = 200 } }
-      r[#r + 1] = { d_s - 1, { virt_text = { { RULE, 'OrgHorizontalRule' } }, virt_text_pos = 'overlay', priority = 200 } }
+      r[#r + 1] = { (icon or ts_s) - 1, { end_col = ts_e, hl_group = ts_group, priority = 200 } }
+      r[#r + 1] = { d_s - 1, { virt_text = { { RULE, rule_group } }, virt_text_pos = 'overlay', priority = 200 } }
     end
   end
 end
@@ -184,6 +193,11 @@ local function tables(bufnr, first, last, rows)
 end
 
 function M.setup()
+  -- Agent note blocks: any colorscheme can repaint them (catppuccin's
+  -- custom_highlights does, in terminal_plugins/theme_catpuccin.lua); these
+  -- links are the fallback.
+  vim.api.nvim_set_hl(0, 'OrgAgentTimestamp', { link = 'Special', default = true })
+  vim.api.nvim_set_hl(0, 'OrgAgentRule', { link = 'Special', default = true })
   require('org.lazy').on_load('org.ui.decorations', 'checkbox_conceal', function(decorations)
     local compute = decorations.compute
     decorations.compute = function(bufnr, first, last, ui)

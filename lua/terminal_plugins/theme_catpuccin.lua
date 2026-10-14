@@ -23,6 +23,11 @@ return { -- You can easily change to a different colorscheme.
           -- like SnacksDashboardHeader.
           SnacksDashboardFooter = { fg = colors.blue, style = {} },
           -- SnacksDashboardSpecial = { fg = colors.blue },
+          -- omp agent note blocks (helpers/org/decorations.lua): the icon,
+          -- timestamp and rule of a 🤖-headed block, so the agent's turns
+          -- read apart from the plain notes' gray Comment.
+          OrgAgentTimestamp = { fg = colors.mauve },
+          OrgAgentRule = { fg = colors.mauve },
         }
       end,
     }

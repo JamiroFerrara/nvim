@@ -1,0 +1,178 @@
+# Org-mode snippets (filetype `org`), loaded by LuaSnip's snipmate loader
+# (lua/plugins/luasnip.lua). Expand with <Tab> or pick from the LuaSnip
+# source in nvim-cmp. `$1`, `$2`... are tabstops, `` `...` `` runs Vimscript
+# (used below to stamp the current date/time).
+
+# --- headlines -------------------------------------------------------------
+
+snippet h1
+	* $0
+snippet h2
+	** $0
+snippet h3
+	*** $0
+snippet h4
+	**** $0
+
+# The vault's TODO sequence (lua/terminal_plugins/org.nvim.lua): TODO NEXT
+# PEND TEST WARN are open, DONE is done. TEST/WARN are the agent keywords.
+snippet todo
+	* TODO $0
+snippet next
+	* NEXT $0
+snippet pend
+	* PEND $0
+snippet test
+	* TEST $0
+snippet warn
+	* WARN $0
+snippet done
+	* DONE $0
+
+snippet task "TODO entry: tag, properties drawer, body"
+	* TODO ${1:title} :${2:tag}:
+	:PROPERTIES:
+	:ID:       ${3:}
+	:END:
+	$0
+
+snippet pri "Headline priority (A, B or C)"
+	[#${1:A}]
+
+# --- timestamps ------------------------------------------------------------
+
+snippet stamp "Inactive date"
+	[`strftime('%Y-%m-%d %a')`]
+snippet stampstamp "Inactive date and time"
+	[`strftime('%Y-%m-%d %a %H:%M')`]
+snippet date "Active date"
+	<`strftime('%Y-%m-%d %a')`>
+snippet datestamp "Active date and time"
+	<`strftime('%Y-%m-%d %a %H:%M')`>
+snippet sched "SCHEDULED"
+	SCHEDULED: <`strftime('%Y-%m-%d %a')`>
+snippet deadline "DEADLINE"
+	DEADLINE: <`strftime('%Y-%m-%d %a')`>
+snippet closed "CLOSED"
+	CLOSED: [`strftime('%Y-%m-%d %a %H:%M')`]
+snippet clock "CLOCK line"
+	CLOCK: [`strftime('%Y-%m-%d %a %H:%M')`]--[`strftime('%Y-%m-%d %a %H:%M')`]
+
+# The entry log block: header (timestamp + 60-dash rule) then body, the same
+# shape helpers/org/notes.lua writes. `🤖` marks an agent note.
+snippet block "Timestamped entry block"
+	[`strftime('%Y-%m-%d %a %H:%M')`] `repeat('-', 60)`
+	$0
+snippet agentblock "Agent (omp) entry block"
+	🤖 [`strftime('%Y-%m-%d %a %H:%M')`] `repeat('-', 60)`
+	$0
+
+# --- drawers and properties ------------------------------------------------
+
+snippet props "Property drawer"
+	:PROPERTIES:
+	:${1:CUSTOM_ID}: ${2}
+	:END:
+# The `:PROJECT_DIRS:` claim of a headline (helpers/org/project.lua): the
+# directory whose cwd then resolves to that headline's project. The longest
+# covering prefix wins, and a headline's claim beats its file's on a tie.
+snippet projectdirs "PROJECT_DIRS claim (headline -> directory)"
+	:PROJECT_DIRS: ${1:~/repos/project}
+snippet drawer "Generic drawer"
+	:${1:NAME}:
+	$0
+	:END:
+snippet logbook "LOGBOOK drawer"
+	:LOGBOOK:
+	$0
+	:END:
+
+# --- blocks ----------------------------------------------------------------
+
+snippet src "Source block"
+	#+begin_src ${1:lua}
+	$0
+	#+end_src
+snippet quote "Quote block"
+	#+begin_quote
+	$0
+	#+end_quote
+snippet example "Example block"
+	#+begin_example
+	$0
+	#+end_example
+snippet verse "Verse block"
+	#+begin_verse
+	$0
+	#+end_verse
+snippet center "Center block"
+	#+begin_center
+	$0
+	#+end_center
+snippet comment "Comment block"
+	#+begin_comment
+	$0
+	#+end_comment
+snippet export "Export block"
+	#+begin_export ${1:html}
+	$0
+	#+end_export
+snippet begin "Generic block"
+	#+begin_${1:quote}
+	$0
+	#+end_${2:quote}
+
+# --- lists, tables, checkboxes --------------------------------------------
+
+snippet bullet "List item"
+	- $0
+snippet cb "Unchecked checkbox"
+	- [ ] $0
+snippet cbd "Checked checkbox"
+	- [x] $0
+snippet table "Table with header row"
+	| ${1:Header} | ${2:Header} |
+	|------------+------------|
+	| ${3:        } | ${4:        } |
+
+# --- links and markup ------------------------------------------------------
+
+snippet link "Link"
+	[[${1:url}][${2:description}]]
+snippet filelink "File link"
+	[[file:${1:path}]]
+snippet bold
+	*$0*
+snippet italic
+	/$0/
+snippet underline
+	_$0_
+snippet code "Inline code"
+	~$0~
+snippet verbatim
+	=$0=
+snippet strike
+	+$0+
+
+# --- keywords (#+...) ------------------------------------------------------
+
+snippet title
+	#+title: $0
+snippet author
+	#+author: $0
+snippet kdate "Document #+date keyword"
+	#+date: <`strftime('%Y-%m-%d %a')`>
+snippet options
+	#+options: $0
+snippet startup
+	#+startup: $0
+snippet filetags
+	#+filetags: :${1:tag}:
+# The file-level `#+PROJECT_DIRS:` claim (helpers/org/project.lua): every cwd
+# under the directory resolves to this file's project.
+snippet filedirs "#+PROJECT_DIRS file claim"
+	#+PROJECT_DIRS: ${1:~/repos/project}
+snippet include
+	#+include: "${1:file}"
+snippet caption
+	#+caption: $0
