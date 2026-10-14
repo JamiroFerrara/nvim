@@ -685,7 +685,12 @@ local function cycle_all(buf)
 end
 
 --- Capture a new entry under the entry at point, in the entry's own file:
---- the Task template of the config, pointed at the entry's outline path.
+--- the Task template of the config, pointed at the entry itself. The olp
+--- must name the entry, not just its ancestors -- `Headline:outline_path`
+--- returns the ancestors only (helpers/org/project.lua's `olp_of` appends
+--- the headline for the same reason), and resolving to an ancestor would
+--- file the entry beside the entry at point, at the top level as a
+--- sibling for a level-1 entry (where the empty path fails outright).
 local function capture_child()
   local item = require('org.agenda.view').item_at_cursor()
   if not (item and item.headline and item.filename) then
@@ -694,7 +699,9 @@ local function capture_child()
   end
   local tpl = vim.deepcopy(require('org.config').opts.capture.templates.t)
   tpl.target = item.filename
-  tpl.olp = item.headline:outline_path()
+  local olp = item.headline:outline_path()
+  olp[#olp + 1] = item.headline:plain_title()
+  tpl.olp = olp
   require('org.capture').capture(tpl)
 end
 
