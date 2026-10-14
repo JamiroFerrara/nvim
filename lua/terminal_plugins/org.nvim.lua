@@ -51,9 +51,9 @@
 --                   tree guides, folded at level 1, <Tab>/<S-Tab> fold like
 --                   an org file, and `c` / <leader>aC capture a child of the
 --                   entry at point
---   callouts.lua    entry lines of the TODO views as callout blocks: a bar
---                   and a full-width band in the state's color (from the
---                   keyword face), so the list reads as stacked blocks
+--   callouts.lua    entry lines of the TODO views get a callout bar in the
+--                   state's color (from the keyword face), in the left
+--                   gutter only -- no background band behind the line
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
