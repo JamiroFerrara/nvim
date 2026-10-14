@@ -1059,28 +1059,24 @@ local function setup_item_category()
     --- whatever `fn` returns or raises.
     local function with_project(item, fn)
       local name = require('helpers.org.project').item_name(item.headline)
-      local f=io.open('/tmp/cat.log','a') f:write('  with_project name='..tostring(name)..' cat='..tostring(item and item.category)..'\n') f:close()
       if not name or name == item.category then
         return fn()
       end
       local category = item.category
       item.category = name
-      local r = table.pack(pcall(fn))
-      do local f=io.open('/tmp/cat.log','a') f:write('  RESULT ok='..tostring(r[1])..' err='..tostring(r[2])..' item='..tostring(item and (item.title or item.raw))..'\n') f:close() end
+      local ok, out = pcall(fn)
       item.category = category
-      if not r[1] then
-        error(r[2], 0)
+      if not ok then
+        error(out, 0)
       end
-      return table.unpack(r, 2, r.n)
+      return out
     end
     render.item_parts = function(item, ctx)
-      local f=io.open('/tmp/cat.log','a') f:write('item_parts called\n') f:close()
       return with_project(item, function()
         return item_parts(item, ctx)
       end)
     end
     render.prefix = function(item, kind)
-      local f=io.open('/tmp/cat.log','a') f:write('prefix called kind='..tostring(kind)..'\n') f:close()
       return with_project(item, function()
         return prefix(item, kind)
       end)
