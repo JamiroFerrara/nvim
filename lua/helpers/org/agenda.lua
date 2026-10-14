@@ -190,7 +190,6 @@ local function setup_entry_scratch()
       vim.bo[buf].bufhidden = 'wipe'
       vim.bo[buf].swapfile = false
       vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-      vim.bo[buf].filetype = 'org'
       local name = (hl.title and hl.title ~= '' and hl.title or 'entry'):gsub('[%s/\\]', '_')
       pcall(vim.api.nvim_buf_set_name, buf, 'org-entry://' .. name)
       -- Remember where the copy came from. The buffer is a preview of one
@@ -201,7 +200,14 @@ local function setup_entry_scratch()
       -- file. Write_back reads the same pair.
       vim.b[buf].org_entry_source = src
       vim.b[buf].org_entry_mark = mark
+      -- Show the buffer before it becomes an org buffer: the FileType hooks
+      -- (org.nvim's buffer setup, helpers/org/mappings.lua) reach for the
+      -- buffer with nvim_buf_call, and on a buffer no window shows that call
+      -- opens a temporary window at the top left (aucmd_prepbuf), which a
+      -- redraw in the hook then paints over the view -- a flash the preview
+      -- pane, which builds one scratch per entry, would show on every move.
       vim.api.nvim_win_set_buf(win, buf)
+      vim.bo[buf].filetype = 'org'
       vim.wo[win].wrap = true
       -- The preview is a scratch holding a copy of the entry; it is written
       -- back into the source file in place of the entry (the extmark keeps
@@ -442,7 +448,10 @@ local function setup_entry_preview()
       callback = teardown,
       desc = 'org: forget the entry preview when its window closes',
     })
-    refresh()
+    -- Fill now, not on the next tick: `open` runs on a key, not in an
+    -- autocommand, so the pane can come up with the entry already in it
+    -- instead of an empty split for a frame.
+    fill()
   end
 
   local function toggle()
