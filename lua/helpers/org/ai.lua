@@ -19,10 +19,12 @@
 -- created detached (`-d`): the launch never moves the active pane or window
 -- off nvim, so the cursor stays put.
 --
--- The pane runs `nvim "+terminal omp …"`, the same shape as the tmux
+-- The pane runs `nvim "+terminal sh <script>"`, the same shape as the tmux
 -- default-command (`nvim +terminal`) every other pane uses, so the instance
 -- lives in an nvim terminal buffer and navigates like the rest of the session
--- (Terminal-Normal vim keys, tmux `is_vim` pane moves).
+-- (Terminal-Normal vim keys, tmux `is_vim` pane moves); the script holds the
+-- omp invocation, which `:terminal` would otherwise mangle, `%` and `#` in a
+-- ticket title first of all.
 --
 -- The launcher owns the start of the run: it puts an :ID: on the headline
 -- (reusing one already there), sets the state to NEXT, saves the file, and
@@ -459,19 +461,30 @@ local function omp_argv(ticket)
   return argv
 end
 
---- The omp argv run inside a terminal-only nvim: `nvim "+terminal omp …"`.
+--- The omp argv run inside a terminal-only nvim: `nvim "+terminal sh <script>"`.
 --- The pane then mirrors the tmux default-command (`nvim +terminal`) every
 --- other pane uses — an nvim terminal buffer, so Terminal-Normal mode and the
 --- tmux `is_vim` navigation work here too. `omp --print` still ends the run:
---- the terminal closes, the pane's TermClose autocmd quits nvim, and tmux
---- closes the pane with it. The whole `+terminal …` is one shell word (nvim
---- takes everything after `+` as the Ex command), and tmux runs the pane
---- through the shell, so each layer is quoted for the shell that reads it.
+--- omp exits, the script takes itself away, the terminal closes, the pane's
+--- TermClose autocmd quits nvim, and tmux closes the pane with it. The whole
+--- `+terminal …` is one shell word (nvim takes everything after `+` as the Ex
+--- command), and tmux runs the pane through the shell, so each layer is quoted
+--- for the shell that reads it.
+---
+--- The invocation itself does not ride on the `:terminal` command line: nvim
+--- expands that argument the way an Ex command's file argument is expanded, so
+--- a `%` or `#` in it becomes the current / alternate file name (`E499` on an
+--- unnamed buffer — the TODO view is one) and a `<cword>`-style span its
+--- expansion. The omp argv carries the ticket's title and body, arbitrary text
+--- that holds any of them — a title reading `20% off` is enough to fail a
+--- launch — so the shell-quoted invocation goes into a script instead, and the
+--- Ex command expands only that script's own safe path.
 ---@param argv string[]
 ---@return string
 local function pane_command(argv)
-  local omp = table.concat(vim.tbl_map(vim.fn.shellescape, argv), ' ')
-  return table.concat(vim.tbl_map(vim.fn.shellescape, { 'nvim', '+terminal ' .. omp }), ' ')
+  local script = vim.fn.tempname()
+  vim.fn.writefile({ '#!/bin/sh', table.concat(vim.tbl_map(vim.fn.shellescape, argv), ' '), 'rm -f -- "$0"' }, script)
+  return table.concat(vim.tbl_map(vim.fn.shellescape, { 'nvim', '+terminal sh ' .. script }), ' ')
 end
 
 --- The omp argv for an interactive instance on `ticket` — the shape the
