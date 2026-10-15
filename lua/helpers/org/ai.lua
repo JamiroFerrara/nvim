@@ -3,6 +3,14 @@
 -- :ID: and file. Over a Visual selection it is that same launch applied to
 -- every entry the selection covers (M.launch_range), one instance each.
 --
+-- A group node -- a headline with at least one child in an open TODO state --
+-- is a container, not a ticket of its own: the launch fans out to its
+-- subnodes in todo (expand_target), one instance each, and the container
+-- itself is stamped with nothing. The subnodes are the open children one
+-- level down: a child ticket owns its own subtree, so no two instances ever
+-- claim the same headline. A headline with no open child -- a leaf ticket
+-- above all -- launches itself, exactly as before.
+--
 -- In an open capture buffer the same key finishes the capture first -- the
 -- entry is filed at its template's destination and the target file written --
 -- and launches on the entry it just stored, so `<leader>ai` captures and
@@ -315,6 +323,36 @@ local function ticket_at_cursor(mutate)
     return nil
   end
   return ticket_at(bufnr, lnum, mutate)
+end
+
+--- The headlines a launch on the entry at `lnum` of `bufnr` covers: the entry
+--- itself, or -- when it is a group node -- its subnodes in todo, one ticket
+--- each. A group node is a headline with at least one child in an open TODO
+--- state: it groups the work under it, so launching it would stamp the
+--- container and leave the subnodes unstamped, and the container's own
+--- :ID: / NEXT / hand-back would describe nothing. The subnodes are the open
+--- children, one level down: a child ticket owns its own subtree (a
+--- `*** TODO` under it is worked as part of it), so no two instances ever
+--- claim the same headline. A headline with no open child -- a leaf ticket
+--- above all -- is launched itself.
+---@param bufnr integer
+---@param lnum integer
+---@return { bufnr: integer, lnum: integer }[]
+local function expand_target(bufnr, lnum)
+  local file = require('org.files').get_buffer(bufnr)
+  local hl = file and file:headline_on(lnum)
+  local children = {}
+  if hl then
+    for _, child in ipairs(hl.children) do
+      if child:is_todo() then
+        children[#children + 1] = { bufnr = bufnr, lnum = child.line }
+      end
+    end
+  end
+  if #children > 0 then
+    return children
+  end
+  return { { bufnr = bufnr, lnum = lnum } }
 end
 
 --- Run `git` in `root` — the rest of `args` its argv — without a shell.
@@ -801,37 +839,14 @@ function M.sync()
   end
 end
 
---- `<leader>ai` in an org or orgagenda buffer: commit the project's pending
---- work (the revert point for the run), then start omp on the headline. In an
---- open capture buffer the capture is finished first (target_at_cursor), so
---- the ticket is the entry just stored.
-function M.launch()
-  local ticket = ticket_at_cursor(true)
-  if not ticket then
-    return
-  end
-  checkpoint(ticket)
-  if in_tmux() then
-    open_pane(ticket)
-  else
-    open_window(ticket)
-  end
-  M.sync()
-end
-
---- `<leader>ai` over a Visual selection: the Visual-mode shape of M.launch.
---- Every entry the selection covers is launched exactly as it would be on
---- its own — its own :ID: / :OMP_SESSION: link, its NEXT state, its
---- checkpoint and its own omp pane. The entries are launched bottom-up, so
---- the property drawer the launcher writes on one entry cannot shift the
---- lines of another still to come.
-function M.launch_range()
-  local first, last = take_visual()
-  local targets = targets_in_range(first, last)
-  if #targets == 0 then
-    notify('org ai: no entries in the selection', vim.log.levels.WARN)
-    return
-  end
+--- Launch every `target`: its own :ID: / :OMP_SESSION: link, its NEXT state,
+--- its checkpoint and its own omp pane. The buffers are launched in order and
+--- the lines within one biggest first, so the property drawer the launcher
+--- writes on one entry cannot shift the lines of a ticket still to come.
+--- Returns how many instances started.
+---@param targets { bufnr: integer, lnum: integer }[]
+---@return integer
+local function launch_targets(targets)
   table.sort(targets, function(a, b)
     if a.bufnr == b.bufnr then
       return a.lnum > b.lnum
@@ -852,9 +867,62 @@ function M.launch_range()
       launched = launched + 1
     end
   end
+  return launched
+end
+
+--- Report a multi-ticket launch: one instance is the ordinary case and says
+--- nothing, a fan-out (a group node, a Visual selection) is worth a line.
+---@param launched integer
+local function notify_launched(launched)
   if launched > 1 then
     notify(('org ai: launched %d tickets'):format(launched))
   end
+end
+
+--- `<leader>ai` in an org or orgagenda buffer: commit the project's pending
+--- work (the revert point for the run), then start omp on the headline. In an
+--- open capture buffer the capture is finished first (target_at_cursor), so
+--- the ticket is the entry just stored. On a group node -- a headline with
+--- subnodes in todo -- the run fans out to those subnodes, one instance each
+--- (expand_target), the container itself untouched.
+function M.launch()
+  local bufnr, lnum = target_at_cursor(true)
+  if not bufnr then
+    return
+  end
+  local launched = launch_targets(expand_target(bufnr, lnum))
+  notify_launched(launched)
+  M.sync()
+end
+
+--- `<leader>ai` over a Visual selection: the Visual-mode shape of M.launch.
+--- Every entry the selection covers is launched exactly as it would be on
+--- its own — its own :ID: / :OMP_SESSION: link, its NEXT state, its
+--- checkpoint and its own omp pane; a selected group node fans out to its
+--- subnodes in todo the same way. The entries are launched bottom-up, so the
+--- property drawer the launcher writes on one entry cannot shift the lines of
+--- another still to come, and a headline reached twice (a group and one of
+--- its own children both covered) is still one ticket.
+function M.launch_range()
+  local first, last = take_visual()
+  local targets = targets_in_range(first, last)
+  if #targets == 0 then
+    notify('org ai: no entries in the selection', vim.log.levels.WARN)
+    return
+  end
+
+  local expanded, seen = {}, {}
+  for _, target in ipairs(targets) do
+    for _, sub in ipairs(expand_target(target.bufnr, target.lnum)) do
+      local key = sub.bufnr .. ':' .. sub.lnum
+      if not seen[key] then
+        seen[key] = true
+        expanded[#expanded + 1] = sub
+      end
+    end
+  end
+
+  notify_launched(launch_targets(expanded))
   M.sync()
 end
 
