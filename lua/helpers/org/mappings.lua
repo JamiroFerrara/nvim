@@ -231,10 +231,13 @@ function M.setup()
 
       -- <leader>ai starts an `omp` instance for the headline at point in a
       -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp
-      -- terminal key in org buffers. On a Visual selection it launches every
-      -- headline the selection covers, the same way, one instance each
-      -- (launch_range). <leader>aj jumps to that instance's pane when it is
-      -- already running, resuming its session when it is not.
+      -- terminal key in org buffers. On a group node -- a headline with
+      -- subnodes in todo -- it launches those subnodes, one instance each,
+      -- instead of the container itself; on any other headline, the headline
+      -- itself. On a Visual selection it launches every headline the
+      -- selection covers, the same way (launch_range). <leader>aj jumps to
+      -- that instance's pane when it is already running, resuming its session
+      -- when it is not.
       --
       -- In an open capture buffer <leader>ai finishes the capture first and
       -- launches on the entry it stored (one key: capture, then run); the

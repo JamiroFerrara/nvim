@@ -47,7 +47,9 @@
 --                   the ticket in a tmux pane and follows its write-back
 --                   (watch.lua reloads the changed org files live; the
 --                   FocusGained autocmd covers a change made while nvim
---                   was unfocused). In an open capture buffer the same key
+--                   was unfocused). A group node -- a headline with
+--                   subnodes in todo -- fans out to those subnodes, one
+--                   instance each. In an open capture buffer the same key
 --                   files the capture at its destination first and launches
 --                   on the entry it stored
 --   retro.lua       `<leader>ar`: one omp run over the agent sessions of
