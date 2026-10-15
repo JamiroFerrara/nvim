@@ -52,10 +52,11 @@
 --     folded group header (`… (N)`) in any agenda view. It takes the key
 --     from log mode, which keeps its `vl` spelling;
 --   * `c` (and its longer spelling `<leader>aC`) captures a new entry as a
---     child of the entry at point, by pointing the Task template at the
---     entry's own outline path -- the agenda's default `c`
---     (org-agenda-calendar) is unbound in the plugin spec to give it the
---     key;
+--     child of the entry at point -- the work is
+--     helpers/org/capture.lua `under`, the same action `c` runs on a
+--     headline in an org file (helpers/org/mappings.lua) -- the agenda's
+--     default `c` (org-agenda-calendar) is unbound in the plugin spec to
+--     give it the key;
 --   * it highlights the statistics cookies (`[1/3]`, `[50%]`) of the view's
 --     entry lines, as an org buffer does through treesitter.
 --
@@ -709,25 +710,17 @@ local function cycle_all(buf)
   pcall(vim.api.nvim_win_set_cursor, 0, { math.min(lnum, vim.api.nvim_buf_line_count(0)), 0 })
 end
 
---- Capture a new entry under the entry at point, in the entry's own file:
---- the Task template of the config, pointed at the entry itself. The olp
---- must name the entry, not just its ancestors -- `Headline:outline_path`
---- returns the ancestors only (helpers/org/project.lua's `olp_of` appends
---- the headline for the same reason), and resolving to an ancestor would
---- file the entry beside the entry at point, at the top level as a
---- sibling for a level-1 entry (where the empty path fails outright).
+--- Capture a new entry under the entry at point, in the entry's own file.
+--- The work is `helpers.org.capture.under`, shared with the `c` mapping of
+--- an org file (helpers/org/mappings.lua); here the entry is the agenda
+--- item at the cursor, which carries its file.
 local function capture_child()
   local item = require('org.agenda.view').item_at_cursor()
   if not (item and item.headline and item.filename) then
     require('org.utils').warn 'org: no entry under the cursor'
     return
   end
-  local tpl = vim.deepcopy(require('org.config').opts.capture.templates.t)
-  tpl.target = item.filename
-  local olp = item.headline:outline_path()
-  olp[#olp + 1] = item.headline:plain_title()
-  tpl.olp = olp
-  require('org.capture').capture(tpl)
+  require('helpers.org.capture').under(item.headline, item.filename)
 end
 
 ---------------------------------------------------------------------------

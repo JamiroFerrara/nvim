@@ -36,8 +36,9 @@
 -- same set the agenda would have shown the entry anyway through org tag
 -- inheritance; the tags are written, not merely inherited.
 -- Both capture paths that reach this store (the `^` Task capture and the
--- `c` / <leader>aC capture-under-entry of helpers/org/tree.lua) go through
--- the filter, so the setting covers either way in.
+-- `c` / <leader>aC capture-under-entry, `M.under`, from the TODO view and
+-- from `c` on a headline in an org file) go through the filter, so the
+-- setting covers either way in.
 local M = {}
 
 local dest
@@ -93,6 +94,30 @@ end
 --- Template `olp`: the outline path the destination picked by `target` names.
 function M.olp()
   return dest and dest.olp
+end
+
+--- Capture a new entry under a known headline, in the headline's own file:
+--- the Task template of the config, `target` and `olp` set to that entry.
+--- The outline path must name the entry itself, not just its ancestors --
+--- `Headline:outline_path` returns the ancestors only -- and resolving to an
+--- ancestor would file the entry beside the entry at point, at the top level
+--- as a sibling for a level-1 entry (where the empty path fails outright).
+--- Both capture-under-entry ways in go through here: `c` / <leader>aC in a
+--- TODO view (helpers/org/tree.lua, the agenda item's headline) and `c` on a
+--- headline in an org file (helpers/org/mappings.lua).
+---@param hl org.Headline|nil the entry to capture into
+---@param filename string|nil the file the entry lives in
+function M.under(hl, filename)
+  if not (hl and filename) then
+    require('org.utils').warn 'org: no entry under the cursor'
+    return
+  end
+  local tpl = vim.deepcopy(require('org.config').opts.capture.templates.t)
+  tpl.target = filename
+  local olp = hl:outline_path()
+  olp[#olp + 1] = hl:plain_title()
+  tpl.olp = olp
+  require('org.capture').capture(tpl)
 end
 
 --- The date header line of a captured entry: `[<timestamp>] <rule>`.

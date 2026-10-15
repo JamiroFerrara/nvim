@@ -11,7 +11,8 @@
 --                   (a headline claim beating the file's on a tie), else the
 --                   nearest `.git` root. The capture destination, the
 --                   project-scoped views and the `^` write side use it
---   capture.lua     capture-task destination (level-1 project headlines)
+--   capture.lua     capture under a headline (`c`, and the capture-task
+--                   destination of level-1 project headlines)
 --   ics.lua         iCalendar subscriptions + event-detail scratch viewer
 --   cookies.lua     automatic statistics cookies, the checkbox auto-DONE,
 --                   the auto-DONE of an entry whose child headlines are all
@@ -26,7 +27,8 @@
 --   decorations.lua checkbox icons (conceal, like the markdown config)
 --   mappings.lua    buffer-local <CR> (normal/insert): follow the link
 --                   under the cursor, else toggle/make a checkbox or
---                   fold a headline; dd-on-headline,
+--                   fold a headline; dd-on-headline, `c`-on-headline
+--                   capture (else the change operator),
 --                   the capture keys in insert mode, and insert mode back
 --                   when the capture buffer is entered again
 --   folding.lua     re-assert org folding after nvim-origami loads, and

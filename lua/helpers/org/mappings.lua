@@ -208,6 +208,27 @@ function M.setup()
         vim.cmd 'normal! dd'
       end, { buffer = args.buf, desc = 'org: delete subtree (on a headline) / line' })
 
+      -- `c` on a headline captures a new entry under it, in the headline's
+      -- own file, the same action as `c` in a TODO view (helpers/org/tree.lua
+      -- bound it there first; both go through helpers/org/capture.lua
+      -- `under`). Off a headline the key must stay the change operator, so
+      -- the mapping is an expression: it returns `c` -- unremapped, hence
+      -- the operator -- when the cursor is not on a headline, and swallows
+      -- the key when it is. The capture opens a buffer, so it is deferred
+      -- out of the expression's context (vim.schedule). Required at
+      -- keypress, so an org file never loads the capture module.
+      vim.keymap.set('n', 'c', function()
+        local file = require('org.files').get_buffer(args.buf)
+        local hl = file and file:headline_on(vim.api.nvim_win_get_cursor(0)[1])
+        if not hl then
+          return 'c'
+        end
+        vim.schedule(function()
+          require('helpers.org.capture').under(hl, file.filename)
+        end)
+        return ''
+      end, { buffer = args.buf, expr = true, desc = 'org: capture a child of the headline at point (else change)' })
+
       -- <leader>ai starts an `omp` instance for the headline at point in a
       -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp
       -- terminal key in org buffers. On a Visual selection it launches every
