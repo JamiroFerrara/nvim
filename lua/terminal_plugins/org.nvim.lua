@@ -575,8 +575,13 @@ return {
         -- the keys that leave the view). `<S-Tab>` cycles every node of the
         -- view, `l` unfolds the node at point one step (or the folded group
         -- header of an agenda view), and `c` captures a child of the entry
-        -- at point (the longer `<leader>aC` is the same action). All
-        -- buffer-local, set in helpers/org/tree.lua.
+        -- at point (the longer `<leader>aC` is the same action). `r` on an
+        -- entry refiles its subtree into another headline of the same view
+        -- -- the entries on screen are the only targets -- and keeps
+        -- org.nvim's `redo` on any other line (and in the day/week agenda):
+        -- `gr` rebuilds from anywhere. All buffer-local, set in
+        -- helpers/org/tree.lua. The config-wide refile (`R`, <C-c><C-w>,
+        -- refile.targets) is untouched.
         clock_goto = '<C-c><C-x><C-j>',
         capture = '<C-c>k',
         -- log mode keeps only its `v` spelling: `l` unfolds the node or

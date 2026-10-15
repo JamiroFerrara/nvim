@@ -19,11 +19,18 @@
 --     (so a sub-task does not surface at the top level of a section its
 --     ancestor is not in) and it reappears, folded, under the ancestor. The
 --     view's first level is always the top-level entries;
+--   * a done entry is not a subtask, whatever it is nested under: the run it
+--     belongs to keeps its line, so a sub-task marked DONE leaves the open
+--     entry it hung under and shows in the Done section of the board, if the
+--     view has one (a view without a Done block -- `o`, `g`, `p` -- lists no
+--     done entries at all, so the finished line simply drops out);
 --   * it adds the plain (not TODO) subheadlines of a listed entry as their
 --     own lines, rendered like any entry (`org.agenda.render.item_line`), so
 --     a subtree shows whole; a subheadline that is itself a listed entry
 --     keeps its agenda unit, and its own subtree is not repeated under the
---     ancestor;
+--     ancestor; a done subheadline hangs under an open entry only when the
+--     view lists it there (never as a plain child), so it is not pulled back
+--     under its ancestor;
 --   * a child line drops the agenda prefix (category, date): its text --
 --     keyword, priority, title, tags -- starts at its ancestor's content
 --     column, one tree level in, after the box-drawing guides (`├─ `, `└─ `,
@@ -57,6 +64,12 @@
 --     headline in an org file (helpers/org/mappings.lua) -- the agenda's
 --     default `c` (org-agenda-calendar) is unbound in the plugin spec to
 --     give it the key;
+--   * `r` on an entry refiles its subtree to another headline of the same
+--     view: the picker offers exactly the entry lines on screen, so the
+--     target is chosen by eye instead of by outline path, and no line
+--     outside the view can be a target. On any other line, and in the
+--     day/week agenda, the key keeps org.nvim's `redo` (rebuild the view),
+--     as does `gr` anywhere;
 --   * it highlights the statistics cookies (`[1/3]`, `[50%]`) of the view's
 --     entry lines, as an org buffer does through treesitter.
 --
@@ -305,9 +318,15 @@ local function transform(view, b, render, ctx)
   -- that matches them), it shows folded under its ancestor's line. `hidden`
   -- marks those listed lines so the run drops them; plain_children then
   -- re-adds each under its ancestor (an unlisted headline is a child there).
+  -- A done entry is never a subtask: it is finished, so it stays on the line
+  -- its own block put it on -- the board's Done section at the bottom -- and
+  -- does not follow its open ancestor into that ancestor's section.
   local hidden = {}
   local function is_subtask(hl)
-    local p = hl and hl.parent
+    if not hl or hl:is_done() then
+      return false
+    end
+    local p = hl.parent
     while p do
       if p.todo then
         return true
@@ -354,6 +373,10 @@ local function transform(view, b, render, ctx)
       return nil
     end
     local set = listed[item.filename]
+    -- a done entry belongs to the Done section, not under an open ancestor:
+    -- unless the ancestor is itself done, a finished subheadline is left to
+    -- its own block (its subtree is skipped with it, never re-added here)
+    local open_entry = not hl:is_done()
     local out, stop
     for _, h in ipairs(all) do
       if h.line > hl.end_line then
@@ -361,6 +384,8 @@ local function transform(view, b, render, ctx)
       elseif h.line <= hl.line then -- an ancestor, or the entry itself
       elseif stop and h.line <= stop then -- inside a listed entry's subtree
       elseif set and set[h.line] then
+        stop = h.end_line
+      elseif open_entry and h:is_done() then
         stop = h.end_line
       else
         out = out or {}
@@ -724,6 +749,140 @@ local function capture_child()
 end
 
 ---------------------------------------------------------------------------
+-- Refile to a headline of the view
+---------------------------------------------------------------------------
+
+--- The file an entry's headline lives in, as a key for comparing two
+--- entries: the path when the headline still knows its file, else the
+--- buffer number. A headline's `file` is the File object while it is in the
+--- buffer, and a path string (or nothing) once it was copied or moved.
+local function entry_file(hl, item)
+  local f = hl and hl.file
+  if type(f) == 'table' then
+    return f.filename or (f.bufnr and tostring(f.bufnr))
+  elseif type(f) == 'string' then
+    return f
+  end
+  return item.filename or (item.bufnr and tostring(item.bufnr))
+end
+
+--- The entry lines the view at `buf` shows: one per line of its
+--- `line_items` -- the table the tree reorder keeps to the lines actually
+--- on screen, synthetic subheadline lines included -- in buffer order, one
+--- per headline (two blocks can list the same entry).
+---@param buf integer
+---@return { item: table, hl: org.Headline }[]
+local function view_entries(buf)
+  local state = require('org.agenda.view').state_of(buf)
+  local items = (state and state.line_items) or {}
+  local lines = vim.tbl_keys(items)
+  table.sort(lines)
+  local out, seen = {}, {}
+  for _, l in ipairs(lines) do
+    local item = items[l]
+    local hl = item.headline
+    if hl then
+      local key = entry_file(hl, item) .. ':' .. tostring(hl.line)
+      if not seen[key] then
+        seen[key] = true
+        out[#out + 1] = { item = item, hl = hl }
+      end
+    end
+  end
+  return out
+end
+
+--- A one-line label for a destination: keyword, title and tags as the view
+--- draws the entry, plus the file name when the view spans several files.
+local function entry_label(entry, multi)
+  local item, hl = entry.item, entry.hl
+  local label = (hl.todo and hl.todo .. ' ' or '') .. (item.title or hl:plain_title())
+  if item.tags and #item.tags > 0 then
+    label = label .. ' :' .. table.concat(item.tags, ':') .. ':'
+  end
+  if multi and item.filename then
+    label = label .. '  (' .. vim.fn.fnamemodify(item.filename, ':t') .. ')'
+  end
+  return label
+end
+
+--- Refile the entry at point to another headline the same view shows: the
+--- destinations are the entry lines on screen, minus the source's own
+--- subtree (a move inside it is org.nvim's "Cannot refile to position
+--- inside the tree" error). `org.refile` moves the subtree, saving a
+--- destination that is not on screen, and the view is re-rendered right
+--- after, so the entry is seen leaving its section; with
+--- `agenda.save_after_edit` the source file is written, the way an edit
+--- from the view is.
+---
+--- Returns true when the key was taken -- a TODO view with an entry at
+--- point, picker or not -- so the caller can leave `r` to org.nvim's redo
+--- everywhere else.
+---@param buf integer
+---@return boolean
+local function refile_in_view(buf)
+  local view = require 'org.agenda.view'
+  local utils = require 'org.utils'
+  local state = view.state_of(buf)
+  if not (state and is_todo_view(state.view)) then
+    return false
+  end
+  local item = view.item_at_cursor()
+  if not (item and item.headline) then
+    return false
+  end
+  local src = view.resolve_target(item)
+  if not src then
+    return true
+  end
+  local hl = item.headline
+  local file = entry_file(hl, item)
+  local heads, seen_files, files = {}, {}, 0
+  for _, e in ipairs(view_entries(buf)) do
+    local h = e.hl
+    local name = entry_file(h, e.item)
+    local inside = name == file and h.line >= hl.line and h.line <= (hl.end_line or hl.line)
+    if not inside then
+      heads[#heads + 1] = e
+      if name and not seen_files[name] then
+        seen_files[name] = true
+        files = files + 1
+      end
+    end
+  end
+  if #heads == 0 then
+    utils.warn 'org: no other entry in the view to refile into'
+    return true
+  end
+  for _, e in ipairs(heads) do
+    e.label = entry_label(e, files > 1)
+  end
+  utils.run(function()
+    local choice = utils.select(heads, {
+      prompt = 'Refile "' .. (item.title or '') .. '" to',
+      kind = 'org_refile',
+      format_item = function(e)
+        return e.label
+      end,
+    })
+    if not choice then
+      return
+    end
+    local dest = view.resolve_target(choice.item)
+    if not dest then
+      return
+    end
+    dest.label = choice.label
+    require('org.refile').refile(src, { dest = dest })
+    if require('org.config').opts.agenda.save_after_edit then
+      require('org.utils').save_buffer_or_warn(src.bufnr)
+    end
+    view.refresh()
+  end)
+  return true
+end
+
+---------------------------------------------------------------------------
 -- Statistics cookies
 ---------------------------------------------------------------------------
 
@@ -840,6 +999,16 @@ local function setup_keys()
         buffer = buf,
         desc = 'org: capture a child of the entry at point',
       })
+      -- `r` on an entry of a TODO view refiles its subtree into another
+      -- headline of the same view (refile_in_view); anywhere else -- a
+      -- section rule, a group header, a folded count line, a date-agenda
+      -- buffer -- it stays org.nvim's `redo`, the rebuild of the view.
+      -- `gr` (redo_all) rebuilds from anywhere.
+      vim.keymap.set('n', 'r', function()
+        if not refile_in_view(buf) then
+          require('org.agenda.view').run_action 'redo'
+        end
+      end, { buffer = buf, desc = 'org: refile the entry to a headline of the view / redo' })
     end
   end)
 end

@@ -1115,7 +1115,8 @@ end
 -- capture key, is left free by agenda.filter_top_headline = false) leaves
 -- the list showing what it showed before the new entry existed: org.nvim
 -- stores the entry and fires OrgCaptureAfterFinalize, but never re-renders
--- the agenda, and the view is only rebuilt on `r` or when it is opened
+-- the agenda, and the view is only rebuilt on a redo (`gr`, or `r` off an
+-- entry line -- on one, helpers/org/tree.lua refiles) or when it is opened
 -- again. Finish the capture and put the view back on screen instead --
 -- close_session restores the window the capture was started from, so the
 -- current buffer here is the orgagenda one -- and re-render it. The User
