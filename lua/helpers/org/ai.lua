@@ -356,6 +356,22 @@ local function snapshot(root, subject)
   return true
 end
 
+--- The checkpoint's commit subject, in the shape every commit of a ticket run
+--- follows (`<icon> <type>(<scope>): <summary>`, the omp-org-ticket skill):
+--- the ticket's title on one line, cut at a word boundary when it would push
+--- the subject past git's 72-character soft limit.
+---@param title string
+---@return string
+local function checkpoint_subject(title)
+  local prefix = '🧹 chore(omp): checkpoint before '
+  local summary = vim.trim((title or ''):gsub('%s+', ' '))
+  local room = 72 - vim.fn.strchars(prefix)
+  if vim.fn.strchars(summary) > room then
+    summary = vim.fn.strcharpart(summary, 0, room - 1):gsub('%s+%S*$', '') .. '…'
+  end
+  return prefix .. summary
+end
+
 --- Commit the pending work of every repo the ticket's project claims — the
 --- repository as the user left it, before the agent touches it. This is the
 --- revert point: a run that goes wrong is undone with `git reset --hard` to
@@ -375,7 +391,7 @@ local function checkpoint(ticket)
     end
   end
 
-  local subject = 'checkpoint before omp: ' .. ticket.title
+  local subject = checkpoint_subject(ticket.title)
   local done, failed = {}, {}
   for _, root in ipairs(roots) do
     local name = vim.fn.fnamemodify(root, ':t')
