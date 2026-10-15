@@ -45,7 +45,7 @@
 --     line without a subtree it falls back to the group header's own fold
 --     (org-super-agenda's `toggle_group`, which this key would otherwise
 --     shadow) -- never to org.nvim's `goto`, which opened the entry's source
---     file in a split (`<Space>` / `o` / `<CR>` are what leave the view);
+--     file in a split (`<S-CR>` / `o` / `<CR>` are what leave the view);
 --     `<S-Tab>` cycles every node of the view;
 --   * `l` unfolds what is folded at point, one direction only: the node's
 --     subtree in a TODO view (one step: folded -> children -> subtree), a
@@ -789,7 +789,7 @@ local function setup_keys()
   -- A TODO view folds like an org buffer: <Tab> cycles the node at point
   -- (folded -> children -> subtree -> folded) and does nothing anywhere
   -- else. It must NOT fall back to org.nvim's <Tab> = goto: that opens the
-  -- entry's source file (in a split), which is what <Space> / `o` / <CR>
+  -- entry's source file (in a split), which is what <S-CR> / `o` / <CR>
   -- are for. org.nvim sets its own buffer mappings in window.lua *after*
   -- the FileType event (its `shared.setup_mappings` runs inside
   -- agenda.open), so ours must land after the open to win.

@@ -139,11 +139,11 @@ function M.setup()
     end
   end, { desc = 'iCalendar event details of the agenda entry at the cursor' })
 
-  -- <CR> (agenda.entry_scratch) and <Space> (agenda.switch_to) on a calendar
-  -- line open the scratch instead of failing with "Command not allowed in
-  -- this line" -- a calendar line has no entry to view either, so
-  -- entry_scratch would do nothing; on anything else both keep their usual
-  -- meaning.
+  -- <CR> (agenda.entry_scratch) and <S-CR> (`o` reaches the same action:
+  -- agenda.switch_to) on a calendar line open the scratch instead of failing
+  -- with "Command not allowed in this line" -- a calendar line has no entry
+  -- to view either, so entry_scratch would do nothing; on anything else both
+  -- keep their usual meaning.
   local wrapped = false
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'orgagenda',

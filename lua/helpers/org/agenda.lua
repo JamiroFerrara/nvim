@@ -141,9 +141,10 @@ end
 
 -- <CR> on an entry opens only that entry in the view's own window, so a
 -- long project file's other headlines stay out of the way; the old <CR>
--- behaviour -- switch_to, the entry opened in its file -- moves to <Space>
--- and <S-CR> (mappings.agenda.switch_to below, with the default `show`
--- unbound to free the key). The buffer is a scratch: acwrite (so `:w` runs
+-- behaviour -- switch_to, the entry opened in its file -- moves to <S-CR>
+-- and `o` (mappings.agenda.switch_to below, with the default `show`
+-- unbound to free the key). <Space> stays the leader in the view: no key
+-- binds it there. The buffer is a scratch: acwrite (so `:w` runs
 -- the write hook below instead of touching a file), wiped when
 -- left, `q` puts the view back (`buffer #`, the hidden agenda). It takes the
 -- entry's own lines from its file -- headline through the end of its

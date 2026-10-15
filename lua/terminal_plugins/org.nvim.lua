@@ -569,7 +569,7 @@ return {
         -- org-style (folded -> children -> subtree -> folded), or, on a
         -- plain line, folds the group of the header there, which this key
         -- would otherwise shadow -- never org.nvim's `goto`, which opened
-        -- the entry's source file in a split (`<Space>` / `o` / `<CR>` are
+        -- the entry's source file in a split (`<S-CR>` / `o` / `<CR>` are
         -- the keys that leave the view). `<S-Tab>` cycles every node of the
         -- view, `l` unfolds the node at point one step (or the folded group
         -- header of an agenda view), and `c` captures a child of the entry
@@ -668,10 +668,15 @@ return {
         -- default and `:w` splices it back into its file in place of the
         -- entry; the whole file stays out of the way of a long project file.
         -- The old <CR> behaviour (switch_to: the entry opened in its file,
-        -- the view left behind) moves here to <Space> and <S-CR>, which open
-        -- the `show` default to make room. `o` reaches the same action: the
-        -- view already owns the window, so the default `o`
+        -- the view left behind) moves here to <S-CR>, which opens the `show`
+        -- default to make room. `o` reaches the same action: the view
+        -- already owns the window, so the default `o`
         -- (delete_other_windows, unbound here) does nothing useful.
+        -- <Space> is left to the leader (init.lua): a view mapping on it
+        -- would wait 'timeoutlen' on every leader sequence, and a lone press
+        -- would leave the view -- switching to the entry's file, or opening
+        -- the event-detail scratch on a calendar line
+        -- (helpers/org/ics.lua) -- instead of doing nothing.
         entry_scratch = '<CR>',
         -- `L` opens the same entry scratch beside the view instead of in it
         -- (helpers/org/agenda.lua setup_entry_preview): a preview window on
@@ -684,7 +689,7 @@ return {
         -- table's iteration order.
         recenter = false,
         entry_preview = 'L',
-        switch_to = { '<Space>', '<S-CR>', 'o' },
+        switch_to = { '<S-CR>', 'o' },
         delete_other_windows = false,
         show = false,
         -- `?` opens the full keymap help, the float `g?` already opens, in
