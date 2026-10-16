@@ -1,13 +1,15 @@
 -- The knowledge-base hub: ~/org/roam/index.org regenerated from the base.
 --
--- Everything below the file's `* Index` headline is generated; everything above
--- it -- what the base is for, the shape, the vocabulary, the rules -- is
--- hand-written and left alone. `M.index()` walks `~/org/roam/documentation/`
--- (the file-for-file mirror of ~/org/projects/) and writes one link per
--- workstream and per finding, with counts and the file's date. It is the
--- browsing surface, rendered from files that already exist; a rendering cannot
--- rot the way a hand-written index does: `OrgKbIndex` -- and the `kb` skill at
--- the end of a tidy run -- simply rebuilds it.
+-- The file is its own header plus the tree: the property drawer, `#+title:` and
+-- `#+filetags:` at the top are kept as they are, and every headline below them
+-- is replaced by what `M.index()` renders -- one entry per file, its
+-- workstreams, and the findings of each workstream as links. Nothing else: no
+-- preamble, no `* Index` wrapper, no summary line, no separators. What the base
+-- is and how it works is ~/org/WORKFLOW.org's business.
+--
+-- Being a rendering of files that already exist, it cannot rot the way a
+-- hand-written index does: `OrgKbIndex` -- and the `kb` skill at the end of a
+-- tidy run -- simply rebuilds it.
 --
 -- `M.ensure_ids` is the other half of "everything here is a node": a knowledge
 -- base file gets an `:ID:` on every headline of level 2 or deeper when it is
@@ -90,24 +92,28 @@ local function descendants(hl, out)
   end
 end
 
---- The generated section: one block per KB file, workstream by workstream.
+--- The tree, and only the tree: one `**` entry per knowledge-base file -- its
+--- counts in the entry itself -- its workstreams as `***` under it, and the
+--- findings of each workstream as links beneath them. No header of its own, no
+--- summary line, no separators, no board links: the file's own header is above
+--- it, the prose about what the base is and how it works is in
+--- ~/org/WORKFLOW.org, and the hub is here to be walked. A file entry is a link
+--- to the file's node, a workstream a link to its headline, a finding a link to
+--- the finding.
 ---@return string[]
 local function body()
   local files = vim.fn.glob(vim.fn.expand(DOCS) .. '/*.org', false, true)
   table.sort(files)
 
-  local out, questions = {}, {}
-  local findings, topics = 0, 0
-
+  local out = {}
   for _, path in ipairs(files) do
     local file = require('org.files').get(path)
     if file then
-      local board = vim.fn.expand('~/org/projects/' .. vim.fn.fnamemodify(path, ':t'))
       local file_id = file.properties and file.properties.ID
       local title = clean(file.settings.title) ~= '' and clean(file.settings.title) or vim.fn.fnamemodify(path, ':t:r')
       local label = file_id and string.format('[[id:%s][%s]]', vim.trim(file_id), title) or title
 
-      local blocks, mine, my_topics = {}, 0, 0
+      local lines, mine, my_ws = {}, 0, 0
       for _, ws in ipairs(file.children or {}) do
         local nodes = {}
         descendants(ws, nodes)
@@ -116,56 +122,37 @@ local function body()
         -- to show what there is to fill in, which is the point of the hub
         local id = ws:get_property('ID', false)
         if #ws_findings > 0 or (id and id:match '%S') then
-          my_topics = my_topics + 1
-          local lines = { string.format('*** %s', link(ws)) }
+          my_ws = my_ws + 1
+          lines[#lines + 1] = string.format('*** %s', link(ws))
           for _, f in ipairs(ws_findings) do
             mine = mine + 1
-            if vim.tbl_contains(all_tags(f), 'kb_question') then
-              questions[#questions + 1] = string.format('- %s — %s', link(f), title)
-            end
-            lines[#lines + 1] = string.format('  - %s  =%s=', link(f), table.concat(f:get_inherited_tags(), ':') ~= '' and ':' .. table.concat(f:get_inherited_tags(), ':') .. ':' or '')
+            local own = f.tags or {}
+            -- the finding's own tags: the file's client tag already shows above
+            lines[#lines + 1] = string.format('  - %s%s', link(f), #own > 0 and '  =:' .. table.concat(own, ':') .. ':' or '')
           end
-          blocks[#blocks + 1] = table.concat(lines, '\n')
         end
       end
 
-      if #blocks > 0 then
-        findings = findings + mine
-        topics = topics + my_topics
-        out[#out + 1] = string.format('** %s — %d workstream%s · %d finding%s', label, my_topics, my_topics == 1 and '' or 's', mine, mine == 1 and '' or 's')
-        out[#out + 1] = string.format(
-          '   [[file:%s][board]] · %s · updated %s',
-          board,
-          vim.fn.fnamemodify(path, ':t'),
-          os.date('%Y-%m-%d', vim.fn.getftime(path))
-        )
-        out[#out + 1] = table.concat(blocks, '\n\n')
-        out[#out + 1] = ''
+      if #lines > 0 then
+        out[#out + 1] = string.format('** %s — %d workstream%s · %d finding%s', label, my_ws, my_ws == 1 and '' or 's', mine, mine == 1 and '' or 's')
+        for _, l in ipairs(lines) do
+          out[#out + 1] = l
+        end
       end
     end
   end
 
-  local head = {
-    string.format('%d file%s · %d workstream%s · %d finding%s. Generated by `OrgKbIndex` (helpers/org/kb.lua) — edit above this headline, everything below is rebuilt.',
-      #files, #files == 1 and '' or 's', topics, topics == 1 and '' or 's', findings, findings == 1 and '' or 's'),
-  }
-  if #questions > 0 then
-    head[#head + 1] = ''
-    head[#head + 1] = string.format('Open questions (%d):', #questions)
-    head[#head + 1] = table.concat(questions, '\n')
+  if #out == 0 then
+    out[#out + 1] = 'No file in `documentation/` yet: seed it from the boards (`~/org/scripts/roam-seed/seed.py --write`).'
   end
-  if #files == 0 then
-    head[#head + 1] = ''
-    head[#head + 1] = 'No file in `documentation/` yet: seed it from the boards (`~/org/scripts/roam-seed/seed.py --write`).'
-  else
-    head[#head + 1] = ''
-    head[#head + 1] = table.concat(out, '\n')
-  end
-  return vim.split(table.concat(head, '\n'), '\n', { plain = true })
+  return out
 end
 
---- Rewrite ~/org/roam/index.org: keep everything above `* Index`, replace the
---- rest.
+--- Rewrite ~/org/roam/index.org: keep its header -- the property drawer, the
+--- `#+title:` and `#+filetags:` keywords, and anything else above the first
+--- headline -- and replace every headline below with the tree. The header is the
+--- only part to edit by hand; anything written *under* it is lost on the next
+--- rebuild.
 ---@return integer lines written, integer files described
 function M.index()
   local path = vim.fn.expand(INDEX)
@@ -175,21 +162,17 @@ function M.index()
     return 0, 0
   end
 
-  local at
+  local at = #lines + 1
   for i, l in ipairs(lines) do
-    if l:match '^%* Index%s*$' then
+    if l:match '^%*+ ' then
       at = i
       break
     end
   end
-  local keep = at and vim.list_slice(lines, 1, at - 1) or lines
-  while #keep > 0 and keep[#keep]:match '^%s*$' do
-    table.remove(keep)
+  local out = vim.list_slice(lines, 1, at - 1)
+  while #out > 0 and out[#out]:match '^%s*$' do
+    table.remove(out)
   end
-
-  local out = keep
-  out[#out + 1] = ''
-  out[#out + 1] = MARKER
   for _, l in ipairs(body()) do
     out[#out + 1] = l
   end
