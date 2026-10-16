@@ -576,6 +576,14 @@ return {
       -- NOTE: inside org buffers `<prefix>s` is the buffer-local `schedule`
       -- (defaults, lua/org/config/mappings.lua) and shadows this.
       global = {
+        -- org.nvim's own agenda/capture dispatchers claim <leader>oa and
+        -- <leader>oc globally, and its setup runs after the mappings
+        -- loader (init.lua), so they would shadow the direct actions
+        -- lua/mappings.lua binds there. `false` is the documented way to
+        -- drop a mapping (org.config.lhs_list -> no lhs); leaving the key
+        -- out (nil) would keep the default <prefix>a / <prefix>c.
+        agenda = false,
+        capture = false,
         pick_project_todo = '<prefix>s',
       },
       agenda = {
@@ -759,6 +767,14 @@ return {
         -- <leader>n adds a timestamped note under the headline at point
         -- (org-add-note). The Emacs key <C-c><C-z> keeps working.
         add_note = '<leader>n',
+        -- `t` adds/edits the tags of the entry at point (org-set-tags)
+        -- moves to <prefix>T: <prefix>t is the global project TODO view
+        -- (lua/mappings.lua) and a buffer-local key here would shadow it
+        -- in every org file. <prefix>T is not bound to any other action,
+        -- but org.nvim's table keys hang off it (<prefix>Tc, <prefix>T-,
+        -- <prefix>Tf, ...): those still win once their next key is typed,
+        -- `T` alone just waits out 'timeoutlen' first.
+        set_tags = '<prefix>T',
         -- next/previous visible heading on <C-j>/<C-k> (replaces ]]/[[).
         -- The action already jumps only to headings org.fold reports as
         -- visible, so a folded subtree is skipped. Buffer-local, so it

@@ -237,7 +237,23 @@ return {
       end,
       desc = 'Org agenda',
     },
-    ['<leader>ot'] = { function() require('org').agenda('t') end, desc = 'Org todo (all)' },
+    ['<leader>oa'] = {
+      function()
+        require('helpers.org.agenda').toggle_view('agenda', function()
+          require('org').agenda('a')
+        end)
+      end,
+      desc = 'Org agenda',
+    },
+    ['<leader>oc'] = { function() require('org').capture('t') end, desc = 'Org capture (project)' },
+    ['<leader>ot'] = {
+      function()
+        require('helpers.org.agenda').toggle_view('todo', function()
+          require('helpers.org.project').todo_view()
+        end)
+      end,
+      desc = 'Org todo (project)',
+    },
     ['°'] = {
       function()
         require('helpers.org.agenda').toggle_view('todo', function()
