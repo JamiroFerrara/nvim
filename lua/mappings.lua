@@ -29,7 +29,6 @@ return {
     },
     ['<leader>ss'] = { '<cmd>luafile $MYVIMRC<CR>', desc = 'Source config' },
     ['<leader>c'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },
-    ['cc'] = { '<cmd>lua require("Comment.api").toggle.linewise.current()<cr>', desc = 'Toggle comment' },
     ['<leader>tt'] = { '<cmd>TransparentToggle<cr>', desc = 'Toggle transparency' },
     ['<leader>tw'] = {
       function()
