@@ -92,8 +92,8 @@ local function descendants(hl, out)
   end
 end
 
---- The tree, and only the tree: one `**` entry per knowledge-base file -- its
---- counts in the entry itself -- its workstreams as `***` under it, and the
+--- The tree, and only the tree: one `*` entry per knowledge-base file -- its
+--- counts in the entry itself -- its workstreams as `**` under it, and the
 --- findings of each workstream as links beneath them. No header of its own, no
 --- summary line, no separators, no board links: the file's own header is above
 --- it, the prose about what the base is and how it works is in
@@ -123,7 +123,7 @@ local function body()
         local id = ws:get_property('ID', false)
         if #ws_findings > 0 or (id and id:match '%S') then
           my_ws = my_ws + 1
-          lines[#lines + 1] = string.format('*** %s', link(ws))
+          lines[#lines + 1] = string.format('** %s', link(ws))
           for _, f in ipairs(ws_findings) do
             mine = mine + 1
             local own = f.tags or {}
@@ -134,7 +134,7 @@ local function body()
       end
 
       if #lines > 0 then
-        out[#out + 1] = string.format('** %s — %d workstream%s · %d finding%s', label, my_ws, my_ws == 1 and '' or 's', mine, mine == 1 and '' or 's')
+        out[#out + 1] = string.format('* %s — %d workstream%s · %d finding%s', label, my_ws, my_ws == 1 and '' or 's', mine, mine == 1 and '' or 's')
         for _, l in ipairs(lines) do
           out[#out + 1] = l
         end
