@@ -231,6 +231,20 @@ return {
     org_directory = '~/org',
     agenda_files = { '~/org/**/*.org' },
     default_notes_file = '~/org/refile.org',
+    -- id: links resolve through the agenda files first, then through their
+    -- archives (id.search_archives), then through `extra_files`. The boards
+    -- roll closed tickets into ~/org/archive/<client>/<YYYY-MM>.org_archive
+    -- (helpers/org/roll.lua) -- a file per client per month, which no static
+    -- `#+ARCHIVE:` keyword can enumerate -- so the whole archive tree is added
+    -- here by glob. This is what keeps a knowledge-base link to an archived
+    -- ticket resolving years after the roll. The old
+    -- ~/org/projects/*.org_archive are covered too.
+    id = {
+      extra_files = {
+        '~/org/archive/**/*.org_archive',
+        '~/org/projects/*.org_archive',
+      },
+    },
     -- An entry cannot be marked DONE while it still has an unfinished child
     -- (org's org-enforce-todo-dependencies; off in org.nvim's own defaults).
     -- Only DONE is guarded: the open keywords of this vault's set
@@ -783,10 +797,19 @@ return {
         -- archive every top-level tree without an open TODO (on a
         -- headline: its children). Emacs reach is 4<prefix>$ (C-u C-c $);
         -- <prefix>$ alone still archives just the subtree at point. The
-        -- action is overridden in config() (helpers/org/archive.lua): the
-        -- key archives the matches at once, without org.nvim's per-entry
-        -- "Move subtree to archive?" confirmation.
+        -- action is overridden in config() (helpers/org/archive.lua →
+        -- helpers/org/roll.lua): it sweeps every workstream of the board at
+        -- once, into ~/org/archive/<client>/<YYYY-MM>.org_archive, without
+        -- org.nvim's per-entry "Move subtree to archive?" confirmation.
         archive_all_done = '<prefix>D',
+        -- the same sweep with a week's grace: only what closed more than
+        -- seven days ago, so a mis-tapped DONE is not carried off at once
+        -- (helpers/org/roll.lua, registered in config()).
+        archive_all_old = '<prefix>A',
+        -- the inverse: the archived entry at point goes back into its board,
+        -- under the parent its drawer's :ARCHIVE_OLPATH: records. org.nvim has
+        -- no other un-archive (helpers/org/roll.lua, registered in config()).
+        unarchive = '<prefix>U',
       },
       org_insert = {
         -- <CR> acts like <Tab>: next table field / cycle empty heading level
@@ -855,15 +878,48 @@ return {
           },
         },
       },
-      -- org-roam, pointed at a sandbox rather than a real note directory
-      -- (~/org/roam/playground, whose playground.org index says what to
-      -- try), so the extension can be explored and weighed against the
-      -- obsidian.nvim vault before a knowledge base is built on it. Every
-      -- `.org` below `directory` is indexed; the keys are under
-      -- <leader>om and the index under stdpath("data")/org/roam-index.json.
-      -- The backlinks window (`<leader>oml`, and `<leader>e` in a roam file)
-      -- opens on the left rather than the default right.
-      roam = { directory = '~/org/roam/playground', buffer = { position = 'left' } },
+      -- org-roam: the knowledge base under ~/org/roam, no longer the
+      -- playground sandbox (kept as reference, out of the graph by the
+      -- exclude below). index.org says what lives where, the tags and the
+      -- properties; every `.org` below `directory` is indexed; the keys are
+      -- under <leader>om and the index under
+      -- stdpath("data")/org/roam-index.json. The backlinks window
+      -- (`<leader>oml`, and `<leader>e` in a roam file) opens on the left
+      -- rather than the default right.
+      roam = {
+        directory = '~/org/roam',
+        exclude = { 'data/', '^playground/' },
+        buffer = { position = 'left' },
+        -- Where a capture that needs a *new* node file lands. Under the
+        -- mirror (index.org) new files are rare: documentation/ is seeded
+        -- from ~/org/projects/, and a finding is a level-3 headline inside
+        -- one of those files, made by capturing *into* an existing node. So
+        -- the only new files are a topic with no workstream home and a
+        -- person -- and `d` (the keyless default) is a topic, so nothing is
+        -- ever scattered at the roam root, which is where the plugin's own
+        -- timestamped default target would put it. Slugs, never timestamps:
+        -- the title is the node's identity, and `${slug}` keeps the file name
+        -- greppable from a link.
+        capture_templates = {
+          d = {
+            description = 'topic',
+            type = 'plain',
+            template = '%?',
+            target = 'topics/${slug}.org',
+            head = '#+title: ${title}\n#+filetags: :kb_entity:\n',
+          },
+          k = {
+            description = 'person',
+            type = 'plain',
+            template = '%?',
+            target = 'people/${slug}.org',
+            head = '#+title: ${title}\n#+filetags: :kb_entity:\n',
+          },
+        },
+        -- `<leader>omx` (extract): a macro topic that outgrew its file becomes
+        -- a topic node, the way a ticket outgrows the board.
+        extract_new_file_path = 'topics/${slug}.org',
+      },
       -- ql = {},
     },
   },
@@ -889,13 +945,28 @@ return {
       'global_cycle',
       desc = "Fold to the buffer's #+STARTUP visibility (else cycle globally)",
     }
-    -- `<prefix>D` archives every headline without an open TODO: the action
-    -- is replaced so it runs without org.nvim's per-entry confirmation
-    -- (helpers/org/archive.lua), the way the config's other archive keys do.
+    -- `<prefix>D` rolls every finished ticket off the board: the action is
+    -- replaced so it sweeps without org.nvim's per-entry confirmation, and so
+    -- it goes to this month's archive file rather than a `<file>.org_archive`
+    -- that grows forever (helpers/org/archive.lua → helpers/org/roll.lua).
     require('org.actions').list.archive_all_done = {
       'helpers.org.archive',
       'archive_all_done',
-      desc = 'Archive children without open TODOs',
+      desc = 'Roll finished tickets into this month’s archive',
+    }
+    -- `<prefix>A` is that sweep with a week's grace (only what closed over
+    -- seven days ago), `<prefix>U` its inverse: the entry at point goes back
+    -- into the board the drawer's :ARCHIVE_FILE: names, under the headline
+    -- its :ARCHIVE_OLPATH: names (helpers/org/roll.lua).
+    require('org.actions').list.archive_all_old = {
+      'helpers.org.roll',
+      'roll_aged',
+      desc = 'Roll tickets closed over a week ago',
+    }
+    require('org.actions').list.unarchive = {
+      'helpers.org.roll',
+      'unarchive',
+      desc = 'Un-archive the entry at point into its board',
     }
     require('org').setup(opts)
 
@@ -927,6 +998,7 @@ return {
     require('helpers.org.ics').setup()
     require('helpers.org.ai').setup()
     require('helpers.org.retro').setup()
+    require('helpers.org.kb').setup()
     require('helpers.org.actions').setup()
   end,
 }
