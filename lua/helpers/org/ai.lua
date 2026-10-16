@@ -48,12 +48,13 @@
 -- headline. Everything after that is the omp-org-ticket skill
 -- appended to omp's system prompt: answer the `AI:` lines, resolve the
 -- ticket, leave TEST/WARN/PEND (the user promotes TEST to DONE once they have
--- validated the change), write the <=2 line 🤖-headed summary -- its text in
--- an org `markdown` source block -- and remove a temporary :ID:.
+-- validated the change), and write the <=2 line 🤖-headed summary -- its text
+-- in an org `markdown` source block. The headline's :ID: stays: it is the
+-- anchor the knowledge base links the ticket by, so neither side removes it.
 --
 -- Each ticket is also linked to its omp session: the launcher writes an
--- `:OMP_SESSION:` key on the headline (the :ID: at the first launch, kept
--- across the temporary :ID: removal) and runs omp with `--session-dir` under
+-- `:OMP_SESSION:` key on the headline (the :ID: at the first launch) and runs
+-- omp with `--session-dir` under
 -- the agent directory, so a later launch `--continue`s that ticket's original
 -- session — full context — instead of starting a fresh one.
 --
@@ -106,8 +107,8 @@ local function agent_dir()
 end
 
 --- The headline property linking a ticket to its omp session directory. Its
---- value is the key fixed at the first launch (the :ID: then) and kept across
---- the temporary :ID: removal, so every later launch resumes that session.
+--- value is the key fixed at the first launch (the :ID: then), so every later
+--- launch resumes that session.
 local SESSION_PROP = 'OMP_SESSION'
 
 --- The directory holding the ticket's omp session, or nil when the ticket
@@ -138,8 +139,7 @@ end
 ---@class OrgTicket
 ---@field bufnr integer
 ---@field lnum integer line of the headline
----@field id string
----@field temporary boolean the launcher created the :ID: (so it may remove it)
+---@field id string the headline's permanent :ID: (the launch creates it when missing)
 ---@field session string|nil the :OMP_SESSION: link key (nil before the first launch)
 ---@field file string absolute org file path
 ---@field title string
@@ -270,16 +270,16 @@ local function ticket_at(bufnr, lnum, mutate)
   end
 
   local id = require('org.id').get { bufnr = bufnr, lnum = hl.line }
-  local temporary = not (id and id:match '%S')
+  local missing_id = not (id and id:match '%S')
   local session = hl:get_property(SESSION_PROP, false)
   if mutate then
-    if temporary then
+    if missing_id then
       id = require('org.id').get_create { bufnr = bufnr, lnum = hl.line }
     end
 
     -- Link the ticket to its omp session: the key is the :ID: at the first
-    -- launch, written to the drawer so it outlives the temporary :ID: and a
-    -- later launch resumes the same session instead of starting fresh.
+    -- launch, written to the drawer, so a later launch resumes the same
+    -- session instead of starting fresh.
     if not (session and session:match '%S') then
       session = id
       require('org.properties').entry_put(bufnr, hl.line, SESSION_PROP, session)
@@ -304,7 +304,6 @@ local function ticket_at(bufnr, lnum, mutate)
     bufnr = bufnr,
     lnum = hl.line,
     id = id,
-    temporary = temporary,
     session = session,
     file = vim.fs.normalize(path),
     title = hl:plain_title(),
@@ -459,7 +458,7 @@ local function prompt(ticket)
   return table.concat({
     'Org ticket launched by nvim <leader>ai.',
     'File: ' .. ticket.file .. '.',
-    'ID: ' .. ticket.id .. ' (' .. (ticket.temporary and 'created by this launch; remove it when you finish' or 'pre-existing; leave it') .. ').',
+    'ID: ' .. ticket.id .. ' (permanent: the knowledge base links this ticket by it; never remove it).',
     'Title: ' .. ticket.title .. '.',
     'State: the launcher already set it to NEXT.',
     'Follow the omp-org-ticket rules appended to your system prompt.',
