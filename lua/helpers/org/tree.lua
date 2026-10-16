@@ -115,6 +115,47 @@ local function key_of(item)
   return (item.filename or tostring(item.bufnr)) .. ':' .. tostring(item.lnum) .. ':' .. vim.trim(title)
 end
 
+--- Drop the empty `[0/0]` statistics cookie (and the space before it) from a
+--- line the view is about to show: a statistics total of 0 means there is
+--- nothing to count, so showing the marker an org file still carries is
+--- noise. A view lists files it never loaded, where the on-screen-buffer
+--- cookie pass (helpers/org/cookies.lua) could not have cleaned it; this is
+--- display only -- neither the file nor a loaded buffer is touched. Only the
+--- empty cookie goes: `[0%]` is 0 of N done and every `[n/m]` with m > 0 is a
+--- real statistic, so both stay.
+--- Returns the cleaned line, and a function mapping an old column of it to
+--- its column after the cut, for the line's highlights (nil when nothing was
+--- dropped).
+local function drop_empty_cookie(text)
+  local parts, gaps, init = {}, {}, 1
+  while true do
+    local s, e = text:find('%s*%[0/0%]', init)
+    if not s then
+      break
+    end
+    parts[#parts + 1] = text:sub(init, s - 1)
+    gaps[#gaps + 1] = { s, e - s + 1 }
+    init = e + 1
+  end
+  if #gaps == 0 then
+    return text, nil
+  end
+  parts[#parts + 1] = text:sub(init)
+  local function shift(col)
+    local cut = 0
+    for _, g in ipairs(gaps) do
+      local stop = g[1] + g[2] - 1
+      if col > stop then
+        cut = cut + g[2]
+      elseif col >= g[1] then -- inside the cut: collapse onto its start
+        return g[1] - 1 - cut
+      end
+    end
+    return col - cut
+  end
+  return table.concat(parts), shift
+end
+
 local function is_todo_view(view)
   if not view then
     return false
@@ -267,6 +308,8 @@ local function reorder(b, order, old_n)
       text_hls, item, line_hl = by_row[old - 1], b.items[old], b.line_hls[old]
       map[old] = new
     end
+    local cut
+    line, cut = drop_empty_cookie(line)
     local text = prefix .. line .. suffix
     lines[new] = text
     for _, h in ipairs(text_hls or {}) do
@@ -276,6 +319,9 @@ local function reorder(b, order, old_n)
       local start, stop, group, prio = h[1], h[2], h[3], h[4]
       if old then
         start, stop, group, prio = h[2], h[3], h[4], h[5]
+      end
+      if cut then
+        start, stop = cut(start), cut(stop)
       end
       hls[#hls + 1] = { new - 1, start + #prefix, stop + #prefix, group, prio }
     end
@@ -716,6 +762,24 @@ end
 
 local function setup_render()
   require('org.lazy').on_load('org.agenda.render', 'view_tree', function(render)
+    -- A line the plugin rebuilds on its own -- agenda/view/edit.lua
+    -- (org-agenda-change-all-lines) rewrites a line after a clock-in or a
+    -- change made outside the view -- comes straight from item_line, past
+    -- the view builder: keep the empty `[0/0]` cookie out of it too.
+    local item_line = render.item_line
+    render.item_line = function(it, ctx)
+      local text, hls, line_hl = item_line(it, ctx)
+      if text then
+        local clean, shift = drop_empty_cookie(text)
+        if shift then
+          for _, h in ipairs(hls or {}) do
+            h[1], h[2] = shift(h[1]), shift(h[2])
+          end
+          text = clean
+        end
+      end
+      return text, hls, line_hl
+    end
     if not render.view then
       return
     end

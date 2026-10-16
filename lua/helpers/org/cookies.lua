@@ -205,6 +205,61 @@ local function finish_when_children_done(bufnr, lnum)
   end
 end
 
+--- Total count a statistics cookie on `hl` would show. org.lists owns that
+--- number but `headline_counts` is module-local there; this mirrors it with
+--- the pieces it is built from -- the section's checkboxes via
+--- `lists.parse_region`, else the child entries' TODO keywords via
+--- `lists.todo_counts` -- under COOKIE_DATA's `todo`/`checkbox` override and
+--- the hierarchical-statistics option. A total of 0 is a headline with nothing
+--- to count: the plugin renders `[0/0]` / `[0%]` and never drops the cookie, so
+--- ensure_cookies removes it instead.
+local function cookie_total(file, hl, lists)
+  local cookie_data = (hl.properties.COOKIE_DATA or ''):lower()
+  local recursive = cookie_data:find 'recursive' ~= nil or lists.opt 'checkbox_hierarchical_statistics' == false
+  local function boxes(items)
+    local n = 0
+    for _, it in ipairs(items) do
+      if it.checkbox then
+        n = n + 1
+      end
+      if recursive then
+        n = n + boxes(it.children)
+      end
+    end
+    return n
+  end
+  local function section_boxes()
+    local n = 0
+    -- a section without a bracket holds no checkbox: skip the item parser
+    for i = hl.line + 1, math.min(hl.body_end, #file.lines) do
+      if file.lines[i]:find '[%[%]]' then
+        for _, l in ipairs(lists.parse_region(file.lines, hl.line + 1, hl.body_end)) do
+          n = n + boxes(l.items)
+        end
+        break
+      end
+    end
+    return n
+  end
+  local mode
+  if cookie_data:find 'todo' then
+    mode = 'todo'
+  elseif cookie_data:find 'checkbox' then
+    mode = 'checkbox'
+  end
+  if not mode then
+    local n = section_boxes()
+    if n > 0 then
+      return n
+    end
+    mode = 'todo'
+  end
+  if mode == 'checkbox' then
+    return section_boxes()
+  end
+  return select(2, lists.todo_counts(file, hl))
+end
+
 --- Automatic statistics cookies. Emacs and org.nvim only keep a `[/]` /
 --- `[x/y]` cookie up to date if it is already there (org.lists
 --- update_section rewrites only lines with a cookie); nothing inserts one.
@@ -249,29 +304,26 @@ local function ensure_cookies(bufnr)
     local last = vim.api.nvim_buf_line_count(bufnr)
     for _, hl in ipairs(file.headlines) do
       if hl.line <= last and hl.raw:find '%[%d*[/%%]%d*%]' then
-        -- an existing (possibly bare `[/]`) cookie: fill it in
-        lists.update_statistics_for(bufnr, hl.line)
+        -- An existing (possibly bare `[/]`) cookie. Fill it in -- unless the
+        -- count is 0, i.e. there is nothing left to count: the plugin would
+        -- write `[0/0]` and never drop it, so remove the cookie instead.
+        if cookie_total(file, hl, lists) == 0 then
+          local p = parser.parse_headline_line(hl.raw, file.settings.todo)
+          if p then
+            -- org allows the cookie anywhere in the title (not just at its
+            -- end), so drop every occurrence and the space it leaves behind;
+            -- trim trailing blanks so a title that was only a cookie is sane
+            local title = (p.title or ''):gsub('%s*%[%d*[/%%]%d*%]', ''):gsub('%s+$', '')
+            edit.update_headline(bufnr, hl.line, { title = title })
+            file = files.get_buffer(bufnr)
+          end
+        else
+          lists.update_statistics_for(bufnr, hl.line)
+        end
       elseif hl.line <= last then
-        -- only parse the section when it could hold a checkbox
-        local maybe_box = false
-        for i = hl.line + 1, math.min(hl.body_end, last) do
-          if file.lines[i]:find '[%[%]]' then
-            maybe_box = true
-            break
-          end
-        end
-        local has_box = false
-        if maybe_box then
-          for _, l in ipairs(lists.parse_region(file.lines, hl.line + 1, hl.body_end)) do
-            for _, it in ipairs(l.items) do
-              if it.checkbox then
-                has_box = true
-              end
-            end
-          end
-        end
-        local want = has_box or select(2, lists.todo_counts(file, hl)) > 0
-        if want then
+        -- insert a cookie only when there is something to count; a total of 0
+        -- would render as `[0/0]` right after insertion
+        if cookie_total(file, hl, lists) > 0 then
           local p = parser.parse_headline_line(hl.raw, file.settings.todo)
           if p then
             edit.update_headline(bufnr, hl.line, { title = (p.title or '') .. ' [/]' })
