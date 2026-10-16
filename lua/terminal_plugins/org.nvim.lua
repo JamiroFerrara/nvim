@@ -71,6 +71,11 @@
 --   callouts.lua    entry lines of the TODO views get a callout bar in the
 --                   state's color (from the keyword face), in the left
 --                   gutter only -- no background band behind the line
+--   actions.lua     `<leader>oM`: a fuzzy picker over what org can do in
+--                   the buffer it is pressed in -- the entry at point, the
+--                   view's own keys, org.nvim's registry and the two view
+--                   toggles (agenda.lua) -- each entry run through the
+--                   very function its own key runs
 --   roam_cmp.lua    the nvim-cmp source for roam `[[` links (wired in
 --                   lua/plugins/cmp.lua, not here): typing `[[` in a roam
 --                   file completes node titles and aliases, and creates the
@@ -922,5 +927,6 @@ return {
     require('helpers.org.ics').setup()
     require('helpers.org.ai').setup()
     require('helpers.org.retro').setup()
+    require('helpers.org.actions').setup()
   end,
 }
