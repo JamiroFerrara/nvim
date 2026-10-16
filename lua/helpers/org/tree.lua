@@ -31,6 +31,19 @@
 --     ancestor; a done subheadline hangs under an open entry only when the
 --     view lists it there (never as a plain child), so it is not pulled back
 --     under its ancestor;
+--   * the checkbox items of a listed entry's own section (its `- [ ]` list
+--     items, up to its first child headline) are added the same way, one
+--     line each, one level under the entry: they fold, and count in the
+--     `… (N)` size, with the rest of the subtree, and a checked one shows in
+--     the DONE face (`OrgCheckboxChecked`). `<CR>` on such a line toggles the
+--     box in the entry's own file -- the same toggle a buffer's `<CR>` on a
+--     checkbox item runs (helpers/org/mappings.lua), so the entry's (and its
+--     ancestors') statistics cookies are recomputed and a last box checked
+--     finishes the entry; the file is written
+--     (org.nvim's agenda.save_after_edit) and the view re-renders at once.
+--     A missing cookie is added first (helpers/org/cookies.lua), so the box
+--     counts for the entry's `[0/1]` counter even when the file was never
+--     opened in a buffer;
 --   * a child line drops the agenda prefix (category, date): its text --
 --     keyword, priority, title, tags -- starts at its ancestor's content
 --     column, one tree level in, after the box-drawing guides (`├─ `, `└─ `,
@@ -137,16 +150,24 @@ end
 --- Node table for the units of one run, in agenda order. `units` is a list
 --- of `{ item, rows }` (an item line plus the entry-text lines under it).
 local function build_nodes(units)
-  local nodes = {}
+  local nodes, by_unit = {}, {}
   for i, u in ipairs(units) do
-    nodes[i] = { unit = u, item = u.item, headline = u.item.headline, children = {}, order = i }
+    nodes[i] = { unit = u, item = u.item, headline = u.item.headline, box = u.box, children = {}, order = i }
+    by_unit[u] = nodes[i]
   end
   for i, nd in ipairs(nodes) do
     local best
-    for j, other in ipairs(nodes) do
-      if i ~= j and is_ancestor(other, nd) then
-        if not best or other.headline.line > best.headline.line then
-          best = other
+    if nd.unit.parent_unit then
+      -- a synthetic line (a checkbox item): it carries no headline, so
+      -- ancestry has nothing to place it with -- it hangs under the entry
+      -- whose text it came from
+      best = by_unit[nd.unit.parent_unit]
+    else
+      for j, other in ipairs(nodes) do
+        if i ~= j and is_ancestor(other, nd) then
+          if not best or other.headline.line > best.headline.line then
+            best = other
+          end
         end
       end
     end
@@ -358,16 +379,46 @@ local function transform(view, b, render, ctx)
     end
   end
 
+  --- The File object behind a headline: the entry's own file while the
+  --- headline carries it (a File while it is in the buffer, a path once the
+  --- headline was copied or moved).
+  local function headline_file(hl)
+    local file = hl and hl.file
+    if type(file) == 'string' then
+      file = require('org.files').get(file)
+    end
+    return file
+  end
+
+  --- The checkbox items of `hl`'s own section, flattened in file order: the
+  --- `- [ ]` lines between the headline and its first child. They carry no
+  --- headline, so org.nvim never feeds them to an agenda and the view has to
+  --- add them itself, one line each, the way it adds the plain subheadlines.
+  --- Nested boxes (a checkbox under a checkbox) keep their order but not
+  --- their indent: every box is one level under the entry.
+  local function checkbox_children(hl, file)
+    local lines = file and file.lines
+    if not lines or not hl.body_end or hl.body_end <= hl.line then
+      return nil
+    end
+    local _, all = require('org.lists').parse_region(lines, hl.line + 1, hl.body_end)
+    local out
+    for _, it in ipairs(all) do
+      if it.checkbox then
+        out = out or {}
+        out[#out + 1] = { lnum = it.lnum, raw = lines[it.lnum], checkbox = it.checkbox }
+      end
+    end
+    return out
+  end
+
   --- Headlines of `item`'s own subtree the view does not list: the plain
   --- (not TODO) subheadlines org.nvim never feeds an agenda. A listed entry
   --- still shows its whole subtree, as an org file does; a listed
   --- subheadline's own subtree is left to its own unit, not repeated here.
   local function plain_children(item)
     local hl = item.headline
-    local file = hl and hl.file
-    if type(file) == 'string' then
-      file = require('org.files').get(file)
-    end
+    local file = headline_file(hl)
     local all = file and file.headlines
     if not all or not hl.end_line or hl.end_line <= hl.line then
       return nil
@@ -412,10 +463,54 @@ local function transform(view, b, render, ctx)
     }
   end
 
+  --- A unit for one checkbox line of an entry: the line is its own node, one
+  --- level under the entry (which its `parent_unit` names, an item carrying
+  --- no headline cannot be placed by ancestry). Its item is a stand-in for
+  --- the key the cursor is returned to after a re-render; it is kept out of
+  --- the view's line items, so the entry keys act on nothing here. `box` is
+  --- what `<CR>` toggles: the line it came from, in the entry's own file.
+  local function box_unit(bx, owner, item)
+    local text = vim.trim(bx.raw)
+    local s, e = text:find '%[[ xX%-]%]'
+    local group = bx.checkbox == 'X' and 'OrgCheckboxChecked' or bx.checkbox == '-' and 'OrgCheckboxPartial' or 'OrgCheckbox'
+    -- the box state is left out of the key: toggling the box rewrites the
+    -- text, and the cursor comes back to the line it toggled
+    local title = text:gsub('%[[ xX%-]%]%s*', '', 1)
+    local file = item.filename or item.bufnr
+    return {
+      item = { title = title, filename = item.filename, bufnr = item.bufnr, lnum = bx.lnum },
+      parent_unit = owner,
+      box = {
+        file = file,
+        lnum = bx.lnum,
+        raw = bx.raw,
+        text = text,
+        -- a synthetic line's hls are `{ start, end, group }` (0-based, end
+        -- exclusive), the shape reorder shifts for the guide
+        hls = s and { { s - 1, e, group } } or {},
+        key = tostring(file) .. ':' .. title,
+      },
+      rows = {},
+    }
+  end
+
   -- units: an item line with the entry-text lines that follow it, plus a
-  -- line per plain subheadline of the entry; every other line is a break
-  -- between runs
+  -- line per checkbox item of the entry's own section and one per plain
+  -- subheadline of it; every other line is a break between runs. The boxes
+  -- come first: they sit in the entry's text, above every child headline of
+  -- the file.
   local units = {}
+  --- The checkbox lines of headline `hl`, one node each, nested under the
+  --- unit `owner` (the entry line they follow).
+  local function add_boxes(hl, owner, item)
+    if not hl then
+      return
+    end
+    for _, bx in ipairs(checkbox_children(hl, headline_file(hl)) or {}) do
+      units[#units + 1] = box_unit(bx, owner, item)
+    end
+  end
+
   local l = 1
   while l <= n do
     if items[l] and not hidden[l] then
@@ -426,10 +521,15 @@ local function transform(view, b, render, ctx)
         k = k + 1
       end
       units[#units + 1] = u
+      add_boxes(items[l].headline, u, items[l])
+      -- the plain subheadlines: a hidden subtask is re-added here, and its
+      -- own boxes come with it, so a subtree nested under a listed entry
+      -- shows its checkboxes the same way the listed entry does
       for _, h in ipairs(plain_children(items[l]) or {}) do
         local cu = plain_unit(h, u.ctx)
         if cu then
           units[#units + 1] = cu
+          add_boxes(h, cu, cu.item)
         end
       end
       l = k
@@ -523,17 +623,36 @@ local function transform(view, b, render, ctx)
       if not visible(nd) then
         return
       end
+      if nd.box and not nd.parent then
+        -- a box hangs under its entry, always: without it there is nothing
+        -- to nest the line under, so it is left out
+        return
+      end
       local total = #nd.children > 0 and count_desc(nd) or 0
       local off = total > 0 and hidden_desc(nd) or 0
       local suffix = total > 0 and ((off > 0 and ' … (' or ' (') .. total .. ')') or ''
       if nd.parent then
-        local text, hls = no_prefix(nd)
+        local text, hls
+        if nd.box then
+          -- the checkbox line, as the entry's file writes it (its marker
+          -- highlighted): it carries no agenda prefix to drop
+          text, hls = nd.box.text, nd.box.hls
+        else
+          text, hls = no_prefix(nd)
+        end
         local lead = pad(base) .. guide
         local shifted = {}
         for _, h in ipairs(hls) do
           shifted[#shifted + 1] = { h[1] + #lead, h[2] + #lead, h[3], h[4] }
         end
-        order[#order + 1] = { text = lead .. text, hls = shifted, item = nd.item, suffix = suffix }
+        -- a box line carries no item: the view's entry keys must skip it the
+        -- way they skip a body line
+        order[#order + 1] = {
+          text = lead .. text,
+          hls = shifted,
+          item = not nd.box and nd.item or nil,
+          suffix = suffix,
+        }
         nd.row = #order
       else
         for i, r in ipairs(nd.unit.rows) do
@@ -631,7 +750,8 @@ local function node_at(buf, lnum)
   return tree and tree.by_line[lnum]
 end
 
---- Put the cursor back on the entry with `key` after a re-render.
+--- Put the cursor back on the entry with `key` after a re-render: the entry
+--- line the view lists it on, or the checkbox line it is the key of.
 local function refocus(buf, key)
   local view = require 'org.agenda.view'
   view.refresh()
@@ -644,6 +764,12 @@ local function refocus(buf, key)
   end
   local tree = tree_of(buf)
   if tree and tree.by_line then
+    for lnum, nd in pairs(tree.by_line) do
+      if nd.box and nd.box.key == key then
+        pcall(vim.api.nvim_win_set_cursor, 0, { lnum, 0 })
+        return
+      end
+    end
     for lnum in pairs(tree.by_line) do
       pcall(vim.api.nvim_win_set_cursor, 0, { lnum, 0 })
       return
@@ -733,6 +859,51 @@ local function cycle_all(buf)
   local lnum = vim.api.nvim_win_get_cursor(0)[1]
   require('org.agenda.view').refresh()
   pcall(vim.api.nvim_win_set_cursor, 0, { math.min(lnum, vim.api.nvim_buf_line_count(0)), 0 })
+end
+
+--- `<CR>` on a checkbox line of a TODO view: toggle that box in the entry's
+--- own file, the same toggle a buffer's `<CR>` on a checkbox item runs
+--- (helpers/org/mappings.lua, through org.lists), so the entry's own and its
+--- ancestors' statistics cookies are recomputed and checking the last box
+--- finishes the entry. The entry's file is loaded when no buffer holds it, a
+--- missing `[n/m]` cookie is added first -- nothing did it for a file the
+--- view listed without ever opening it in a buffer, and the box must count
+--- for it -- and the file is written (org.nvim's agenda.save_after_edit),
+--- the way an edit made from the view is.
+---@param buf integer the view's buffer
+---@param box table the node's `box` (file, line, text)
+local function toggle_box(buf, box)
+  local utils = require 'org.utils'
+  local bufnr = type(box.file) == 'number' and box.file or utils.find_buffer(box.file)
+  if not bufnr then
+    local ok, loaded = pcall(utils.load_buffer, box.file)
+    bufnr = ok and loaded or nil
+  end
+  if not (bufnr and vim.api.nvim_buf_is_valid(bufnr)) then
+    utils.warn 'org: cannot find the file of the checkbox'
+    return
+  end
+  -- the entry may have moved since the render (an edit elsewhere in the
+  -- file): the line carrying the same text is the one to toggle
+  local lnum = require('org.agenda.view').locate_line(bufnr, { lnum = box.lnum, raw = box.raw })
+  local item = lnum and require('org.lists').item_at(bufnr, lnum)
+  if not (item and item.checkbox) then
+    utils.warn 'org: the checkbox has moved; press gr to rebuild the view'
+    return
+  end
+  local ok, err = pcall(vim.api.nvim_buf_call, bufnr, function()
+    vim.api.nvim_win_set_cursor(0, { item.lnum, 0 })
+    require('org.lists').toggle_checkbox()
+  end)
+  if not ok then
+    utils.warn('org: ' .. tostring(err))
+    return
+  end
+  require('helpers.org.cookies').ensure(bufnr)
+  if require('org.config').opts.agenda.save_after_edit then
+    utils.save_buffer_or_warn(bufnr)
+  end
+  refocus(buf, box.key)
 end
 
 --- Capture a new entry under the entry at point, in the entry's own file.
@@ -981,6 +1152,18 @@ local function setup_keys()
       vim.keymap.set('n', '<S-Tab>', function()
         cycle_all(buf)
       end, { buffer = buf, desc = 'org: fold every subtree of the view' })
+      -- <CR> stays the entry scratch (helpers/org/agenda.lua binds it as the
+      -- `entry_scratch` action) on every line of the view but a checkbox
+      -- line, which it toggles instead, the way <CR> on a checkbox item
+      -- toggles it in an org buffer.
+      vim.keymap.set('n', '<CR>', function()
+        local nd = node_at(buf, vim.api.nvim_win_get_cursor(0)[1])
+        if nd and nd.box then
+          toggle_box(buf, nd.box)
+          return
+        end
+        require('org.agenda.view').actions.entry_scratch()
+      end, { buffer = buf, desc = 'org: toggle the checkbox at point / open the entry scratch' })
       -- `l` unfolds (never folds): the node's subtree at a folded entry of a
       -- TODO view, the group at a folded header (`… (N)`) anywhere, the
       -- agenda included. It takes the key from log mode, which keeps `vl`.

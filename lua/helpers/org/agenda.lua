@@ -4,7 +4,9 @@
 -- toggles (helpers/org/tagging.lua), the fold state
 -- left behind by entering an entry, the editable scratch view `<CR>` opens
 -- with only that entry (wrapped by default, written back into its file on
--- save or when it is left), the `L` preview pane that keeps that scratch
+-- save or when it is left) -- in a TODO view a checkbox line takes `<CR>`
+-- for its own toggle instead (helpers/org/tree.lua) --, the `L` preview
+-- pane that keeps that scratch
 -- beside the view and reloads it as the cursor moves or the entry under it
 -- changes (setup_entry_preview),
 -- the insert mode a terminal window would

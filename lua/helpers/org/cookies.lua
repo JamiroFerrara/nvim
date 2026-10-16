@@ -4,6 +4,11 @@
 -- entry whose child headlines are all finished, the reopen of a finished
 -- entry that gains an open child (a capture or a typed subtree), and the
 -- undo hygiene that keeps all of it out of the user's undo history.
+--
+-- `M.ensure` is the one entry point outside them: the pass above runs for a
+-- buffer that is loaded and on screen, and a checkbox toggled from a TODO
+-- view (helpers/org/tree.lua) edits a file no window shows, so the view asks
+-- for the cookies itself before the box is counted.
 local M = {}
 
 local updating = false
@@ -284,6 +289,16 @@ local function ensure_cookies(bufnr)
   if not ok then
     require('org.utils').warn('statistics cookies: ' .. tostring(err))
   end
+end
+
+--- Add the statistics cookies `bufnr` is missing, the way opening the file
+--- on screen does: a checkbox toggled from outside the buffer (from a TODO
+--- view, helpers/org/tree.lua) must leave the entry counted even when no
+--- buffer ever showed it, and a programmatic edit raises no TextChanged for
+--- the debounced pass to ride on.
+---@param bufnr integer
+function M.ensure(bufnr)
+  ensure_cookies(bufnr)
 end
 
 local function schedule_cookies(bufnr)

@@ -18,7 +18,9 @@
 --                   the auto-DONE of an entry whose child headlines are all
 --                   finished, and the reopen of a finished parent when a
 --                   capture files an open entry under it
---   agenda.lua      `D` toggle_done action, the `<CR>` entry scratch and
+--   agenda.lua      `D` toggle_done action, the `<CR>` entry scratch (a
+--                   TODO view's checkbox line takes `<CR>` for the toggle,
+--                   helpers/org/tree.lua) and
 --                   the `L` preview pane beside the view, the fold state
 --                   after entering an entry from the list, and the insert
 --                   mode a terminal window would leave in the agenda
@@ -59,11 +61,13 @@
 --   watch.lua       fs_event watcher over the org tree: reloads changed
 --                   org buffers and re-renders the agenda view whenever an
 --                   org file changes on disk, focus aside
---   tree.lua        TODO views as trees: an entry's listed sublevels and its
---                   plain (not TODO) subheadlines are nested under it with
---                   tree guides, folded at level 1, <Tab>/<S-Tab> fold like
---                   an org file, and `c` / <leader>aC capture a child of the
---                   entry at point
+--   tree.lua        TODO views as trees: an entry's listed sublevels, its
+--                   plain (not TODO) subheadlines and its checkbox items are
+--                   nested under it with tree guides, folded at level 1,
+--                   <Tab>/<S-Tab> fold like an org file, `c` / <leader>aC
+--                   capture a child of the entry at point, and <CR> on a
+--                   checkbox line toggles that box in the entry's own file
+--                   (everywhere else <CR> stays the entry scratch)
 --   callouts.lua    entry lines of the TODO views get a callout bar in the
 --                   state's color (from the keyword face), in the left
 --                   gutter only -- no background band behind the line
@@ -566,7 +570,8 @@ return {
         later = ')',
         earlier = { 'b', '(' },
         -- A TODO view (helpers/org/tree.lua) shows an entry's sublevels --
-        -- the plain subheadlines included -- as a tree folded at level 1,
+        -- the plain subheadlines and the entry's own checkbox items
+        -- included -- as a tree folded at level 1,
         -- and `<Tab>` there is fold-only: it cycles the node at point,
         -- org-style (folded -> children -> subtree -> folded), or, on a
         -- plain line, folds the group of the header there, which this key
@@ -579,8 +584,11 @@ return {
         -- entry refiles its subtree into another headline of the same view
         -- -- the entries on screen are the only targets -- and keeps
         -- org.nvim's `redo` on any other line (and in the day/week agenda):
-        -- `gr` rebuilds from anywhere. All buffer-local, set in
-        -- helpers/org/tree.lua. The config-wide refile (`R`, <C-c><C-w>,
+        -- `gr` rebuilds from anywhere. `<CR>` on a checkbox line toggles
+        -- that box in the entry's own file, the way `<CR>` on a checkbox
+        -- item does in an org buffer (helpers/org/mappings.lua); on every
+        -- other line it stays the entry scratch below. All buffer-local, set
+        -- in helpers/org/tree.lua. The config-wide refile (`R`, <C-c><C-w>,
         -- refile.targets) is untouched.
         clock_goto = '<C-c><C-x><C-j>',
         capture = '<C-c>k',
@@ -674,6 +682,9 @@ return {
         -- (helpers/org/agenda.lua setup_entry_scratch). The buffer wraps by
         -- default and `:w` splices it back into its file in place of the
         -- entry; the whole file stays out of the way of a long project file.
+        -- In a TODO view a checkbox line keeps <CR> for itself -- it toggles
+        -- that box in the entry's file (helpers/org/tree.lua); every other
+        -- line opens the entry scratch.
         -- The old <CR> behaviour (switch_to: the entry opened in its file,
         -- the view left behind) moves here to <S-CR>, which opens the `show`
         -- default to make room. `o` reaches the same action: the view
