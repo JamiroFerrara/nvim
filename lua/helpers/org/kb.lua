@@ -92,14 +92,13 @@ local function descendants(hl, out)
   end
 end
 
---- The tree, and only the tree: one `*` entry per knowledge-base file -- its
---- counts in the entry itself -- its workstreams as `**` under it, and the
---- findings of each workstream as links beneath them. No header of its own, no
---- summary line, no separators, no board links: the file's own header is above
---- it, the prose about what the base is and how it works is in
---- ~/org/WORKFLOW.org, and the hub is here to be walked. A file entry is a link
---- to the file's node, a workstream a link to its headline, a finding a link to
---- the finding.
+--- The tree, and only the tree: one `*` entry per knowledge-base file, its
+--- workstreams as `**` under it, and the findings of each workstream as links
+--- beneath them. No counts, no header of its own, no summary line, no
+--- separators, no board links: the file's own header is above it, the prose
+--- about what the base is and how it works is in ~/org/WORKFLOW.org, and the
+--- hub is here to be walked. A file entry is a link to the file's node, a
+--- workstream a link to its headline, a finding a link to the finding.
 ---@return string[]
 local function body()
   local files = vim.fn.glob(vim.fn.expand(DOCS) .. '/*.org', false, true)
@@ -113,7 +112,7 @@ local function body()
       local title = clean(file.settings.title) ~= '' and clean(file.settings.title) or vim.fn.fnamemodify(path, ':t:r')
       local label = file_id and string.format('[[id:%s][%s]]', vim.trim(file_id), title) or title
 
-      local lines, mine, my_ws = {}, 0, 0
+      local lines = {}
       for _, ws in ipairs(file.children or {}) do
         local nodes = {}
         descendants(ws, nodes)
@@ -122,10 +121,8 @@ local function body()
         -- to show what there is to fill in, which is the point of the hub
         local id = ws:get_property('ID', false)
         if #ws_findings > 0 or (id and id:match '%S') then
-          my_ws = my_ws + 1
           lines[#lines + 1] = string.format('** %s', link(ws))
           for _, f in ipairs(ws_findings) do
-            mine = mine + 1
             local own = f.tags or {}
             -- the finding's own tags: the file's client tag already shows above
             lines[#lines + 1] = string.format('  - %s%s', link(f), #own > 0 and '  =:' .. table.concat(own, ':') .. ':' or '')
@@ -134,7 +131,7 @@ local function body()
       end
 
       if #lines > 0 then
-        out[#out + 1] = string.format('* %s — %d workstream%s · %d finding%s', label, my_ws, my_ws == 1 and '' or 's', mine, mine == 1 and '' or 's')
+        out[#out + 1] = string.format('* %s', label)
         for _, l in ipairs(lines) do
           out[#out + 1] = l
         end
