@@ -20,7 +20,10 @@ local M = {}
 local BASE = '~/org/roam'
 local DOCS = BASE .. '/documentation'
 local INDEX = BASE .. '/index.org'
-local MARKER = '* Index'
+
+--- The startup visibility every file of the base opens with, the same keyword
+--- the boards carry.
+local STARTUP = '#+STARTUP: show2levels logdone logdrawer'
 
 --- Link descriptions carry no brackets and stay on one line, or the link
 --- breaks the moment a title contains one. A title like "`[[` completes nodes"
@@ -112,16 +115,22 @@ local function body()
       local title = clean(file.settings.title) ~= '' and clean(file.settings.title) or vim.fn.fnamemodify(path, ':t:r')
       local label = file_id and string.format('[[id:%s][%s]]', vim.trim(file_id), title) or title
 
-      local lines = {}
+      local lines, listed = {}, false
       for _, ws in ipairs(file.children or {}) do
         local nodes = {}
         descendants(ws, nodes)
         local ws_findings = vim.tbl_filter(is_finding, nodes)
-        -- every workstream is listed, findings or not: an empty base still has
-        -- to show what there is to fill in, which is the point of the hub
+        -- A workstream named after its own file is the file entry over again:
+        -- the same title twice, pointing at two nodes nobody can tell apart.
+        -- The file entry stands for it, and its findings are listed under the
+        -- file entry instead of under a heading that would repeat the title.
+        local named_after_the_file = clean(ws:plain_title()):lower() == title:lower()
         local id = ws:get_property('ID', false)
         if #ws_findings > 0 or (id and id:match '%S') then
-          lines[#lines + 1] = string.format('** %s', link(ws))
+          listed = true
+          if not named_after_the_file then
+            lines[#lines + 1] = string.format('** %s', link(ws))
+          end
           for _, f in ipairs(ws_findings) do
             local own = f.tags or {}
             -- the finding's own tags: the file's client tag already shows above
@@ -130,7 +139,7 @@ local function body()
         end
       end
 
-      if #lines > 0 then
+      if listed then
         out[#out + 1] = string.format('* %s', label)
         for _, l in ipairs(lines) do
           out[#out + 1] = l
@@ -215,20 +224,54 @@ function M.ensure_ids(bufnr)
   return #missing
 end
 
+--- Give `bufnr` the `#+STARTUP:` every file of the base opens with -- the one
+--- the boards carry -- above the first blank line or headline, with the file's
+--- other keywords. Added when missing only: a value of your own is left alone.
+--- Returns true when it was added.
+---@param bufnr integer
+---@return boolean
+function M.ensure_startup(bufnr)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  for _, l in ipairs(lines) do
+    if l:match '^#%+STARTUP:' then
+      return false
+    end
+  end
+  local at = #lines
+  for i, l in ipairs(lines) do
+    if l:match '^%s*$' or l:match '^%*+ ' then
+      at = i - 1
+      break
+    end
+  end
+  vim.api.nvim_buf_set_lines(bufnr, at, at, false, { STARTUP })
+  return true
+end
+
 function M.setup()
   vim.api.nvim_create_user_command('OrgKbIndex', M.index, {
     desc = 'Rebuild the knowledge-base hub (~/org/roam/index.org)',
   })
   -- Everything in the base is a node: the files under the base's own
   -- directories get an :ID: on every headline of level 2 or deeper as they are
-  -- saved. `BufWritePre`, so the ID is in the file the write puts on disk.
+  -- saved, and the startup visibility like everywhere else in ~/org.
+  -- `BufWritePre`, so both are in the file the write puts on disk.
   vim.api.nvim_create_autocmd('BufWritePre', {
     pattern = { '*/org/roam/documentation/*.org', '*/org/roam/people/*.org', '*/org/roam/topics/*.org' },
     callback = function(args)
+      M.ensure_startup(args.buf)
       local n = M.ensure_ids(args.buf)
       if n > 0 then
         require('org.utils').notify(string.format('org kb: %d node%s given an :ID:', n, n == 1 and '' or 's'))
       end
+    end,
+  })
+  -- The hub's header is yours, so only the keyword is ensured there: an :ID: on
+  -- a heading of the tree would be a node the next rebuild throws away.
+  vim.api.nvim_create_autocmd('BufWritePre', {
+    pattern = '*/org/roam/index.org',
+    callback = function(args)
+      M.ensure_startup(args.buf)
     end,
   })
 end
