@@ -28,6 +28,13 @@ return { -- You can easily change to a different colorscheme.
           -- read apart from the plain notes' gray Comment.
           OrgAgentTimestamp = { fg = colors.mauve },
           OrgAgentRule = { fg = colors.mauve },
+          -- org.nvim's agenda group headers (the super_agenda sections:
+          -- "Work", "Important", a project's title): a lavender label on a
+          -- surface0 badge, so a section reads apart from the view's own
+          -- blue-bold block header above it and the entries below. The
+          -- trailing space that closes the badge is added by
+          -- helpers/org/agenda.lua.
+          OrgSuperAgendaHeader = { fg = colors.lavender, bg = colors.surface0, style = { 'bold' } },
         }
       end,
     }

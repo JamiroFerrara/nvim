@@ -880,6 +880,40 @@ local function insert_rule(b, pos, width)
   insert_line(b, pos, string.rep('─', math.max((width or 80) - 1, 10)), 'OrgSuperAgendaSeparator')
 end
 
+-- Close the badge of every group header the grouper drew from line `first`
+-- on: the header text opens with the `header_prefix` space, so one more at
+-- the end balances it, and the surface0 background the theme gives
+-- OrgSuperAgendaHeader (theme_catpuccin.lua) then reads as a label instead
+-- of a highlight stopping at the last letter. The space goes at the end
+-- column of the header's own highlight -- not the end of the line, since a
+-- folded header carries the ` … (N)` suffix after the label -- so the
+-- suffix stays outside the badge; the highlights that start at or run past
+-- that column shift right with it. Starts at `first` because
+-- `b.super_headers` accumulates over a builder's blocks: only the headers
+-- this grouper call drew get their space, once.
+local function close_badges(b, first)
+  local col_of = {}
+  for _, h in ipairs(b.hls) do
+    if h[4] == 'OrgSuperAgendaHeader' and h[1] + 1 > first then
+      col_of[h[1] + 1] = math.max(col_of[h[1] + 1] or 0, h[3])
+    end
+  end
+  for lnum, col in pairs(col_of) do
+    local text = b.lines[lnum]
+    b.lines[lnum] = text:sub(1, col) .. ' ' .. text:sub(col + 1)
+    for _, h in ipairs(b.hls) do
+      if h[1] == lnum - 1 and h[3] > 0 then
+        if h[2] >= col then
+          h[2] = h[2] + 1
+        end
+        if h[3] >= col then
+          h[3] = h[3] + 1
+        end
+      end
+    end
+  end
+end
+
 -- True while `render.view` is drawing a board (setup_board_view below), the
 -- one thing the grouper needs to know about the view it is called from: the
 -- board is where the between-block separator is off, so every section must
@@ -951,8 +985,16 @@ local function setup_board_sections()
           insert_rule(b, pos, ctx.width)
         end
       end
+      local first = #b.lines
       if not (block and block.state_sections and block.super_groups) then
-        return grouper(b, rows, block, ctx, add, day)
+        local ok, result = pcall(grouper, b, rows, block, ctx, add, day)
+        if not ok then
+          error(result, 0)
+        end
+        if result then
+          close_badges(b, first)
+        end
+        return result
       end
       local opts = require('org.extensions').opts 'super_agenda'
       local header, final = opts.header_separator, opts.final_group_separator
@@ -988,6 +1030,7 @@ local function setup_board_sections()
             end
           end
         end
+        close_badges(b, first)
       end
       return result
     end
