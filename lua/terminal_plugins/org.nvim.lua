@@ -1002,6 +1002,7 @@ return {
     require('helpers.org.reveal').setup()
     require('helpers.org.callouts').setup()
     require('helpers.org.decorations').setup()
+    require('helpers.org.wrap').setup()
     -- the group view's `changed-down` sorting strategy: it reads the same
     -- last-changed date the column shows (helpers/org/changed.lua), so it
     -- goes in with the view's own pieces
