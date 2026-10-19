@@ -1,10 +1,15 @@
 -- Org wraps prose (`lua/autocommands.lua`), but a `#+begin_src` body is code:
 -- wrapping it breaks the alignment the language reads by. `wrap` is
 -- window-local and org has no per-region option, so the window is unwrapped
--- while the cursor is inside a src block, and its previous value restored
--- when the cursor leaves it. The block ranges are read from the buffer text
--- and cached per `changedtick`: a cursor move costs a lookup, a scan only
--- happens after an edit.
+-- whenever a src body is on screen -- the cursor alone is not enough, code is
+-- usually read with the cursor on the headline above it -- and its previous
+-- value restored once the last block scrolls out. Prose in that same window
+-- goes unwrapped too while a block is in view: the alternative, wrapping the
+-- code, is what this exists to prevent.
+--
+-- The block ranges are read from the buffer text and cached per
+-- `changedtick`: a cursor move or scroll costs a lookup, a scan only happens
+-- after an edit.
 local M = {}
 
 local group = vim.api.nvim_create_augroup('org_src_nowrap', { clear = true })
@@ -22,8 +27,9 @@ local function org_buffer(buf)
   return vim.bo[buf].filetype == 'org' and (buftype == '' or buftype == 'acwrite')
 end
 
---- The `[first, last]` line pairs of every src block in `buf`, the `#+begin_src`
---- and `#+end_src` lines included; an unterminated block runs to the last line.
+--- The `[first, last]` body line pairs of every src block in `buf` (the
+--- `#+begin_src` / `#+end_src` fence lines excluded); an unterminated block
+--- runs to the last line.
 ---@param buf integer
 ---@return table
 local function src_ranges(buf)
@@ -39,42 +45,46 @@ local function src_ranges(buf)
     local lower = line:lower()
     if start then
       if lower:match(END) then
-        ranges[#ranges + 1] = { start, i }
+        if i > start + 1 then
+          ranges[#ranges + 1] = { start + 1, i - 1 }
+        end
         start = nil
       end
     elseif lower:match(BEGIN) then
       start = i
     end
   end
-  if start then
-    ranges[#ranges + 1] = { start, #lines }
+  if start and #lines > start then
+    ranges[#ranges + 1] = { start + 1, #lines }
   end
   cache[buf] = { tick = tick, ranges = ranges }
   return ranges
 end
 
---- Whether `lnum` holds a line of a src body, the fence lines excluded.
+--- Whether any src body intersects the lines the current window displays,
+--- even partially.
 ---@param buf integer
----@param lnum integer
 ---@return boolean
-local function in_src(buf, lnum)
+local function block_in_view(buf)
+  local first = vim.fn.line 'w0'
+  local last = vim.fn.line 'w$'
   for _, range in ipairs(src_ranges(buf)) do
-    if lnum > range[1] and lnum < range[2] then
+    if range[1] <= last and range[2] >= first then
       return true
     end
   end
   return false
 end
 
---- Unwrap the window while the cursor sits in a src body, restore its value
---- (whatever the user had, not a hardcoded `true`) on the way out.
+--- Unwrap the window while a src body is on screen, restore its value
+--- (whatever the user had, not a hardcoded `true`) once none is.
 local function update()
   local buf = vim.api.nvim_get_current_buf()
   if not org_buffer(buf) then
     return
   end
   local saved = vim.w.org_src_wrap
-  if in_src(buf, vim.api.nvim_win_get_cursor(0)[1]) then
+  if block_in_view(buf) then
     if saved == nil then
       vim.w.org_src_wrap = vim.wo.wrap
       vim.wo.wrap = false
@@ -103,6 +113,8 @@ function M.setup()
     'CursorMovedI',
     'TextChanged',
     'TextChangedI',
+    'WinScrolled',
+    'WinResized',
   }, {
     group = group,
     callback = function(args)
