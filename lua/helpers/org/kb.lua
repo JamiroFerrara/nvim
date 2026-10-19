@@ -303,12 +303,13 @@ function M.ensure_startup(bufnr)
   return true
 end
 
---- The facets a page carries: its `#+filetags:` without the kind (`kb_*`).
----@param file org.File
+--- A headline's own facet tags -- what it says it is about. Kind tags
+--- (`kb_*`) that reached it through inheritance are not facets.
+---@param hl org.Headline
 ---@return string[]
-local function facets(file)
+local function tags_of(hl)
   local out = {}
-  for _, tag in ipairs(file.settings.filetags or {}) do
+  for _, tag in ipairs(hl.tags or {}) do
     if not tag:match '^kb_' then
       out[#out + 1] = tag
     end
@@ -371,10 +372,26 @@ local function scan_topics()
         title = vim.fn.fnamemodify(path, ':t:r')
       end
       local id = vim.trim((file.properties and file.properties.ID) or '')
+      local sections = {}
+      local function walk(hl)
+        for _, child in ipairs(hl.children or {}) do
+          local tags = tags_of(child)
+          if child.level == 2 and #tags > 0 then
+            local section = clean(child:plain_title())
+            sections[#sections + 1] = {
+              title = section,
+              tags = tags,
+              link = string.format('[[file:%s::*%s][%s]]', path, section, section),
+            }
+          end
+          walk(child)
+        end
+      end
+      walk({ children = file.children or {} })
       topics[#topics + 1] = {
         title = title,
         link = string.format('[[%s][%s]]', id ~= '' and ('id:' .. id) or ('file:' .. path), title),
-        facets = facets(file),
+        sections = sections,
         used_by = used_by[id] or {},
         repos = repos,
         langs = langs,
@@ -388,36 +405,37 @@ local function scan_topics()
   return topics
 end
 
---- One query term against one topic. `used-by:`, `repo:` and `lang:` ask what
---- the files say; `stub` asks whether the page still has gaps; anything else is
---- a facet.
+--- One query term against one section's tags and the page it sits in.
+--- `used-by:`, `repo:` and `lang:` ask what the page's files say; `stub` asks
+--- whether the page still has gaps; anything else is a facet on the section.
 ---@param term string lowercase
----@param t table
+---@param tags string[]
+---@param page table
 ---@return boolean
-local function matches(term, t)
+local function matches(term, tags, page)
   local key, val = term:match '^([^:]+):(.+)$'
   if key == 'used-by' then
-    for _, p in ipairs(t.used_by) do
+    for _, p in ipairs(page.used_by) do
       if p:lower():find(val, 1, true) then
         return true
       end
     end
   elseif key == 'repo' then
-    for _, r in ipairs(t.repos) do
+    for _, r in ipairs(page.repos) do
       if r:lower():find(val, 1, true) then
         return true
       end
     end
   elseif key == 'lang' then
-    for _, l in ipairs(t.langs) do
+    for _, l in ipairs(page.langs) do
       if l:lower() == val then
         return true
       end
     end
   elseif term == 'stub' then
-    return t.stub
+    return page.stub
   else
-    for _, f in ipairs(t.facets) do
+    for _, f in ipairs(tags) do
       if f:lower() == term then
         return true
       end
@@ -427,9 +445,11 @@ local function matches(term, t)
 end
 
 --- The query as lines: `payments+media -used-by:mayday`, `stub`, `repo:J3-stack`,
---- `lang:csharp`, or a facet name. One line per matching topic, grouped by the
---- project that points at it, under `* Unused` when no project does. Links, not
---- text, so a result is a place to go.
+--- `lang:csharp`, or a facet name. The facets live on the sections, so a match
+--- is a section: its page is the heading the sections are listed under, and the
+--- page's own axes are the union of its sections' tags. Grouped by the project
+--- that points at the page, under `* Unused` when none does. Links, not text,
+--- so a result is a place to go.
 ---@param expr string|nil
 ---@return string[]
 function M.render(expr)
@@ -443,9 +463,9 @@ function M.render(expr)
     word = word:lower()
     if word ~= '' then
       local parts = vim.split(word, '+', { plain = true })
-      local fn = function(t)
+      local fn = function(tags, page)
         for _, p in ipairs(parts) do
-          if not matches(p, t) then
+          if not matches(p, tags, page) then
             return false
           end
         end
@@ -456,24 +476,36 @@ function M.render(expr)
   end
 
   local kept = {}
-  for _, t in ipairs(scan_topics()) do
-    local ok = true
-    for _, f in ipairs(yes) do
-      if not f(t) then
-        ok = false
-        break
-      end
-    end
-    if ok then
-      for _, f in ipairs(no) do
-        if f(t) then
-          ok = false
-          break
+  for _, page in ipairs(scan_topics()) do
+    local axes = {}
+    for _, s in ipairs(page.sections) do
+      for _, tag in ipairs(s.tags) do
+        if not vim.tbl_contains(axes, tag) then
+          axes[#axes + 1] = tag
         end
       end
     end
-    if ok then
-      kept[#kept + 1] = t
+    local function hit(tags)
+      for _, f in ipairs(yes) do
+        if not f(tags, page) then
+          return false
+        end
+      end
+      for _, f in ipairs(no) do
+        if f(tags, page) then
+          return false
+        end
+      end
+      return true
+    end
+    local sections = {}
+    for _, s in ipairs(page.sections) do
+      if hit(s.tags) then
+        sections[#sections + 1] = s
+      end
+    end
+    if hit(axes) then
+      kept[#kept + 1] = { page = page, axes = axes, sections = sections }
     end
   end
 
@@ -485,33 +517,46 @@ function M.render(expr)
   end
 
   local groups, order, unused = {}, {}, {}
-  for _, t in ipairs(kept) do
-    local owner = t.used_by[1]
+  for _, k in ipairs(kept) do
+    local owner = k.page.used_by[1]
     if owner then
       if not groups[owner] then
         groups[owner] = {}
         order[#order + 1] = owner
       end
-      groups[owner][#groups[owner] + 1] = t
+      groups[owner][#groups[owner] + 1] = k
     else
-      unused[#unused + 1] = t
+      unused[#unused + 1] = k
     end
   end
   table.sort(order)
 
-  local function line(t)
-    return '** ' .. t.link .. (#t.facets > 0 and (' — ' .. table.concat(t.facets, ', ')) or '')
+  local function page_line(k)
+    local axes = vim.deepcopy(k.axes)
+    table.sort(axes)
+    return '** ' .. k.page.link .. (#axes > 0 and (' — ' .. table.concat(axes, ', ')) or '')
+  end
+  local function section_line(s)
+    local tags = vim.deepcopy(s.tags)
+    table.sort(tags)
+    return '*** ' .. s.link .. ' — ' .. table.concat(tags, ', ')
+  end
+  local function block(k)
+    out[#out + 1] = page_line(k)
+    for _, s in ipairs(k.sections) do
+      out[#out + 1] = section_line(s)
+    end
   end
   for _, owner in ipairs(order) do
     out[#out + 1] = '* ' .. owner
-    for _, t in ipairs(groups[owner]) do
-      out[#out + 1] = line(t)
+    for _, k in ipairs(groups[owner]) do
+      block(k)
     end
   end
   if #unused > 0 then
     out[#out + 1] = '* Unused'
-    for _, t in ipairs(unused) do
-      out[#out + 1] = line(t)
+    for _, k in ipairs(unused) do
+      block(k)
     end
   end
   return out
