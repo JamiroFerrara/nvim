@@ -381,7 +381,9 @@ local function scan_topics()
             sections[#sections + 1] = {
               title = section,
               tags = tags,
-              link = string.format('[[file:%s::*%s][%s]]', path, section, section),
+              -- the line, not `*title`: a section whose title is itself a link
+              -- sends the headline search somewhere else
+              link = string.format('[[file:%s::%d][%s]]', vim.fn.fnamemodify(path, ':~'), child.line, section),
             }
           end
           walk(child)
@@ -455,6 +457,7 @@ end
 function M.render(expr)
   expr = vim.trim(expr or '')
   local yes, no = {}, {}
+  local facet_term = false
   for word in expr:gmatch '%S+' do
     local negate = word:sub(1, 1) == '-'
     if negate then
@@ -463,6 +466,12 @@ function M.render(expr)
     word = word:lower()
     if word ~= '' then
       local parts = vim.split(word, '+', { plain = true })
+      for _, p in ipairs(parts) do
+        local key = p:match '^([^:]+):'
+        if not (key == 'used-by' or key == 'repo' or key == 'lang' or p == 'stub') then
+          facet_term = true
+        end
+      end
       local fn = function(tags, page)
         for _, p in ipairs(parts) do
           if not matches(p, tags, page) then
@@ -499,9 +508,11 @@ function M.render(expr)
       return true
     end
     local sections = {}
-    for _, s in ipairs(page.sections) do
-      if hit(s.tags) then
-        sections[#sections + 1] = s
+    if facet_term then
+      for _, s in ipairs(page.sections) do
+        if hit(s.tags) then
+          sections[#sections + 1] = s
+        end
       end
     end
     if hit(axes) then
