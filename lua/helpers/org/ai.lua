@@ -814,6 +814,54 @@ local function targets_in_range(first, last)
   return targets
 end
 
+--- Reload a buffer no window shows, from disk, without showing it.
+---
+--- `nvim_buf_call` on such a buffer opens a temporary window at the top left
+--- (aucmd_prepbuf) to run the autocmds in; a redraw inside it paints that
+--- buffer over the view. `sync` runs on every org write -- the watcher feeds
+--- it -- and reloads every loaded org file, so every save flashed the file
+--- behind the one being edited. The text is swapped in place instead:
+--- org.files keys its parse on the changedtick, so the next render sees it.
+---
+--- A buffer with unsaved edits is left alone, as :checktime does; an encoding
+--- or fileformat the plain read cannot reproduce is left for the next time
+--- the buffer is shown ('autoread' reloads it there, in its own window).
+---@param buf integer
+local function reload_hidden(buf)
+  if vim.bo[buf].modified then
+    return
+  end
+  local enc = vim.bo[buf].fileencoding
+  if enc ~= '' and not enc:lower():match '^utf%-8' then
+    return
+  end
+  if vim.bo[buf].fileformat ~= 'unix' and vim.bo[buf].fileformat ~= 'dos' then
+    return
+  end
+  local name = vim.api.nvim_buf_get_name(buf)
+  local ok, lines = pcall(vim.fn.readfile, name)
+  if not ok then
+    return
+  end
+  if #lines == 0 then
+    lines = { '' }
+  end
+  local tail_ok, tail = pcall(vim.fn.readblob, name, -1, 1)
+  if vim.deep_equal(lines, vim.api.nvim_buf_get_lines(buf, 0, -1, false)) then
+    return
+  end
+  -- an external reload is not an undo step
+  local saved = vim.bo[buf].undolevels
+  vim.bo[buf].undolevels = -1
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].undolevels = saved
+  -- :edit keeps a file without a final newline as such ('eol' off)
+  if tail_ok then
+    vim.bo[buf].eol = tail == '\n'
+  end
+  vim.bo[buf].modified = false
+end
+
 --- Reload org files changed on disk under the loaded buffers and re-render
 --- the agenda view. The agent writes to the file while nvim holds the
 --- buffer, so a reload is what makes the write-back visible.
@@ -821,9 +869,13 @@ function M.sync()
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     local name = vim.api.nvim_buf_get_name(buf)
     if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buftype == '' and name:match '%.org$' then
-      pcall(vim.api.nvim_buf_call, buf, function()
-        vim.cmd 'silent! checktime'
-      end)
+      if #vim.fn.win_findbuf(buf) == 0 then
+        reload_hidden(buf)
+      else
+        pcall(vim.api.nvim_buf_call, buf, function()
+          vim.cmd 'silent! checktime'
+        end)
+      end
     end
   end
   -- A rebuild, not just a redraw: `redo` re-reads the files and puts the
