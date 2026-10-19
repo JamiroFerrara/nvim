@@ -623,10 +623,10 @@ function M.render(expr)
   return out
 end
 
---- Render `expr` into a throwaway org buffer: `nofile`, unwritable, gone when
---- you close it. The result is a lens, not a file -- nothing to keep in sync.
---- Called from a query buffer, it updates that buffer instead of opening a
---- second one: `t` adds a tag to the filter and re-renders in place.
+--- Render `expr` into a throwaway org buffer that swallows the current window:
+--- `nofile`, unwritable, and `q` puts back what you were reading. The result is
+--- a lens, not a file -- nothing to keep in sync. Called from a query buffer, it
+--- updates that buffer in place: `t` adds a tag to the filter and re-renders.
 ---@param expr string|nil
 ---@return string[]
 function M.query(expr)
@@ -634,10 +634,11 @@ function M.query(expr)
   local lines = M.render(expr)
   local buf = vim.api.nvim_get_current_buf()
   if vim.b[buf].kb_query == nil then
+    local origin = buf
     buf = vim.api.nvim_create_buf(false, true)
     pcall(vim.api.nvim_buf_set_name, buf, 'kb-query')
-    vim.cmd 'botright split'
     vim.api.nvim_win_set_buf(0, buf)
+    vim.b[buf].kb_origin = origin
   end
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
@@ -645,7 +646,15 @@ function M.query(expr)
   vim.bo[buf].bufhidden = 'wipe'
   vim.bo[buf].modifiable = false
   vim.b[buf].kb_query = expr
-  vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = buf, desc = 'close the query' })
+  vim.keymap.set('n', 'q', function()
+    local win = vim.api.nvim_get_current_win()
+    local origin = vim.b[buf].kb_origin
+    if origin and vim.api.nvim_buf_is_valid(origin) then
+      vim.api.nvim_win_set_buf(win, origin)
+    end
+    pcall(vim.api.nvim_buf_del_var, buf, 'kb_query')
+    pcall(vim.api.nvim_buf_delete, buf, { force = true })
+  end, { buffer = buf, desc = 'close the query' })
   vim.keymap.set('n', 't', function()
     vim.ui.select(M.tags(), { prompt = 'add tag: ' .. (expr ~= '' and expr or 'all') }, function(choice)
       if choice then
