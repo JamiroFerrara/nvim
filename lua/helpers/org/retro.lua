@@ -255,6 +255,23 @@ function M.setup()
         buffer = args.buf,
         desc = 'org: query the knowledge base',
       })
+      -- `<CR>` on a tag runs that tag as a query; anywhere else it stays org's
+      -- open-at-point, which is the action this shadows. The agenda has its own
+      -- `<CR>`, so this is org files only.
+      if args.match == 'org' then
+        vim.keymap.set('n', '<CR>', function()
+          local kb = require 'helpers.org.kb'
+          local tag = kb.tag_at_cursor()
+          if tag then
+            kb.query(tag)
+          else
+            require('org.context').open_at_point()
+          end
+        end, {
+          buffer = args.buf,
+          desc = 'org: open at point, or query the tag under the cursor',
+        })
+      end
     end,
   })
 end

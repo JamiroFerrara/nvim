@@ -446,6 +446,56 @@ local function matches(term, tags, page)
   return false
 end
 
+--- The tag under the cursor, when the cursor is inside the `:tag:` run at the
+--- end of a headline. nil anywhere else, including inside the headline's text:
+--- `<CR>` keeps its meaning there.
+---@return string|nil
+function M.tag_at_cursor()
+  local line = vim.api.nvim_get_current_line()
+  if not line:match '^%*+ ' then
+    return nil
+  end
+  local s, e = line:find ':[%w_@#%%:]+:%s*$'
+  if not s then
+    return nil
+  end
+  local col = vim.api.nvim_win_get_cursor(0)[2] + 1
+  if col < s or col > e then
+    return nil
+  end
+  local pos = s
+  while pos <= e do
+    local name, after = line:match('^:([%w_@#%%]+):()', pos)
+    if not name then
+      break
+    end
+    if col >= pos and col <= after then
+      return name
+    end
+    pos = after - 1
+  end
+  return nil
+end
+
+--- Every facet the base uses, sorted: the vocabulary as it actually is, which
+--- is what a tag picker offers.
+---@return string[]
+function M.tags()
+  local seen, out = {}, {}
+  for _, page in ipairs(scan_topics()) do
+    for _, s in ipairs(page.sections) do
+      for _, tag in ipairs(s.tags) do
+        if not seen[tag] then
+          seen[tag] = true
+          out[#out + 1] = tag
+        end
+      end
+    end
+  end
+  table.sort(out)
+  return out
+end
+
 --- The query as lines: `payments+media -used-by:mayday`, `stub`, `repo:J3-stack`,
 --- `lang:csharp`, or a facet name. The facets live on the sections, so a match
 --- is a section: its page is the heading the sections are listed under, and the
@@ -575,19 +625,34 @@ end
 
 --- Render `expr` into a throwaway org buffer: `nofile`, unwritable, gone when
 --- you close it. The result is a lens, not a file -- nothing to keep in sync.
+--- Called from a query buffer, it updates that buffer instead of opening a
+--- second one: `t` adds a tag to the filter and re-renders in place.
 ---@param expr string|nil
 ---@return string[]
 function M.query(expr)
+  expr = vim.trim(expr or '')
   local lines = M.render(expr)
-  local buf = vim.api.nvim_create_buf(false, true)
-  pcall(vim.api.nvim_buf_set_name, buf, 'kb-query')
+  local buf = vim.api.nvim_get_current_buf()
+  if vim.b[buf].kb_query == nil then
+    buf = vim.api.nvim_create_buf(false, true)
+    pcall(vim.api.nvim_buf_set_name, buf, 'kb-query')
+    vim.cmd 'botright split'
+    vim.api.nvim_win_set_buf(0, buf)
+  end
+  vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].filetype = 'org'
   vim.bo[buf].bufhidden = 'wipe'
   vim.bo[buf].modifiable = false
-  vim.cmd 'botright split'
-  vim.api.nvim_win_set_buf(0, buf)
+  vim.b[buf].kb_query = expr
   vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = buf, desc = 'close the query' })
+  vim.keymap.set('n', 't', function()
+    vim.ui.select(M.tags(), { prompt = 'add tag: ' .. (expr ~= '' and expr or 'all') }, function(choice)
+      if choice then
+        M.query((expr ~= '' and (expr .. ' ') or '') .. choice)
+      end
+    end)
+  end, { buffer = buf, desc = 'add a tag to the query' })
   return lines
 end
 
@@ -600,6 +665,12 @@ function M.setup()
   end, {
     nargs = '*',
     desc = 'Query the knowledge base by facet or derived fact',
+    complete = function(arglead)
+      local items = vim.list_extend(M.tags(), { 'stub', 'used-by:', 'repo:', 'lang:' })
+      return vim.tbl_filter(function(x)
+        return x:sub(1, #arglead) == arglead
+      end, items)
+    end,
   })
   -- A project file is where the ids matter: its workstreams and its content
   -- headings are what everything else links by. A pointer heading is not a node
