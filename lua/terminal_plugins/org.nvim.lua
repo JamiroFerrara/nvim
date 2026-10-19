@@ -840,7 +840,7 @@ return {
       sidebar = {},
       -- heatmap = {},
       -- kanban = {},
-      lsp = {},
+      -- lsp = {},
       -- cli = {},
       -- calendars live out of the repo; see helpers/org/ics.lua
       ics = { calendars = ics.calendars() },
