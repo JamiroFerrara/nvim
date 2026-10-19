@@ -54,102 +54,159 @@ local function link(hl)
   return title
 end
 
---- A headline's own tags plus its inherited ones. `get_inherited_tags()` walks
---- the ancestors only -- it excludes the headline itself, like
---- `outline_path()` -- so a tag written on the finding must be read from
---- `hl.tags`, and a tag on its topic or file comes back from the inheritance.
+--- The link target of a pointer headline -- `** [[id:…][Topic]]`, the shape a
+--- project file uses to depend on a topic kept in `topics/` -- or nil when the
+--- headline carries its own text.
 ---@param hl org.Headline
----@return string[]
-local function all_tags(hl)
-  local out = {}
-  for _, t in ipairs(hl.tags or {}) do
-    out[#out + 1] = t
+---@return string|nil
+local function pointer(hl)
+  local target = (hl.title or ''):match '^%[%[([^%]]-)%]%['
+  if target and target:match '%S' then
+    return vim.trim(target)
   end
-  for _, t in ipairs(hl:get_inherited_tags()) do
-    out[#out + 1] = t
-  end
-  return out
+  return nil
 end
 
---- A headline is a finding when it says something (a `kb_fact` or `kb_answer`
---- tag, its own or inherited from its topic) and has an identity to be linked
---- by.
+--- `[[id:…][title]]` for `hl`, following its pointer when it is one: a
+--- workstream lists the topics it depends on, and the link goes where the
+--- pointer goes.
 ---@param hl org.Headline
----@return boolean
-local function is_finding(hl)
-  local ids = hl:get_property('ID', false)
-  if not (ids and ids:match '%S') then
-    return false
+---@return string
+local function entry(hl)
+  local target = pointer(hl)
+  if target then
+    return string.format('[[%s][%s]]', target, clean(hl:plain_title()))
   end
-  local tags = all_tags(hl)
-  return vim.tbl_contains(tags, 'kb_fact') or vim.tbl_contains(tags, 'kb_answer')
+  return link(hl)
 end
 
---- Every headline with an :ID: under `hl`, depth first.
----@param hl org.Headline
----@param out org.Headline[]
-local function descendants(hl, out)
-  for _, child in ipairs(hl.children or {}) do
-    out[#out + 1] = child
-    descendants(child, out)
+--- `[[id:…][title]]` for a file's node, or the bare title when it has none.
+---@param path string
+---@param file org.File
+---@return string
+local function file_link(path, file)
+  local title = clean(file.settings.title) ~= '' and clean(file.settings.title) or vim.fn.fnamemodify(path, ':t:r')
+  local id = file.properties and file.properties.ID
+  if id and id:match '%S' then
+    return string.format('[[id:%s][%s]]', vim.trim(id), title)
   end
+  return title
 end
 
---- The tree, and only the tree: one `*` entry per knowledge-base file, its
---- workstreams as `**` under it, and the findings of each workstream as links
---- beneath them. No counts, no header of its own, no summary line, no
---- separators, no board links: the file's own header is above it, the prose
---- about what the base is and how it works is in ~/org/WORKFLOW.org, and the
---- hub is here to be walked. A file entry is a link to the file's node, a
---- workstream a link to its headline, a finding a link to the finding.
+--- The hub: one section per kind of file, and under a project its workstreams
+--- with the topics each one depends on. A topic entry says which projects use
+--- it, the one thing a shared node cannot show by itself. Nothing else: no
+--- counts, no summary, no board links, no prose -- the file's own header carries
+--- what little of that belongs here, and what the base is lives in
+--- ~/org/WORKFLOW.org.
 ---@return string[]
 local function body()
-  local files = vim.fn.glob(vim.fn.expand(DOCS) .. '/*.org', false, true)
-  table.sort(files)
-
   local out = {}
-  for _, path in ipairs(files) do
-    local file = require('org.files').get(path)
-    if file then
-      local file_id = file.properties and file.properties.ID
-      local title = clean(file.settings.title) ~= '' and clean(file.settings.title) or vim.fn.fnamemodify(path, ':t:r')
-      local label = file_id and string.format('[[id:%s][%s]]', vim.trim(file_id), title) or title
+  local used_by = {} -- topic id -> { project title, ... }
 
-      local lines, listed = {}, false
-      for _, ws in ipairs(file.children or {}) do
-        local nodes = {}
-        descendants(ws, nodes)
-        local ws_findings = vim.tbl_filter(is_finding, nodes)
-        -- A workstream named after its own file is the file entry over again:
-        -- the same title twice, pointing at two nodes nobody can tell apart.
-        -- The file entry stands for it, and its findings are listed under the
-        -- file entry instead of under a heading that would repeat the title.
-        local named_after_the_file = clean(ws:plain_title()):lower() == title:lower()
-        local id = ws:get_property('ID', false)
-        if #ws_findings > 0 or (id and id:match '%S') then
-          listed = true
-          if not named_after_the_file then
-            lines[#lines + 1] = string.format('** %s', link(ws))
-          end
-          for _, f in ipairs(ws_findings) do
-            local own = f.tags or {}
-            -- the finding's own tags: the file's client tag already shows above
-            lines[#lines + 1] = string.format('  - %s%s', link(f), #own > 0 and '  =:' .. table.concat(own, ':') .. ':' or '')
-          end
-        end
+  --- A pointer records who depends on what; `id:` is the prefix, the id is the
+  --- key.
+  local function note_use(target, project)
+    local key = target:match '^id:(.+)$' or target
+    local t = used_by[key] or {}
+    used_by[key] = t
+    if not vim.tbl_contains(t, project) then
+      t[#t + 1] = project
+    end
+  end
+
+  --- `hl`'s children at `depth`, walking into the ones that carry their own
+  --- text. A pointer's children live in the file it points at, so there is
+  --- nothing below it here.
+  local function children(hl, depth, acc, project)
+    for _, child in ipairs(hl.children or {}) do
+      local target = pointer(child)
+      if target then
+        note_use(target, project)
       end
-
-      if listed then
-        out[#out + 1] = string.format('* %s', label)
-        for _, l in ipairs(lines) do
-          out[#out + 1] = l
-        end
+      acc[#acc + 1] = string.format('%s %s', string.rep('*', depth), entry(child))
+      if not target then
+        children(child, depth + 1, acc, project)
       end
     end
   end
 
+  local function files(dir)
+    local found = vim.fn.glob(vim.fn.expand(BASE .. '/' .. dir) .. '/*.org', false, true)
+    table.sort(found)
+    return found
+  end
+
+  -- projects: the file, its workstreams, the topics they depend on
+  local projects = {}
+  for _, path in ipairs(files 'documentation') do
+    local file = require('org.files').get(path)
+    if file then
+      local title = clean(file.settings.title) ~= '' and clean(file.settings.title) or vim.fn.fnamemodify(path, ':t:r')
+      local acc = {}
+      for _, ws in ipairs(file.children or {}) do
+        if clean(ws:plain_title()):lower() == title:lower() then
+          -- the file entry stands for this workstream: its children come up
+          children(ws, 3, acc, title)
+        else
+          acc[#acc + 1] = string.format('*** %s', entry(ws))
+          children(ws, 4, acc, title)
+        end
+      end
+      -- the file exists, so the project is listed even when it has nothing
+      -- under it yet: a project with an empty base is a project to fill in
+      projects[#projects + 1] = { '** ' .. file_link(path, file), acc }
+    end
+  end
+
+  if #projects > 0 then
+    out[#out + 1] = '* Projects'
+    for _, project in ipairs(projects) do
+      out[#out + 1] = project[1]
+      for _, l in ipairs(project[2]) do
+        out[#out + 1] = l
+      end
+    end
+  end
+
+  -- topics: the shared nodes, each saying who depends on it
+  local topics = {}
+  for _, path in ipairs(files 'topics') do
+    local file = require('org.files').get(path)
+    if file then
+      local label = file_link(path, file)
+      local id = file.properties and file.properties.ID
+      local users = id and used_by[vim.trim(id)]
+      if users and #users > 0 then
+        label = label .. ' — used by ' .. table.concat(users, ', ')
+      end
+      topics[#topics + 1] = '** ' .. label
+    end
+  end
+  if #topics > 0 then
+    out[#out + 1] = '* Topics'
+    for _, l in ipairs(topics) do
+      out[#out + 1] = l
+    end
+  end
+
+  -- people: leaves, one node each
+  local people = {}
+  for _, path in ipairs(files 'people') do
+    local file = require('org.files').get(path)
+    if file then
+      people[#people + 1] = '** ' .. file_link(path, file)
+    end
+  end
+  if #people > 0 then
+    out[#out + 1] = '* People'
+    for _, l in ipairs(people) do
+      out[#out + 1] = l
+    end
+  end
+
   if #out == 0 then
-    out[#out + 1] = 'No file in `documentation/` yet: seed it from the boards (`~/org/scripts/roam-seed/seed.py --write`).'
+    out[#out + 1] = 'Nothing in the base yet: seed it from the boards (`~/org/scripts/roam-seed/seed.py --write`).'
   end
   return out
 end
@@ -193,19 +250,17 @@ function M.index()
   return #out, described
 end
 
---- Give every headline of level 2 or deeper in `bufnr` an `:ID:` when it has
---- none, and return how many were minted. A knowledge-base file is a directory
---- of nodes, and a heading you type by hand is one of them from the moment you
---- write it — not only the headings an agent wrote. Level 1 is left alone: the
---- workstreams come from the mirror (`~/org/scripts/roam-seed/seed.py`) and
---- already carry theirs.
+--- Give every content headline of level 2 or deeper in `bufnr` an `:ID:` when
+--- it has none, and return how many were minted. A pointer headline --
+--- `** [[id:…][Topic]]` -- gets none: it is the project's reference to a node
+--- that lives in `topics/`, not a node of its own.
 ---@param bufnr integer
 ---@return integer
 function M.ensure_ids(bufnr)
   local file = require('org.files').get_buffer(bufnr)
   local missing = {}
   for _, hl in ipairs(file.headlines or {}) do
-    if hl.level >= 2 then
+    if hl.level >= 2 and not pointer(hl) then
       local id = hl:get_property('ID', false)
       if not (id and id:match '%S') then
         missing[#missing + 1] = hl.line
@@ -252,18 +307,25 @@ function M.setup()
   vim.api.nvim_create_user_command('OrgKbIndex', M.index, {
     desc = 'Rebuild the knowledge-base hub (~/org/roam/index.org)',
   })
-  -- Everything in the base is a node: the files under the base's own
-  -- directories get an :ID: on every headline of level 2 or deeper as they are
-  -- saved, and the startup visibility like everywhere else in ~/org.
-  -- `BufWritePre`, so both are in the file the write puts on disk.
+  -- A project file is where the ids matter: its workstreams and its content
+  -- headings are what everything else links by. A pointer heading is not a node
+  -- (the topic it names is), so it gets none.
   vim.api.nvim_create_autocmd('BufWritePre', {
-    pattern = { '*/org/roam/documentation/*.org', '*/org/roam/people/*.org', '*/org/roam/topics/*.org' },
+    pattern = '*/org/roam/documentation/*.org',
     callback = function(args)
       M.ensure_startup(args.buf)
       local n = M.ensure_ids(args.buf)
       if n > 0 then
         require('org.utils').notify(string.format('org kb: %d node%s given an :ID:', n, n == 1 and '' or 's'))
       end
+    end,
+  })
+  -- Every other file of the base is a document: the file is the node and its
+  -- sections are structure, so only the startup visibility is ensured.
+  vim.api.nvim_create_autocmd('BufWritePre', {
+    pattern = { '*/org/roam/topics/*.org', '*/org/roam/people/*.org' },
+    callback = function(args)
+      M.ensure_startup(args.buf)
     end,
   })
   -- The hub's header is yours, so only the keyword is ensured there: an :ID: on
