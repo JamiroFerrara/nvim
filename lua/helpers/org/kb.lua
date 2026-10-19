@@ -303,9 +303,247 @@ function M.ensure_startup(bufnr)
   return true
 end
 
+--- The facets a page carries: its `#+filetags:` without the kind (`kb_*`).
+---@param file org.File
+---@return string[]
+local function facets(file)
+  local out = {}
+  for _, tag in ipairs(file.settings.filetags or {}) do
+    if not tag:match '^kb_' then
+      out[#out + 1] = tag
+    end
+  end
+  return out
+end
+
+--- What the base knows, one record per topic: the node, its facets, who points
+--- at it, the repositories its citations reach and the languages of its
+--- excerpts. `used-by`, `stub`, `repo` and `lang` are computed here rather than
+--- tagged, because each of them changes without anyone editing a tag.
+---@return table[]
+local function scan_topics()
+  local used_by = {}
+  local function walk(hl, project)
+    for _, child in ipairs(hl.children or {}) do
+      local target = pointer(child)
+      if target then
+        local key = target:match '^id:(.+)$' or target
+        local u = used_by[key] or {}
+        used_by[key] = u
+        if not vim.tbl_contains(u, project) then
+          u[#u + 1] = project
+        end
+      end
+      walk(child, project)
+    end
+  end
+  for _, path in ipairs(vim.fn.glob(vim.fn.expand(DOCS) .. '/*.org', false, true)) do
+    local file = require('org.files').get(path)
+    if file then
+      local title = clean(file.settings.title)
+      if title == '' then
+        title = vim.fn.fnamemodify(path, ':t:r')
+      end
+      walk({ children = file.children or {} }, title)
+    end
+  end
+
+  local topics = {}
+  for _, path in ipairs(vim.fn.glob(vim.fn.expand(BASE .. '/topics') .. '/*.org', false, true)) do
+    local file = require('org.files').get(path)
+    if file then
+      local text = table.concat(vim.fn.readfile(path), '\n')
+      local repos, langs, seen = {}, {}, {}
+      for target in text:gmatch '%[%[file:([^%]]-)%]%]' do
+        local rel = target:match 'repos/(.+)$'
+        if rel and not seen[rel] then
+          seen[rel] = true
+          repos[#repos + 1] = rel
+        end
+      end
+      for lang in text:gmatch '#%+begin_src%s+(%S+)' do
+        if not vim.tbl_contains(langs, lang) then
+          langs[#langs + 1] = lang
+        end
+      end
+      local title = clean(file.settings.title)
+      if title == '' then
+        title = vim.fn.fnamemodify(path, ':t:r')
+      end
+      local id = vim.trim((file.properties and file.properties.ID) or '')
+      topics[#topics + 1] = {
+        title = title,
+        link = string.format('[[%s][%s]]', id ~= '' and ('id:' .. id) or ('file:' .. path), title),
+        facets = facets(file),
+        used_by = used_by[id] or {},
+        repos = repos,
+        langs = langs,
+        stub = text:find('Nothing yet', 1, true) ~= nil,
+      }
+    end
+  end
+  table.sort(topics, function(a, b)
+    return a.title:lower() < b.title:lower()
+  end)
+  return topics
+end
+
+--- One query term against one topic. `used-by:`, `repo:` and `lang:` ask what
+--- the files say; `stub` asks whether the page still has gaps; anything else is
+--- a facet.
+---@param term string lowercase
+---@param t table
+---@return boolean
+local function matches(term, t)
+  local key, val = term:match '^([^:]+):(.+)$'
+  if key == 'used-by' then
+    for _, p in ipairs(t.used_by) do
+      if p:lower():find(val, 1, true) then
+        return true
+      end
+    end
+  elseif key == 'repo' then
+    for _, r in ipairs(t.repos) do
+      if r:lower():find(val, 1, true) then
+        return true
+      end
+    end
+  elseif key == 'lang' then
+    for _, l in ipairs(t.langs) do
+      if l:lower() == val then
+        return true
+      end
+    end
+  elseif term == 'stub' then
+    return t.stub
+  else
+    for _, f in ipairs(t.facets) do
+      if f:lower() == term then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+--- The query as lines: `payments+media -used-by:mayday`, `stub`, `repo:J3-stack`,
+--- `lang:csharp`, or a facet name. One line per matching topic, grouped by the
+--- project that points at it, under `* Unused` when no project does. Links, not
+--- text, so a result is a place to go.
+---@param expr string|nil
+---@return string[]
+function M.render(expr)
+  expr = vim.trim(expr or '')
+  local yes, no = {}, {}
+  for word in expr:gmatch '%S+' do
+    local negate = word:sub(1, 1) == '-'
+    if negate then
+      word = word:sub(2)
+    end
+    word = word:lower()
+    if word ~= '' then
+      local parts = vim.split(word, '+', { plain = true })
+      local fn = function(t)
+        for _, p in ipairs(parts) do
+          if not matches(p, t) then
+            return false
+          end
+        end
+        return true
+      end
+      table.insert(negate and no or yes, fn)
+    end
+  end
+
+  local kept = {}
+  for _, t in ipairs(scan_topics()) do
+    local ok = true
+    for _, f in ipairs(yes) do
+      if not f(t) then
+        ok = false
+        break
+      end
+    end
+    if ok then
+      for _, f in ipairs(no) do
+        if f(t) then
+          ok = false
+          break
+        end
+      end
+    end
+    if ok then
+      kept[#kept + 1] = t
+    end
+  end
+
+  local out = { '# Query: ' .. (expr ~= '' and expr or 'all') }
+  if #kept == 0 then
+    out[#out + 1] = ''
+    out[#out + 1] = 'Nothing matches.'
+    return out
+  end
+
+  local groups, order, unused = {}, {}, {}
+  for _, t in ipairs(kept) do
+    local owner = t.used_by[1]
+    if owner then
+      if not groups[owner] then
+        groups[owner] = {}
+        order[#order + 1] = owner
+      end
+      groups[owner][#groups[owner] + 1] = t
+    else
+      unused[#unused + 1] = t
+    end
+  end
+  table.sort(order)
+
+  local function line(t)
+    return '** ' .. t.link .. (#t.facets > 0 and (' — ' .. table.concat(t.facets, ', ')) or '')
+  end
+  for _, owner in ipairs(order) do
+    out[#out + 1] = '* ' .. owner
+    for _, t in ipairs(groups[owner]) do
+      out[#out + 1] = line(t)
+    end
+  end
+  if #unused > 0 then
+    out[#out + 1] = '* Unused'
+    for _, t in ipairs(unused) do
+      out[#out + 1] = line(t)
+    end
+  end
+  return out
+end
+
+--- Render `expr` into a throwaway org buffer: `nofile`, unwritable, gone when
+--- you close it. The result is a lens, not a file -- nothing to keep in sync.
+---@param expr string|nil
+---@return string[]
+function M.query(expr)
+  local lines = M.render(expr)
+  local buf = vim.api.nvim_create_buf(false, true)
+  pcall(vim.api.nvim_buf_set_name, buf, 'kb-query')
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].filetype = 'org'
+  vim.bo[buf].bufhidden = 'wipe'
+  vim.bo[buf].modifiable = false
+  vim.cmd 'botright split'
+  vim.api.nvim_win_set_buf(0, buf)
+  vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = buf, desc = 'close the query' })
+  return lines
+end
+
 function M.setup()
   vim.api.nvim_create_user_command('OrgKbIndex', M.index, {
     desc = 'Rebuild the knowledge-base hub (~/org/roam/index.org)',
+  })
+  vim.api.nvim_create_user_command('OrgKbQuery', function(args)
+    M.query(table.concat(args.fargs, ' '))
+  end, {
+    nargs = '*',
+    desc = 'Query the knowledge base by facet or derived fact',
   })
   -- A project file is where the ids matter: its workstreams and its content
   -- headings are what everything else links by. A pointer heading is not a node

@@ -249,6 +249,12 @@ function M.setup()
         buffer = args.buf,
         desc = 'org: rebuild the knowledge-base hub',
       })
+      vim.keymap.set('n', '<leader>omq', function()
+        require('helpers.org.kb').query(vim.fn.input 'kb query: ')
+      end, {
+        buffer = args.buf,
+        desc = 'org: query the knowledge base',
+      })
     end,
   })
 end
