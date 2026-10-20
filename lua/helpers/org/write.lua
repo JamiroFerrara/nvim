@@ -34,6 +34,13 @@
 -- buffers of the whole tree on every org write -- only for a buffer whose
 -- text was already stale when the view edited it.
 --
+-- A caller with no human at the prompt must ask `M.stale` instead: the
+-- launcher (helpers/org/ai.lua) runs from a mapping and from the
+-- `nvim --headless` climb, where the unforced `:write` is a W12 question
+-- nothing answers -- the step hangs rather than failing -- and a forced one
+-- drops the other writer's text. It reloads what it can and refuses the
+-- launch on a stale buffer.
+--
 -- M.setup() replaces `require('org.utils').save_buffer` with M.save: org's own
 -- view actions (a state change, a note, a checkbox, a refile) all write
 -- through it, so that is the one place the question comes from. The config's
@@ -85,6 +92,42 @@ function M.fresh(bufnr)
   end
   local path = vim.api.nvim_buf_get_name(bufnr)
   return path ~= '' and stat_key(path) == rec
+end
+
+--- Whether the file moved on since the text `bufnr` holds was read -- the
+--- buffer's edits sit on a version the file has left behind, so writing it
+--- back would drop whatever the other writer put there.
+---
+--- A buffer whose text is the file's is reloaded first (M.refresh), which
+--- makes it current: only a buffer nvim holds edits in can be stale, and the
+--- answer then is the module's own record of the read (`reads`), the one the
+--- watcher keeps up to date. A buffer the module never recorded is not
+--- called stale: nvim's own check answers for it, as it does for a `:write`
+--- made from the keyboard.
+---
+--- The callers that may not prompt -- the launcher of
+--- `helpers/org/ai.lua`, run from a mapping and from a `nvim --headless`
+--- climb -- ask this before they write: an unforced `:write` there is the
+--- W12 question, which nothing answers, so the write hangs instead of
+--- failing. A human's `:w` still gets the question (`M.save`).
+---@param bufnr integer
+---@return boolean
+function M.stale(bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return false
+  end
+  if not vim.bo[bufnr].modified then
+    M.refresh(bufnr)
+  end
+  if not vim.bo[bufnr].modified then
+    return false
+  end
+  local rec = reads[bufnr]
+  if not rec then
+    return false
+  end
+  local path = vim.api.nvim_buf_get_name(bufnr)
+  return path ~= '' and stat_key(path) ~= rec
 end
 
 --- Whether the buffer's text is what the file holds, so writing it back
@@ -202,6 +245,12 @@ end
 --- the buffer's text matches.
 function M.setup()
   vim.api.nvim_create_autocmd('BufWritePost', {
+    pattern = { '*.org', '*.org_archive' },
+    callback = function(ev)
+      M.remember(ev.buf)
+    end,
+  })
+  vim.api.nvim_create_autocmd('BufReadPost', {
     pattern = { '*.org', '*.org_archive' },
     callback = function(ev)
       M.remember(ev.buf)

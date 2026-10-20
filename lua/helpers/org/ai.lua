@@ -50,8 +50,23 @@
 -- ticket title first of all.
 --
 -- The launcher owns the start of the run: it puts an :ID: on the headline
--- (reusing one already there), sets the state to NEXT, saves the file, and
--- only then starts omp. Before that hand-off it also commits whatever the
+-- (reusing one already there), claims it (`NEXT`) when nobody has claimed it
+-- yet, counts the launch in the drawer, saves the file, and only then starts
+-- omp. The claim is the launcher's, but only over an untouched ticket: a
+-- state a run already wrote (`PEND`, `TEST`, `WARN`, `DONE`) states what that
+-- run left behind, and relaunching is not a reason to erase it -- the state
+-- goes back to `NEXT` only from `TODO` (or from no keyword at all). The
+-- launch number rides along (`:OMP_LAUNCH:`), and the message omp starts with
+-- says which launch this is, so a run that finds its own unanswered round in
+-- the ticket can tell a relaunch from an answer instead of reading silence as
+-- consent (the relaunch rule is the omp-org-ticket skill's).
+--
+-- A launch whose buffer is stale is refused: an agent's write-back lands on
+-- disk while nvim holds the file, so writing the state back from a buffer
+-- that never saw it would drop it (helpers/org/write.lua, `M.stale`), and an
+-- unforced write there is the W12 question nothing answers.
+--
+-- Before that hand-off it also commits whatever the
 -- ticket's project leaves pending (helpers/org/project.lua's
 -- `#+PROJECT_DIRS:` claims, one commit per repo, never a push): that commit
 -- is the revert point, so a run that goes wrong is undone with
@@ -144,6 +159,19 @@ end
 --- launch resumes that session.
 local SESSION_PROP = 'OMP_SESSION'
 
+--- The headline property counting the launches of a ticket. The launcher
+--- writes it on every launch (1, 2, 3 …) and the launch message carries the
+--- number, so a run reading its own ticket can tell the first launch from a
+--- relaunch — the one case where the ticket may already hold the run's own
+--- unanswered round.
+local LAUNCH_PROP = 'OMP_LAUNCH'
+
+--- The keywords that mean a run has already worked the ticket: what it left
+--- behind is the outcome (the omp-org-ticket skill's States), so a relaunch
+--- may not overwrite it. Only `TODO` -- and an unkeyworded headline -- is the
+--- launcher's to claim.
+local CLAIMABLE = { TODO = true }
+
 --- The directory holding the ticket's omp session, or nil when the ticket
 --- carries no key to key one on. The key is the :OMP_SESSION: link when there
 --- is one; a ticket that never launched falls back to its :ID:, which is the
@@ -174,6 +202,9 @@ end
 ---@field lnum integer line of the headline
 ---@field id string the headline's permanent :ID: (the launch creates it when missing)
 ---@field session string|nil the :OMP_SESSION: link key (nil before the first launch)
+---@field launch integer how many times this ticket has been launched (1 on the first)
+---@field state string|nil the keyword the launcher leaves the headline in
+---@field claimed boolean whether this launch wrote that keyword (NEXT) or found it
 ---@field file string absolute org file path
 ---@field title string
 
@@ -288,7 +319,7 @@ end
 
 --- The ticket for the headline at `lnum` of `bufnr`, in an orgagenda or an
 --- org buffer. With `mutate` set (the launch) a missing :ID: is created, the
---- state is forced to NEXT and the buffer saved; without it (the jump)
+--- the state is claimed (NEXT) when the ticket is untouched, the buffer saved; without it (the jump)
 --- nothing is written -- the headline is only read.
 ---@param bufnr integer
 ---@param lnum integer
@@ -305,7 +336,24 @@ local function ticket_at(bufnr, lnum, mutate)
   local id = require('org.id').get { bufnr = bufnr, lnum = hl.line }
   local missing_id = not (id and id:match '%S')
   local session = hl:get_property(SESSION_PROP, false)
+  local launch = tonumber(hl:get_property(LAUNCH_PROP, false) or '') or 0
+  local state = hl.todo
+  local claimed = false
   if mutate then
+    -- An agent's write-back lands on disk while nvim holds the file; writing
+    -- the drawer and the state into a buffer that never saw it would drop it
+    -- (helpers/org/write.lua, `M.stale`), and the unforced write that follows
+    -- is the W12 question nothing answers -- a mapping, and the headless
+    -- climb, would hang on it. Reload what can be reloaded and refuse the
+    -- launch otherwise: the user saves or reloads, then launches.
+    if write.stale(bufnr) then
+      notify(
+        'org ai: ' .. vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ':t') .. ' changed on disk — save or :e! before launching',
+        vim.log.levels.WARN
+      )
+      return nil
+    end
+
     if missing_id then
       id = require('org.id').get_create { bufnr = bufnr, lnum = hl.line }
     end
@@ -318,9 +366,19 @@ local function ticket_at(bufnr, lnum, mutate)
       require('org.properties').entry_put(bufnr, hl.line, SESSION_PROP, session)
     end
 
-    -- NEXT is the launcher's, not the agent's; `force` skips blockers so the
-    -- state is deterministic whatever the ticket carries.
-    require('org.todo').change_state({ bufnr = bufnr, lnum = hl.line }, 'NEXT', { force = true })
+    launch = launch + 1
+    require('org.properties').entry_put(bufnr, hl.line, LAUNCH_PROP, tostring(launch))
+
+    -- Claim the ticket, but only an untouched one: `NEXT` means "a run is on
+    -- this", and a state a run already wrote says what it left behind. A
+    -- relaunch therefore finds `PEND`/`TEST`/`WARN`/`DONE` and leaves it --
+    -- the run that follows reads the state and the launch number, and the
+    -- omp-org-ticket skill decides what a relaunch means. `force` skips
+    -- blockers so the claim is deterministic whatever the map looks like.
+    if state == nil or CLAIMABLE[state] then
+      require('org.todo').change_state({ bufnr = bufnr, lnum = hl.line }, 'NEXT', { force = true })
+      state, claimed = 'NEXT', true
+    end
   end
 
   local path = vim.api.nvim_buf_get_name(bufnr)
@@ -336,6 +394,9 @@ local function ticket_at(bufnr, lnum, mutate)
     lnum = hl.line,
     id = id,
     session = session,
+    launch = launch,
+    state = state,
+    claimed = claimed,
     file = vim.fs.normalize(path),
     title = hl:plain_title(),
   }
@@ -508,18 +569,28 @@ local function checkpoint(ticket)
   end
 end
 
---- The message omp starts with: the ticket's identity, the state the
---- launcher already applied, and whether the :ID: is the launcher's to
---- remove. One line, so it survives shell quoting in the pane.
+--- The message omp starts with: the ticket's identity, which launch this is,
+--- the state the launcher left the headline in, and whether the :ID: is the
+--- launcher's to remove. One line, so it survives shell quoting in the pane.
+---
+--- The state line says what the launcher did, not what it wishes: a first
+--- launch claims the ticket (`NEXT`), a relaunch leaves whatever a run wrote
+--- (`PEND` waiting on the user, `TEST` awaiting validation, `WARN`, `DONE`),
+--- and the run has to read that rather than assume it was reset. The launch
+--- number is the other half of the same fact: `#2` on a ticket whose body
+--- already holds this skill's own round is a relaunch, and the skill says what
+--- a relaunch means.
 ---@param ticket OrgTicket
 ---@return string
 local function prompt(ticket)
+  local state = ticket.state and ('`' .. ticket.state .. '`') or 'none'
   return table.concat({
     'Org ticket launched by nvim <leader>ai.',
     'File: ' .. ticket.file .. '.',
     'ID: ' .. ticket.id .. ' (permanent: the knowledge base links this ticket by it; never remove it).',
     'Title: ' .. ticket.title .. '.',
-    'State: the launcher already set it to NEXT.',
+    'Launch: #' .. ticket.launch .. '.',
+    'State: ' .. state .. (ticket.claimed and ' (the launcher claimed it).' or ' (left as the last run left it).'),
     'Follow the omp-org-ticket rules appended to your system prompt.',
   }, ' ')
 end
@@ -913,7 +984,7 @@ function M.sync()
   end
 end
 
---- Launch every `target`: its own :ID: / :OMP_SESSION: link, its NEXT state,
+--- Launch every `target`: its own :ID: / :OMP_SESSION: / :OMP_LAUNCH: drawer, its claim,
 --- its checkpoint and its own omp pane. The buffers are launched in order and
 --- the lines within one biggest first, so the property drawer the launcher
 --- writes on one entry cannot shift the lines of a ticket still to come.
@@ -973,11 +1044,13 @@ end
 
 --- The same launch applied to one headline already in hand: the ticket at
 --- `lnum` of `bufnr` gets exactly what `<leader>ai` gives the headline at
---- point -- its own :ID: / :OMP_SESSION: link, its NEXT state, its checkpoint
---- and its own omp pane. Unlike the mapping, the headline is launched itself
---- and never fanned out to the frontier below it: the caller has already
---- decided which headline, and the text it wrote (a note) sits on that one.
---- This is what a note on a TEST entry triggers (helpers/org/notes.lua).
+--- point -- its own :ID: / :OMP_SESSION: / :OMP_LAUNCH: drawer, its claim,
+--- its checkpoint and its own omp pane. Unlike the mapping, the headline is
+--- launched itself and never fanned out to the frontier below it: the caller
+--- has already decided which headline, and the text it wrote (a note) sits on
+--- that one. This is what a note on a TEST entry triggers
+--- (helpers/org/notes.lua), and there the state is a run's own: the launch
+--- leaves it standing and the run that answers the note writes the next one.
 ---@param bufnr integer
 ---@param lnum integer
 function M.launch_at(bufnr, lnum)
@@ -995,7 +1068,7 @@ end
 --- read off the file at that moment: the parent is still open, and nothing is
 --- open below it (org's `has_undone_children`; a sibling still in flight
 --- leaves it blocked, and that sibling's own run makes the climb). The launch
---- is the ordinary one -- :ID: / :OMP_SESSION: / NEXT, the project
+--- is the ordinary one -- :ID: / :OMP_SESSION: / :OMP_LAUNCH:, the claim, the project
 --- checkpoint, its own pane -- and, the parent having nothing open below it,
 --- it lands on the parent itself. A ticket whose parent is no ticket (the
 --- project's own headline, a grouping line) has nowhere to climb to and says
@@ -1043,12 +1116,14 @@ function M.climb_up(file, id)
   local launched = launch_targets { { bufnr = buf, lnum = parent.line } }
   if launched > 0 then
     say('climbed to ' .. parent:plain_title())
+  else
+    say('could not launch ' .. parent:plain_title() .. ' (see the notification)')
   end
 end
 
 --- `<leader>ai` over a Visual selection: the Visual-mode shape of M.launch.
 --- Every entry the selection covers is launched exactly as it would be on
---- its own — its own :ID: / :OMP_SESSION: link, its NEXT state, its
+--- its own — its own :ID: / :OMP_SESSION: / :OMP_LAUNCH: drawer, its claim, its
 --- checkpoint and its own omp pane; a selected container fans out to the
 --- frontier below it the same way (so a covered ancestor and a covered
 --- descendant both resolve to the descendant's own ticket, which the `seen`
