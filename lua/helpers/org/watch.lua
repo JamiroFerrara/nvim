@@ -17,9 +17,10 @@
 -- file itself would miss the rename, the directory does not.
 --
 -- Events are debounced: a single save can raise several, and the reload
--- callback (a checktime of every org buffer plus an agenda redo) should run
--- once per quiet period. The callback is scheduled, so it never runs inside
--- the libuv callback.
+-- callback (a reload of every changed org buffer -- in place when no window
+-- shows it, helpers/org/write.lua -- plus an agenda redo) should run once per
+-- quiet period. The callback is scheduled, so it never runs inside the libuv
+-- callback.
 local M = {}
 
 local uv = vim.uv or vim.loop

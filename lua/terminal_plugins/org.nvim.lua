@@ -69,6 +69,12 @@
 --   watch.lua       fs_event watcher over the org tree: reloads changed
 --                   org buffers and re-renders the agenda view whenever an
 --                   org file changes on disk, focus aside
+--   write.lua       the other half of that reload: the view's own writes
+--                   (a state change, a note, the launcher) go through it, so
+--                   a file an agent rewrote under the buffer is written
+--                   without nvim asking "Do you really want to write to it?"
+--                   -- the text was refreshed to the agent's, nothing is
+--                   lost. Replaces org.utils.save_buffer
 --   tree.lua        TODO views as trees: an entry's listed sublevels, its
 --                   plain (not TODO) subheadlines and its checkbox items are
 --                   nested under it with tree guides, folded at level 1,
@@ -1159,6 +1165,10 @@ return {
     require('helpers.org.changed').setup()
     require('helpers.org.wayfinder').setup()
     require('helpers.org.notes').setup()
+    -- takes over org.utils.save_buffer: every write org makes on its own (a
+    -- state change in a view, a note, a checkbox, a refile) must not ask about
+    -- a file an agent has rewritten under it (helpers/org/write.lua)
+    require('helpers.org.write').setup()
     capture.setup()
     require('helpers.org.mappings').setup()
     require('helpers.org.folding').setup()

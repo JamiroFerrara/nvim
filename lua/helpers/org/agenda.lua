@@ -27,6 +27,10 @@
 -- previous buffer back (view/window.lua, mode "current").
 local M = {}
 
+-- the entry scratch's write-back goes through it: the file it splices into is
+-- written by the agents of the tickets running too (helpers/org/write.lua)
+local write = require 'helpers.org.write'
+
 -- `D` in the agenda toggles an entry between DONE and TODO: a done entry
 -- goes back to TODO, anything else (open, or no keyword at all) becomes
 -- DONE. change_state runs the full org semantics (CLOSED timestamp, state
@@ -252,9 +256,7 @@ local function setup_entry_scratch()
         vim.api.nvim_buf_set_lines(src, from - 1, to, false, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
         vim.api.nvim_buf_set_extmark(src, ns, from - 1, 0, { id = mark, right_gravity = false })
         if vim.api.nvim_buf_get_name(src) ~= '' then
-          vim.api.nvim_buf_call(src, function()
-            vim.cmd 'silent! write'
-          end)
+          write.save(src)
         end
         dirty = false
         vim.b[buf].org_entry_dirty = nil
