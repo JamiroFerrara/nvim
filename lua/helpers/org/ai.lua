@@ -881,6 +881,11 @@ end
 --- stat kept alongside the text (helpers/org/write.lua), so a write from the
 --- view does not have to ask about a change the buffer already carries.
 function M.sync()
+  -- the tree changed on disk: the agenda's file list is cached for the burst
+  -- of calls one render makes (helpers/org/agenda.lua) and has to be walked
+  -- again -- a file added by another process is no write of a loaded buffer,
+  -- so nothing else drops it
+  require('helpers.org.agenda').drop_file_lists()
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     local name = vim.api.nvim_buf_get_name(buf)
     if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buftype == '' and name:match '%.org$' then

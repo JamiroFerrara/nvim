@@ -899,6 +899,19 @@ end
 -- fresh walk instead of a stale list.
 local FILE_LIST_WINDOW_MS = 250
 
+-- The cached walk (`pattern key` -> `{ at, paths }`), held at module level so
+-- the tree watcher can drop it (M.drop_file_lists below) without going back
+-- through the wrapped function.
+local file_lists = {}
+
+--- Drop the cached agenda file list: the org tree changed on disk, so the next
+--- walk must see it. A file added or removed by another process is not a write
+--- of a loaded buffer, so nothing else would have cleared the cache
+--- (helpers/org/ai.lua calls this from the file watcher's callback).
+function M.drop_file_lists()
+  file_lists = {}
+end
+
 -- Cache the agenda file list (`org.utils.glob_org_files`) for that window, and
 -- drop it on `org.files.invalidate` -- the call every org write makes, its own
 -- BufWritePost hook and the ones the capture, refile and save paths run --
@@ -907,31 +920,27 @@ local function setup_file_list_cache()
   local utils = require 'org.utils'
   local files = require 'org.files'
   local walk = utils.glob_org_files
-  local lists = {}
   utils.glob_org_files = function(patterns)
     -- the cwd is part of the answer: a relative pattern resolves against it
-    local key = vim.fn.getcwd()
-      .. '\0'
-      .. (type(patterns) == 'string' and patterns or table.concat(patterns or {}, '\0'))
+    local key = vim.fn.getcwd() .. '\0' .. (type(patterns) == 'string' and patterns or table.concat(patterns or {}, '\0'))
+    local cached = file_lists[key]
     local now = (vim.uv or vim.loop).hrtime() / 1e6
-    local cached = lists[key]
-    if cached and now - cached.at < FILE_LIST_WINDOW_MS then
-      -- a copy: callers extend the list they are handed (the search view's
-      -- extra files, files_for's archive files) and would otherwise write
-      -- into the cache
-      local out = {}
-      for i, p in ipairs(cached.paths) do
-        out[i] = p
-      end
-      return out
+    if not (cached and now - cached.at < FILE_LIST_WINDOW_MS) then
+      cached = { at = now, paths = walk(patterns) }
+      file_lists[key] = cached
     end
-    local paths = walk(patterns)
-    lists[key] = { at = now, paths = paths }
-    return paths
+    -- a copy, the way the walk itself handed back a fresh list: a caller is
+    -- free to grow or reorder what it gets (the search view's extra files,
+    -- files_for's archive files) without writing into the cache behind it
+    local out = {}
+    for i, p in ipairs(cached.paths) do
+      out[i] = p
+    end
+    return out
   end
   local invalidate = files.invalidate
   files.invalidate = function(...)
-    lists = {}
+    file_lists = {}
     return invalidate(...)
   end
 end
