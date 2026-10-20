@@ -461,7 +461,7 @@ end
 ---@param title string
 ---@return string
 local function checkpoint_subject(title)
-  local prefix = '🧹 chore(omp): checkpoint before '
+  local prefix = ' chore(omp): checkpoint before '
   local summary = vim.trim((title or ''):gsub('%s+', ' '))
   local room = 72 - vim.fn.strchars(prefix)
   if vim.fn.strchars(summary) > room then
