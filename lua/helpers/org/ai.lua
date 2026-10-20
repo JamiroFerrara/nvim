@@ -58,9 +58,15 @@
 -- the agent directory, so a later launch `--continue`s that ticket's original
 -- session — full context — instead of starting a fresh one.
 --
--- The run is one-shot (`omp --print`): omp processes the ticket and exits; the
--- nvim terminal closes, its TermClose autocmd quits nvim, and tmux closes the
--- pane with it instead of parking an idle interactive session.
+-- The run ends by killing its own pane. omp runs interactively, so the user
+-- watches the ticket's TUI in the pane; an interactive omp then waits at its
+-- own prompt forever, so the skill's last step is the agent killing the pane
+-- it runs in: `tmux kill-pane` on its own `$TMUX_PANE`, issued through
+-- `run-shell -b` so the tmux server -- not the dying pane -- runs it, and
+-- guarded on the pane's `@omp_ticket`, so a pane the user opened by hand is
+-- left alone. Should the agent die before that step, the pane still goes away
+-- when its omp is quit: the nvim terminal closes, its TermClose autocmd quits
+-- nvim, and tmux closes the pane with it.
 --
 -- The agent edits the org file on disk, so nvim has to follow: a directory
 -- watcher over the org tree (helpers/org/watch.lua) reloads changed,
@@ -476,19 +482,21 @@ end
 --- instead of a fresh one. A ticket with no session file yet launches fresh
 --- (no `--continue`), seeding the directory.
 ---
---- `--print` is what ends the run: an interactive `omp "<prompt>"` processes
---- the ticket and then sits at its own prompt forever, so the pane would never
---- exit. Non-interactive mode processes the ticket and exits; the nvim
---- terminal closes, its TermClose autocmd quits nvim, and tmux closes a pane
---- when its command exits, so the window goes away on its own.
+--- The run ends by killing its own pane, not through `--print`: non-interactive
+--- mode draws no TUI -- the pane sat on a bare `Working…`, with no progress to
+--- watch -- while an interactive `omp "<prompt>"` shows the ticket being worked
+--- and then waits at its own prompt forever, so the pane would never exit on
+--- its own. The skill's last step closes that gap: the agent kills the pane it
+--- runs in (the module header has the mechanism), so the argv stays the
+--- interactive one.
 ---@param ticket OrgTicket
 ---@return string[]
 local function omp_argv(ticket)
   local dir = session_dir(ticket)
   if not dir then
-    return { 'omp', '--print', '--append-system-prompt', SKILL, prompt(ticket) }
+    return { 'omp', '--append-system-prompt', SKILL, prompt(ticket) }
   end
-  local argv = { 'omp', '--print', '--session-dir', dir }
+  local argv = { 'omp', '--session-dir', dir }
   if has_session(dir) then
     argv[#argv + 1] = '--continue'
   end
@@ -501,8 +509,8 @@ end
 --- The omp argv run inside a terminal-only nvim: `nvim "+terminal sh <script>"`.
 --- The pane then mirrors the tmux default-command (`nvim +terminal`) every
 --- other pane uses — an nvim terminal buffer, so Terminal-Normal mode and the
---- tmux `is_vim` navigation work here too. `omp --print` still ends the run:
---- omp exits, the script takes itself away, the terminal closes, the pane's
+--- tmux `is_vim` navigation work here too. Quitting the omp in it ends the
+--- pane: the script takes itself away, the terminal closes, the pane's
 --- TermClose autocmd quits nvim, and tmux closes the pane with it. The whole
 --- `+terminal …` is one shell word (nvim takes everything after `+` as the Ex
 --- command), and tmux runs the pane through the shell, so each layer is quoted
@@ -527,8 +535,8 @@ end
 --- The omp argv for an interactive instance on `ticket` — the shape the
 --- `<prefix> i` panel lists and jumps to. A ticket with a session resumes it
 --- (`--session-dir` + `--continue`, full context); one without starts fresh
---- with the ticket prompt. No `--print`: the session stays open at its own
---- prompt instead of exiting.
+--- with the ticket prompt. A resumed session keeps the same interactive shape
+--- as a launch: it is the user's pane, quit by hand.
 ---@param ticket OrgTicket
 ---@return string[]
 local function resume_argv(ticket)
