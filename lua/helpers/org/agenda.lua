@@ -340,7 +340,11 @@ end
 -- holds -- a note added with `z` under the cursor, say -- which would
 -- otherwise leave the pane showing the lines it was built with
 -- (copy_stale below); `L` again, `q` in the pane, or leaving the view
--- closes it. The pane holds the very scratch `<CR>` opens, aimed at the
+-- closes it. While it is open the view's `J` / `K` -- the global half-page
+-- scroll -- page the pane rather than the entry list under the cursor, which
+-- would move the pane onto another entry instead of showing the rest of the
+-- one being read (page below; the pane's own `J` / `K` scroll it either way).
+-- The pane holds the very scratch `<CR>` opens, aimed at the
 -- pane's own window instead of the view's (entry_scratch above takes a
 -- target window), so it is editable and writes back the same way: an entry
 -- edited in the pane is spliced into its file when the cursor moves on,
@@ -353,7 +357,14 @@ local function setup_entry_preview()
     if state.aug then
       pcall(vim.api.nvim_del_augroup_by_id, state.aug)
     end
-    state.aug, state.win, state.key, state.placeholder = nil, nil, nil, nil
+    -- The view's half-page keys go back to the global ones: the buffer
+    -- outlives the pane (it is the agenda buffer), so the maps are dropped
+    -- by hand rather than with the pane's buffer.
+    if state.vbuf and vim.api.nvim_buf_is_valid(state.vbuf) then
+      pcall(vim.keymap.del, 'n', 'J', { buffer = state.vbuf })
+      pcall(vim.keymap.del, 'n', 'K', { buffer = state.vbuf })
+    end
+    state.aug, state.win, state.key, state.placeholder, state.vbuf = nil, nil, nil, nil, nil
   end
 
   --- Splice a dirty scratch back into its file. The scratch's own write-back
@@ -469,6 +480,21 @@ local function setup_entry_preview()
     end)
   end
 
+  --- A half-page scroll of the pane, run for the view's `J` / `K`. It is the
+  --- scroll the global keys give (`<C-d>` / `<C-u>`, lua/mappings.lua), run
+  --- in the pane's own window so the pane's cursor and scrolloff rules
+  --- apply; the view's cursor and scroll are left alone.
+  local function page(key)
+    return function()
+      if not (state.win and vim.api.nvim_win_is_valid(state.win)) then
+        return
+      end
+      vim.api.nvim_win_call(state.win, function()
+        vim.cmd.normal { args = { key }, bang = true }
+      end)
+    end
+  end
+
   local function open(view)
     local vwin = view.state.win
     if not (vwin and vim.api.nvim_win_is_valid(vwin)) then
@@ -509,6 +535,16 @@ local function setup_entry_preview()
       callback = teardown,
       desc = 'org: forget the entry preview when its window closes',
     })
+    -- With the pane open the pane is what there is to read, so the view's
+    -- half-page keys page it -- the rest of the entry being read -- instead
+    -- of moving the cursor down the entry list, which would reload the pane
+    -- on another entry instead. Buffer-local to the view and dropped with
+    -- the pane (teardown); in the pane itself the global keys already scroll
+    -- it.
+    state.vbuf = vbuf
+    -- `\6` / `\21` are `<C-d>` / `<C-u>`, the scroll the global keys carry.
+    vim.keymap.set('n', 'J', page '\6', { buffer = vbuf, desc = 'org: page the entry preview down' })
+    vim.keymap.set('n', 'K', page '\21', { buffer = vbuf, desc = 'org: page the entry preview up' })
     -- Fill now, not on the next tick: `open` runs on a key, not in an
     -- autocommand, so the pane can come up with the entry already in it
     -- instead of an empty split for a frame.
