@@ -16,6 +16,14 @@
 -- Blocks are separated by a blank line, so each reads as its own turn in the
 -- conversation; lines within one block stay consecutive.
 --
+-- A note on an entry in TEST does not stop at the note: TEST means the work
+-- was handed back for validation, so a note there is the user's answer to it,
+-- and storing it also launches the ticket -- helpers/org/ai.lua's launch, run
+-- on the entry the note landed on (never fanned out to its children: the note
+-- is on that headline). The agent then starts on the entry with the note in
+-- its body, the launcher re-stamping NEXT. Every other state stores the note
+-- and nothing else.
+--
 -- The omp write-back (skill omp-org-ticket) writes the same block; its header
 -- carries the 🤖 icon in front of the timestamp, which is what marks the
 -- block as the agent's -- decorations.lua draws that header like these. Its
@@ -93,6 +101,14 @@ end
 --- org-add-note: prompt for the note, then store it at the end of the entry
 --- body (chronological order). Registered as `org.todo.add_note`, so both the
 --- org buffer `<leader>n` and the agenda/todo view `z` use it.
+---
+--- A note on an entry in TEST reads the note back to the agent: the entry has
+--- been handed back for validation, so the note is the user's answer to it,
+--- and storing it also launches the ticket (helpers/org/ai.lua's launch,
+--- `M.launch_at`) -- the launcher re-stamps the entry NEXT and omp starts
+--- with the note in the body. Any other state stores the note and stops
+--- there. TEST is read off the headline as it was found, before the note
+--- lands below it.
 ---@param target? table
 ---@return boolean|nil
 function M.add(target)
@@ -101,6 +117,7 @@ function M.add(target)
   if not bufnr then
     return nil
   end
+  local retest = hl.todo == 'TEST'
   local utils = require 'org.utils'
   local note = utils.input_note { prompt = 'Note: ', purpose = edit.note_purpose 'note' }
   if not note or vim.trim(note) == '' then
@@ -110,6 +127,9 @@ function M.add(target)
   local ts = date.effective_now(hl):clone({ active = false }):to_string()
   local first = append_block(bufnr, hl, entry_lines(ts, note))
   edit.note_stored(bufnr, first, hl.line)
+  if retest then
+    require('helpers.org.ai').launch_at(bufnr, hl.line)
+  end
   return true
 end
 

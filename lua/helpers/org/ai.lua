@@ -17,6 +17,12 @@
 -- starts the run in one stroke instead of reading the capture buffer's
 -- scratch text as a headline.
 --
+-- A note on an entry in TEST starts the same run without the key: the entry
+-- is waiting on the user's validation, so a note there is their answer to it
+-- and helpers/org/notes.lua hands the headline to M.launch_at once the note
+-- is stored -- the agent reads the note as the ticket's new body. Every
+-- other state just stores the note.
+--
 -- Layout: the first launch splits the nvim pane once with a vertical divider
 -- (`split-window -h`, omp on the right). Once anything already sits beside
 -- nvim, every later launch opens its own tmux window inserted after the
@@ -951,6 +957,20 @@ function M.launch()
   end
   local launched = launch_targets(expand_target(bufnr, lnum))
   notify_launched(launched)
+  M.sync()
+end
+
+--- The same launch applied to one headline already in hand: the ticket at
+--- `lnum` of `bufnr` gets exactly what `<leader>ai` gives the headline at
+--- point -- its own :ID: / :OMP_SESSION: link, its NEXT state, its checkpoint
+--- and its own omp pane. Unlike the mapping, the headline is launched itself
+--- and never fanned out to open children: the caller has already decided
+--- which headline, and the text it wrote (a note) sits on that one. This is
+--- what a note on a TEST entry triggers (helpers/org/notes.lua).
+---@param bufnr integer
+---@param lnum integer
+function M.launch_at(bufnr, lnum)
+  notify_launched(launch_targets { { bufnr = bufnr, lnum = lnum } })
   M.sync()
 end
 
