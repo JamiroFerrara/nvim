@@ -847,6 +847,59 @@ local function setup_custom_views()
   })
 end
 
+-- How recent a walk of the agenda file list makes the next one redundant.
+-- The walk is the recursive `**` glob behind `~/org/**/*.org` (~10 ms over
+-- this vault), and a single render asks for the list again and again: every
+-- tag-matching block reads all files' tag definitions to expand tag groups
+-- (org.tags.match_groups), the whole-list TODO command reads their keywords
+-- (org/agenda/view.lua todo_names), and a block carrying no `files` of its
+-- own falls back to it (files_for_block). The board asks five or six times, so
+-- the walk alone was 50-70 ms of a 70-160 ms switch -- view 5's ~105 ms is
+-- almost all of it -- for an answer that cannot have changed between two calls
+-- of the same synchronous render. The first caller walks, the rest read that
+-- list; the window is short enough that a file added by hand lands in the next
+-- press, and a write of any org file clears the cache outright (see below), so
+-- a save, or an agent's write-back through the file watcher, is followed by a
+-- fresh walk instead of a stale list.
+local FILE_LIST_WINDOW_MS = 250
+
+-- Cache the agenda file list (`org.utils.glob_org_files`) for that window, and
+-- drop it on `org.files.invalidate` -- the call every org write makes, its own
+-- BufWritePost hook and the ones the capture, refile and save paths run --
+-- so the files a write adds or removes are seen at the next render.
+local function setup_file_list_cache()
+  local utils = require 'org.utils'
+  local files = require 'org.files'
+  local walk = utils.glob_org_files
+  local lists = {}
+  utils.glob_org_files = function(patterns)
+    -- the cwd is part of the answer: a relative pattern resolves against it
+    local key = vim.fn.getcwd()
+      .. '\0'
+      .. (type(patterns) == 'string' and patterns or table.concat(patterns or {}, '\0'))
+    local now = (vim.uv or vim.loop).hrtime() / 1e6
+    local cached = lists[key]
+    if cached and now - cached.at < FILE_LIST_WINDOW_MS then
+      -- a copy: callers extend the list they are handed (the search view's
+      -- extra files, files_for's archive files) and would otherwise write
+      -- into the cache
+      local out = {}
+      for i, p in ipairs(cached.paths) do
+        out[i] = p
+      end
+      return out
+    end
+    local paths = walk(patterns)
+    lists[key] = { at = now, paths = paths }
+    return paths
+  end
+  local invalidate = files.invalidate
+  files.invalidate = function(...)
+    lists = {}
+    return invalidate(...)
+  end
+end
+
 -- Splice `text` into the builder at `pos` (1-based, before the line already
 -- there) and shift the line-indexed tables the builder carries with it --
 -- the highlight rows (0-based), the `items` / `line_hls` / `line_ctx` /
@@ -1375,6 +1428,7 @@ local function setup_capture_refresh()
 end
 
 function M.setup()
+  setup_file_list_cache()
   setup_toggle_done()
   setup_redo_stay()
   setup_one_key()

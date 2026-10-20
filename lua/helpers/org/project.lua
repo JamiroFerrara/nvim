@@ -163,10 +163,31 @@ local function stamp(path)
   return st and (st.mtime.sec .. ':' .. st.size) or 'nil'
 end
 
+-- How recent a scan makes the next one redundant. The scan is small -- a glob
+-- of the projects directory and one stat per file -- but it is asked for once
+-- per rendered entry: the category column (`item_name`) resolves the project
+-- of every headline a view lists, so one switch through the number keys scans
+-- a hundred times over, all inside the single synchronous render the press
+-- started. That burst is most of what a switch costs (the global view's
+-- ~160 ms: ~50 ms of it this scan). Everything the index can say was already
+-- read this same breath, so a scan this fresh answers the calls that follow;
+-- the window is short enough that a change made by hand lands in the render
+-- after the next keystroke, and a write under a live view re-renders through
+-- the file watcher (helpers/org/watch.lua -> ai.sync -> view.redo) a tick
+-- later, past the window.
+local REFRESH_WINDOW_MS = 50
+local refreshed_at = -1 / 0
+
 --- Rebuild the claim index when any project file changed (mtime or size, so
 --- a rewrite that keeps the mtime on coarse file systems is still seen).
+---@param force? boolean scan even inside the window (a write of our own)
 ---@return boolean rebuilt
-local function refresh()
+local function refresh(force)
+  local now = (vim.uv or vim.loop).hrtime() / 1e6
+  if not force and now - refreshed_at < REFRESH_WINDOW_MS then
+    return false
+  end
+  refreshed_at = now
   local paths = vim.fn.glob(vim.fn.expand(projects_dir) .. '/*.org', false, true)
   table.sort(paths)
   local fresh = {}
@@ -536,7 +557,7 @@ function M.ensure(project)
           return false
         end
         require('org.files').invalidate(project.file)
-        refresh()
+        refresh(true)
         once('merge:' .. project.file, string.format('project: %s also covers %s', vim.fn.fnamemodify(project.file, ':t'), project.root))
       end
     end
@@ -548,7 +569,7 @@ function M.ensure(project)
     return false
   end
   require('org.files').invalidate(project.file)
-  refresh()
+  refresh(true)
   once('created:' .. project.file, 'project: created ' .. vim.fn.fnamemodify(project.file, ':t'))
   return true
 end
