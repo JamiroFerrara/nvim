@@ -32,9 +32,31 @@ M.ICONS = {
 --- label, `wf_<type>` and `wayfinder_<type>`.
 ---@param tag string
 ---@return string|nil
-local function kind_of(tag)
+local function kind_of_tag(tag)
   local kind = tag:match '^wf_(%a+)$' or tag:match '^wayfinder_(%a+)$'
   return kind and M.ICONS[kind] and kind or nil
+end
+
+--- The kind a headline's own tags name: `map` for the map itself, `research` /
+--- `prototype` / `grilling` / `task` for one of its tickets, nil for anything
+--- that is no wayfinder label. Own tags only (`hl.tags`, not `get_tags`): the
+--- plain `wf` marker inherits down a map
+--- (lua/terminal_plugins/org.nvim.lua, `tags_exclude_from_inheritance`), so
+--- reading the inherited ones would label a plain capture inside a map as a
+--- ticket of it. This is the one predicate on the labels, so the machinery
+--- that must tell a map from a ticket -- the children-done cascade
+--- (helpers/org/cookies.lua) and the takeable hint (helpers/org/tree.lua) --
+--- asks it instead of matching tags again.
+---@param hl org.Headline
+---@return string|nil
+function M.kind(hl)
+  for _, tag in ipairs((hl and hl.tags) or {}) do
+    local kind = kind_of_tag(tag)
+    if kind then
+      return kind
+    end
+  end
+  return nil
 end
 
 --- The tags string of an entry line with every kind label read as its icon:
@@ -48,7 +70,7 @@ function M.show(tagstr)
     return tagstr
   end
   return (tagstr:gsub('[^:]+', function(tag)
-    local kind = kind_of(tag)
+    local kind = kind_of_tag(tag)
     return kind and M.ICONS[kind] or tag
   end))
 end

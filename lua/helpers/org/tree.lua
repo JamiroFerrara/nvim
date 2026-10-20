@@ -260,6 +260,44 @@ local function visible(nd)
   return true
 end
 
+--- The map's frontier, counted off the file's own tree: the tickets under `hl`
+--- that are open with nothing open below them -- the leaves
+--- helpers/org/ai.lua would launch from the map, one instance each. One
+--- number per map, and it is the shape of the chart: a route charted as a
+--- chain reads 1 however deep it is, a fork reads as many as it has legs.
+--- The reading is the walker's (`frontier`, helpers/org/ai.lua): `is_todo` is
+--- true for every keyword before the `|` -- `PEND`, `TEST` and `WARN` with the
+--- rest -- so a ticket handed back for validation still blocks what it
+--- unblocks.
+---@param hl org.Headline
+---@return integer
+local function frontier_count(hl)
+  local n = 0
+  for _, c in ipairs(hl.children) do
+    if c:has_undone_children() then
+      n = n + frontier_count(c)
+    elseif c:is_todo() then
+      n = n + 1
+    end
+  end
+  return n
+end
+
+--- The ` · N takeable` a map's line ends with, or '' for any other entry. Only
+--- a map states its frontier: on a ticket the count would be its own subtree
+--- -- a fork already visible as its children -- while the map is where "how
+--- much of this route can run at once" is worth reading. The vault's own
+--- labels decide who is a map (helpers/org/wayfinder.lua), so no headline of
+--- another board is touched.
+---@param hl org.Headline|nil
+---@return string
+local function takeable_hint(hl)
+  if require('helpers.org.wayfinder').kind(hl) ~= 'map' then
+    return ''
+  end
+  return ' · ' .. frontier_count(hl) .. ' takeable'
+end
+
 local function count_desc(nd)
   local n = #nd.children
   for _, ch in ipairs(nd.children) do
@@ -747,7 +785,7 @@ local function transform(view, b, render, ctx)
         for i, r in ipairs(nd.unit.rows) do
           local e = entry_of(r)
           e.prefix = ''
-          e.suffix = i == 1 and suffix or ''
+          e.suffix = i == 1 and (suffix .. takeable_hint(nd.headline)) or ''
           order[#order + 1] = e
           if i == 1 then
             nd.row = #order

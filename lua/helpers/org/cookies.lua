@@ -73,6 +73,16 @@ end
 --- org.todo_keywords reports neither as done.
 local FINISHED = { TEST = true, WARN = true }
 
+--- Does `hl` carry a wayfinder label -- `wf_map` on a map, `wf_<type>` on one
+--- of its tickets? The vault's own tracker (skill://wayfinder/org-tracker.md)
+--- writes both, and its tags are the one thing that tells a map's subtree,
+--- where nesting is blocking, from an ordinary outline, where it is
+--- containment. The predicate lives with the labels themselves
+--- (helpers/org/wayfinder.lua).
+local function wayfinder(hl)
+  return require('helpers.org.wayfinder').kind(hl) ~= nil
+end
+
 --- Is `name` a keyword that means the entry is over?
 local function finished_p(kw, name)
   return name ~= nil and (kw:is_done(name) or FINISHED[name] == true)
@@ -168,6 +178,14 @@ end
 --- Called only from that event, so opening a file or a hand-set state is
 --- never fought (the same reason reopen_finished is absent from
 --- ensure_cookies).
+---
+--- A wayfinder parent is never finished by its children. Nesting means
+--- *blocks* there -- "a ticket hangs under the one it unblocks, whose
+--- question waits on its answer" (skill://wayfinder/org-tracker.md), the
+--- opposite of the *contains* this pass reads -- so a route charted as a
+--- chain would close itself, ticket by ticket, the moment its deepest leaf
+--- landed, the map with it. Reopening stays on both: a ticket graduated
+--- under a finished one must put it back on the frontier.
 ---@param bufnr integer
 ---@param lnum integer the entry that just changed
 local function finish_when_children_done(bufnr, lnum)
@@ -188,14 +206,25 @@ local function finish_when_children_done(bufnr, lnum)
   local targets = {}
   local parent = hl.parent
   while parent do
-    if parent.todo and not finished_p(kw, parent.todo) and children_done(parent, kw) then
+    if
+      parent.todo
+      and not finished_p(kw, parent.todo)
+      and children_done(parent, kw)
+      and not wayfinder(parent)
+    then
       targets[#targets + 1] = parent.line
     end
     parent = parent.parent
   end
   for _, line in ipairs(targets) do
     local p = files.get_buffer(bufnr):headline_at(line)
-    if p and p.todo and not finished_p(kw, p.todo) and children_done(p, kw) then
+    if
+      p
+      and p.todo
+      and not finished_p(kw, p.todo)
+      and children_done(p, kw)
+      and not wayfinder(p)
+    then
       local target = kw:first_done(p.todo)
       if target then
         pcall(vim.cmd, 'silent! undojoin')
