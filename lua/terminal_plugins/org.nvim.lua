@@ -47,6 +47,10 @@
 --                   read per entry through the todo `prefix_format` below,
 --                   plus the `changed-up` / `changed-down` sorting strategies
 --                   (the group view's sections)
+--   wayfinder.lua   a wayfinder ticket kind (`wf_<type>`, or the longer
+--                   `wayfinder_<type>` of the first maps) drawn as its icon
+--                   on the entry line, in the tag column a line ends with,
+--                   and the glyph the `5` view's kind sections are headed by
 --   ai.lua          <leader>ai on an entry launches an `omp` instance for
 --                   the ticket in a tmux pane and follows its write-back
 --                   (watch.lua reloads the changed org files live; the
@@ -87,6 +91,7 @@
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
 local notes = require 'helpers.org.notes'
+local wayfinder = require 'helpers.org.wayfinder'
 
 -- TODO keyword sequence (org-todo-keywords): the keywords before the `|` are
 -- open, the ones after it done. Named here rather than inline in
@@ -197,13 +202,18 @@ end
 -- one, above the untouched TODO), then priority, urgency settling the ties --
 -- and no `category-keep`, so the categories interleave, as a map's tickets
 -- all carry the project's.
+--
+-- The header opens with the kind's icon (helpers/org/wayfinder.lua), the
+-- same glyph its tickets' lines carry where their label sat: the section is
+-- the legend of the icons, the one place a kind is named in words beside
+-- them.
 ---@param kind string research / prototype / grilling / task
 ---@return table
 local function wf_type_section(kind)
   return {
     type = 'tags_todo',
     match = 'wf_' .. kind .. '|wayfinder_' .. kind .. '/!',
-    header = kind:gsub('^%l', string.upper) .. ', open',
+    header = wayfinder.ICONS[kind] .. ' ' .. kind:gsub('^%l', string.upper) .. ', open',
     hide_empty = true,
     flat = true,
     super_groups = false,
@@ -485,7 +495,7 @@ return {
             {
               type = 'tags_todo',
               match = '{^wf}|{^wayfinder}/!',
-              header = 'Wayfinder map, open',
+              header = wayfinder.ICONS.map .. ' Wayfinder map, open',
               super_groups = false,
               sorting = { 'category-keep' },
             },
@@ -1145,6 +1155,7 @@ return {
     -- last-changed date the column shows (helpers/org/changed.lua), so it
     -- goes in with the view's own pieces
     require('helpers.org.changed').setup()
+    require('helpers.org.wayfinder').setup()
     require('helpers.org.notes').setup()
     capture.setup()
     require('helpers.org.mappings').setup()
