@@ -883,66 +883,167 @@ local function setup_custom_views()
   })
 end
 
--- How recent a walk of the agenda file list makes the next one redundant.
--- The walk is the recursive `**` glob behind `~/org/**/*.org` (~10 ms over
--- this vault), and a single render asks for the list again and again: every
--- tag-matching block reads all files' tag definitions to expand tag groups
--- (org.tags.match_groups), the whole-list TODO command reads their keywords
--- (org/agenda/view.lua todo_names), and a block carrying no `files` of its
--- own falls back to it (files_for_block). The board asks five or six times, so
--- the walk alone was 50-70 ms of a 70-160 ms switch -- view 5's ~105 ms is
--- almost all of it -- for an answer that cannot have changed between two calls
--- of the same synchronous render. The first caller walks, the rest read that
--- list; the window is short enough that a file added by hand lands in the next
--- press, and a write of any org file clears the cache outright (see below), so
--- a save, or an agent's write-back through the file watcher, is followed by a
--- fresh walk instead of a stale list.
-local FILE_LIST_WINDOW_MS = 250
+-- The scans one switch repeats, and what each costs over this vault: the
+-- agenda file list -- the recursive `**` walk behind `~/org/**/*.org`, ~10 ms
+-- -- the parsed files themselves (`org.files.agenda_files`, a `files.get` per
+-- path, ~9 ms) and the tag definitions of those files (`org.tags.match_groups`,
+-- ~1.3 ms). A render asks for them again and again: every tag-matching block
+-- compiles its match (which reads the tag groups), every block carrying no
+-- `files` of its own falls back to the whole list, and the whole-list TODO
+-- command reads the list's keywords. The board asks five or six times, so the
+-- three scans together were 50-70 ms of a 70-160 ms switch -- view 5's ~105 ms
+-- was almost all of it -- for an answer that cannot have changed between two
+-- calls of the same render. Each is read once and kept, and what makes a new
+-- switch read them again is the two things below: the write and edit events
+-- that mark the files dirty, and a key over their text. Nothing is a window --
+-- while neither says the files changed, there is nothing to re-read.
+local cache_gen = 0 -- bumped on every drop
 
--- The cached walk (`pattern key` -> `{ at, paths }`), held at module level so
--- the tree watcher can drop it (M.drop_file_lists below) without going back
--- through the wrapped function.
-local file_lists = {}
+local file_lists = {} -- pattern key -> string[] paths (the walk)
+local file_list -- { key, files } the parsed agenda files, at that key
+local tag_groups -- { key, groups } the tag groups, at that key
 
---- Drop the cached agenda file list: the org tree changed on disk, so the next
---- walk must see it. A file added or removed by another process is not a write
---- of a loaded buffer, so nothing else would have cleared the cache
---- (helpers/org/ai.lua calls this from the file watcher's callback).
-function M.drop_file_lists()
-  file_lists = {}
+--- A cheap key over the text of every agenda file: the changedtick of the
+--- buffer that holds it, else the file's mtime, nanoseconds and size -- what
+--- `org.files` keys its own caches on (`files.get` and `get_buffer`), so the
+--- key cannot drift from the parses the caches below hold. One pass over the
+--- buffers and a stat per file, ~0.2 ms over this vault however many files it
+--- holds; `org.files.agenda_files` re-runs `files.get` per path, 9 ms, which is
+--- what the caches save. A buffer whose name is not the file's path (opened
+--- through a symlink) is missed here -- it is the event drops below, not this
+--- key, that catch it.
+---@param paths string[]
+---@return string
+local function content_key(paths)
+  local ticks = {}
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buf) then
+      local name = vim.api.nvim_buf_get_name(buf)
+      if name ~= '' then
+        ticks[vim.fs.normalize(name)] = vim.api.nvim_buf_get_changedtick(buf)
+      end
+    end
+  end
+  local parts = {}
+  for i, p in ipairs(paths) do
+    local tick = ticks[p]
+    if tick then
+      parts[i] = p .. '=' .. tick
+    else
+      local st = vim.uv.fs_stat(p)
+      parts[i] = st and (p .. '=' .. st.mtime.sec .. '.' .. st.mtime.nsec .. ':' .. st.size) or (p .. '=-')
+    end
+  end
+  return table.concat(parts, '\n')
 end
 
--- Cache the agenda file list (`org.utils.glob_org_files`) for that window, and
--- drop it on `org.files.invalidate` -- the call every org write makes, its own
--- BufWritePost hook and the ones the capture, refile and save paths run --
--- so the files a write adds or removes are seen at the next render.
-local function setup_file_list_cache()
+--- Drop everything read off the org files: the walk, the parsed files, the tag
+--- groups. The org tree changed, so the next switch must read them again. A file
+--- added or removed by another process is not a write of a loaded buffer, so
+--- nothing else would have cleared the caches (helpers/org/ai.lua calls this
+--- from the file watcher's callback).
+function M.drop_file_lists()
+  cache_gen = cache_gen + 1
+  file_lists, file_list, tag_groups = {}, nil, nil
+end
+
+-- Cache the three scans, each dropped by M.drop_file_lists and the write and
+-- edit hooks below, and the two content caches re-checked against the files'
+-- own text key, so a switch of unchanged files reads nothing.
+local function setup_file_caches()
   local utils = require 'org.utils'
   local files = require 'org.files'
+  local tags = require 'org.tags'
+
+  --- The files a pattern list names (`org.utils.glob_org_files`), the walk held
+  --- by pattern list. The cwd is part of the answer: a relative pattern
+  --- resolves against it.
   local walk = utils.glob_org_files
   utils.glob_org_files = function(patterns)
-    -- the cwd is part of the answer: a relative pattern resolves against it
     local key = vim.fn.getcwd() .. '\0' .. (type(patterns) == 'string' and patterns or table.concat(patterns or {}, '\0'))
-    local cached = file_lists[key]
-    local now = (vim.uv or vim.loop).hrtime() / 1e6
-    if not (cached and now - cached.at < FILE_LIST_WINDOW_MS) then
-      cached = { at = now, paths = walk(patterns) }
-      file_lists[key] = cached
+    local paths = file_lists[key]
+    if not paths then
+      paths = walk(patterns)
+      file_lists[key] = paths
     end
     -- a copy, the way the walk itself handed back a fresh list: a caller is
     -- free to grow or reorder what it gets (the search view's extra files,
     -- files_for's archive files) without writing into the cache behind it
     local out = {}
-    for i, p in ipairs(cached.paths) do
+    for i, p in ipairs(paths) do
       out[i] = p
     end
     return out
   end
+
+  --- The parsed agenda files, at the key their text made when they were read,
+  --- and the tag groups read off the same text. Both are re-read when the key
+  --- moves -- an edit (a buffer's changedtick) or a write of any file in the
+  --- list (its stat) -- which is what makes them current without any event
+  --- having to fire: a plugin's edit of a buffer no window shows, a save, a
+  --- write from another process under the watcher, all move it.
+  local agenda_files = files.agenda_files
+  local function files_at_key()
+    local paths = require('org.files').agenda_file_paths()
+    local key = content_key(paths)
+    local c = file_list
+    if not (c and c.key == key) then
+      c = { key = key, files = agenda_files() }
+      file_list = c
+    end
+    return c
+  end
+
+  files.agenda_files = function(extra)
+    if extra ~= nil then
+      return agenda_files(extra)
+    end
+    -- a copy: agenda_files_with_current inserts the current buffer into what it
+    -- is handed
+    local cached = files_at_key().files
+    local out = {}
+    for i, f in ipairs(cached) do
+      out[i] = f
+    end
+    return out
+  end
+
+  --- The tag groups of the agenda files (`org.tags.match_groups`), read by every
+  --- tag-matching block's match compile. The current buffer's own `#+TAGS:` is
+  --- part of the answer (match_groups reads it when it is an org buffer), so the
+  --- buffer and its changedtick key the entry alongside the files' key.
+  local match_groups = tags.match_groups
+  tags.match_groups = function()
+    if not require('org.config').opts.group_tags then
+      return match_groups()
+    end
+    local buf = vim.api.nvim_get_current_buf()
+    local here = ''
+    if vim.bo[buf].filetype == 'org' then
+      here = vim.api.nvim_buf_get_name(buf) .. ':' .. vim.api.nvim_buf_get_changedtick(buf)
+    end
+    local key = files_at_key().key .. '\0' .. here
+    local c = tag_groups
+    if not (c and c.key == key) then
+      c = { key = key, groups = match_groups() }
+      tag_groups = c
+    end
+    return c.groups
+  end
+
   local invalidate = files.invalidate
   files.invalidate = function(...)
-    file_lists = {}
+    M.drop_file_lists()
     return invalidate(...)
   end
+
+  vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'TextChangedP', 'BufModifiedSet' }, {
+    pattern = '*.org',
+    callback = function()
+      M.drop_file_lists()
+    end,
+    desc = 'org: drop the caches read off the org files',
+  })
 end
 
 -- Splice `text` into the builder at `pos` (1-based, before the line already
@@ -1473,7 +1574,7 @@ local function setup_capture_refresh()
 end
 
 function M.setup()
-  setup_file_list_cache()
+  setup_file_caches()
   setup_toggle_done()
   setup_redo_stay()
   setup_one_key()
