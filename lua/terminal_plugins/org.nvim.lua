@@ -49,8 +49,8 @@
 --                   (the group view's sections)
 --   wayfinder.lua   a wayfinder ticket kind (`wf_<type>`, or the longer
 --                   `wayfinder_<type>` of the first maps) drawn as its icon
---                   on the entry line, in the tag column a line ends with,
---                   and the glyph the `5` view's kind sections are headed by
+--                   on the entry line, right before the state keyword, and
+--                   the glyph the `5` view's kind sections are headed by
 --   ai.lua          <leader>ai on an entry launches an `omp` instance for
 --                   the ticket in a tmux pane and follows its write-back
 --                   (watch.lua reloads the changed org files live; the
@@ -212,9 +212,9 @@ end
 -- all carry the project's.
 --
 -- The header opens with the kind's icon (helpers/org/wayfinder.lua), the
--- same glyph its tickets' lines carry where their label sat: the section is
--- the legend of the icons, the one place a kind is named in words beside
--- them.
+-- same glyph its tickets' lines carry before their state keyword: the
+-- section is the legend of the icons, the one place a kind is named in words
+-- beside them.
 ---@param kind string research / prototype / grilling / task
 ---@return table
 local function wf_type_section(kind)
