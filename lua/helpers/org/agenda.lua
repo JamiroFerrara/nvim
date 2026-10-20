@@ -969,6 +969,36 @@ local function setup_board_sections()
         if b.block_starts and #b.block_starts > 0 then
           table.remove(b.block_starts)
         end
+        -- ...and the block separator the view wrote above the header goes
+        -- with it (render.view: a blank line, then the rule, before every
+        -- block but the first): a section that is not drawn must leave no
+        -- trace. Without this a view whose blocks are mostly `hide_empty` --
+        -- the wayfinder view's kind sections, one per ticket kind, of which
+        -- a project uses one or two -- draws a column of bare rules between
+        -- the two sections that do hold something. The line is recognised
+        -- by the separator's own highlight, so the rule under a board
+        -- section's header (same glyphs) is never mistaken for one.
+        local rule_row = #b.lines - 1
+        local is_separator = false
+        for _, h in ipairs(b.hls) do
+          if h[1] == rule_row and h[4] == 'OrgAgendaBlockSeparator' then
+            is_separator = true
+            break
+          end
+        end
+        if is_separator then
+          table.remove(b.lines)
+          if b.lines[#b.lines] == '' then
+            table.remove(b.lines)
+          end
+          local hls = {}
+          for _, h in ipairs(b.hls) do
+            if h[1] < #b.lines then
+              hls[#hls + 1] = h
+            end
+          end
+          b.hls = hls
+        end
         return true
       end
       -- On the board the between-block separator is off (setup_board_view),
