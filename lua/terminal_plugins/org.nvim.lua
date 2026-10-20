@@ -289,12 +289,13 @@ return {
       -- picker) reads one project, so the tags and priorities the ticket
       -- lines already carry are only visible here. Reached from the
       -- dispatcher menu or `:Org agenda <key>`, which give the whole set;
-      -- the agenda buffer's 1 / 2 / 3 / 4 (helpers/org/agenda.lua) open
+      -- the agenda buffer's 1 / 2 / 3 / 4 / 5 (helpers/org/agenda.lua) open
       -- them, 1 global, 2 the whole file of the cwd's project (the `g` list,
       -- its entries split per open keyword), and the rest
       -- narrowed to cwd's project. `°` (helpers/org/project.lua) opens
       -- the `w` board the same scoped way, so it is an alias for the `3`
-      -- key. The keys avoid the built-in
+      -- key; `5` is the wayfinder map of the cwd project (`y` below). The
+      -- keys avoid the built-in
       -- dispatcher ones (a t T m M s S n # / < > e * ?), so they add rows
       -- instead of replacing. Blocks are `tags_todo`
       -- (tags/property match, TODO entries only) -- the `/!` trailing the
@@ -314,7 +315,8 @@ return {
       -- changes state. A section holding nothing is not drawn -- the "In
       -- progress" and Done blocks included -- and the sections are told
       -- apart by a blank line, not a rule (a rule only under a section's
-      -- header); `p` the open A/B priorities. A block's
+      -- header); `p` the open A/B priorities; `y` the wayfinder map, as the
+      -- charted tree. A block's
       -- `header` labels the group; a composite command shows its blocks one
       -- after the other, in this order.
       custom_commands = {
@@ -409,6 +411,56 @@ return {
           types = {
             { type = 'tags_todo', match = 'PRIORITY="A"/!', header = 'Priority A, open', skip = unprioritized },
             { type = 'tags_todo', match = 'PRIORITY="B"/!', header = 'Priority B, open', skip = unprioritized },
+          },
+        },
+        -- Key `5`'s view: the wayfinder map of the cwd project, as the tree
+        -- it was charted as -- a ticket nested under another because that
+        -- question waits on this one -- drawn with the same tree the rest of
+        -- the TODO views use (helpers/org/tree.lua), folded at level 1, so
+        -- the maps are what opens and <Tab> walks down a route.
+        --
+        -- One block, not two. The frontier -- the tickets the wayfinder
+        -- tracker would show as takeable: open, with nothing open under them
+        -- -- is the LEAVES of this tree, and it cannot be listed as a
+        -- section of its own: the tree helper hides a listed entry that sits
+        -- under a TODO ancestor from every block but the one its ancestor is
+        -- listed in (`is_subtask`, helpers/org/tree.lua), so a block of
+        -- leaves alone renders empty. The fold state carries the same
+        -- information: a node with a `… (N)` count still waits on its
+        -- subtree, and an open entry with no count is what a session can
+        -- claim now.
+        --
+        -- The one `wf` tag goes on the map and on every ticket, so one match
+        -- lists a whole expedition; the map additionally carries `wf_map` and
+        -- each ticket its `wf_<type>` -- `grilling`, `research`, `prototype`,
+        -- `task`, the labels the wayfinder skill's own tracker gives a ticket
+        -- (its `org-tracker.md`) -- so a line says which kind it is. The
+        -- match is the tag-regexp form (`|org-match-syntax|`):
+        -- `{^wf}|{^wayfinder}` takes every `wf`-prefixed tag, and the longer
+        -- `wayfinder_<type>` names of the maps charted before the labels were
+        -- shortened with it.
+        y = {
+          description = 'Wayfinder: the charted map (its open leaves are takeable)',
+          types = {
+            -- The map and every open ticket under it, in file order: the
+            -- tree is read as it was charted, parents before children,
+            -- where every other strategy would reorder siblings by a
+            -- property no ticket of a map is charted by. `category-keep` is
+            -- that no-op inside one project file -- every entry of the block
+            -- carries the same category; org.nvim's default for a block
+            -- whose `sorting` is nil would sort by urgency -- and
+            -- `super_groups = false` keeps the block one run, since the tree
+            -- nests an entry's listed sublevels only within a run. A DONE
+            -- ticket leaves the tree (`/!`): the way it stops blocking its
+            -- parent. The header always shows, so an empty view says the
+            -- project has no map yet.
+            {
+              type = 'tags_todo',
+              match = '{^wf}|{^wayfinder}/!',
+              header = 'Wayfinder map, open',
+              super_groups = false,
+              sorting = { 'category-keep' },
+            },
           },
         },
       },
@@ -512,6 +564,35 @@ return {
     -- 630ef07^): TODO NEXT PEND TEST WARN | DONE. The project files use
     -- WARN/PEND/NEXT/TEST, which were plain text before.
     todo_keywords = TODO_KEYWORDS,
+    -- Tag inheritance (org-use-tag-inheritance) stays on, and the plain `wf`
+    -- tag is left to inherit: everything charted under a map is on that map,
+    -- so one match lists a whole expedition (the `y` view below matches
+    -- `{^wf}|{^wayfinder}`), and a ticket captured inside a map -- `c` /
+    -- `<leader>aC`, the `^` Task capture with the map's headline as target --
+    -- gets the tag written onto it by helpers/org/capture.lua
+    -- (`capture_tags` appends what the destination inherits).
+    -- The labels are the exception, and this is what keeps them labels:
+    -- `wf_map` names the map itself -- inherited, org would label every
+    -- ticket with it, and a line of the `y` view could not say whether it is
+    -- the map or one of its tickets -- and `wf_<type>` names the headline
+    -- whose type it is, so a ticket's own children are not all of its type.
+    -- An exclusion changes only inheritance: every headline that carries the
+    -- tag itself still matches it, which is how the `y` view tells the map
+    -- from its tickets. The `wayfinder_<type>` names are the labels' longer
+    -- spelling from before they were shortened, kept here so the first maps
+    -- -- charted with them -- label their tickets the same way.
+    tags_exclude_from_inheritance = {
+      'wf_map',
+      'wf_grilling',
+      'wf_research',
+      'wf_prototype',
+      'wf_task',
+      'wayfinder_map',
+      'wayfinder_grilling',
+      'wayfinder_research',
+      'wayfinder_prototype',
+      'wayfinder_task',
+    },
     -- Refile targets. Left empty, `<prefix>r` only offers the level-1
     -- headlines of the buffer it starts in -- in refile.org that is just
     -- "Tasks", which is useless for sorting the inbox. Project files open

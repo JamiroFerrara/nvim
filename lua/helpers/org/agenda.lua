@@ -677,7 +677,9 @@ end
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
 -- TODOs across every project, 2 the group view -- the whole project file,
 -- split by state, not just the headline cwd's project resolved to -- 3 the
--- board (in progress, bugs, features, chores, untagged, done), 4 priorities.
+-- board (in progress, bugs, features, chores, untagged, done), 4 priorities,
+-- 5 the wayfinder map of the cwd project, drawn as its charted tree (the `y`
+-- command, lua/terminal_plugins/org.nvim.lua).
 -- Buffer-local to orgagenda -- the TODO view renders into the same buffer,
 -- so it switches from there too -- which is why the keys are the plain
 -- digits and not the `<leader>o` ones: a count typed in the agenda
@@ -698,13 +700,13 @@ end
 -- shows, under the file's own name (open_custom_view heads a file-scope
 -- block with it). What the old division -- a section per project inside the
 -- file -- said, the entry lines now say themselves: the category column
--- carries the sub-project's name (helpers/org/project.lua item_name). 3 and
--- 4 (and `°`, which opens the same `w` board through M.custom_view) are
+-- carries the sub-project's name (helpers/org/project.lua item_name). 3, 4
+-- and 5 (and `°`, which opens the same `w` board through M.custom_view) are
 -- scoped to the project of the working directory the way `°` was: each
 -- block's `files` becomes the project's file and a headline claim adds its
 -- subtree restriction. A cwd that names no project -- or one whose file
 -- does not exist yet -- opens the full view, the same one the dispatcher
--- menu's `w` / `p` give. Resolution runs per key press (project.current
+-- menu's `w` / `p` / `y` give. Resolution runs per key press (project.current
 -- reads getcwd, or the job cwd of a terminal buffer), so a `cd` moves the
 -- scope with it. 1 is global: it never scopes, so it lists the open TODOs
 -- of every project.
@@ -714,6 +716,7 @@ local CUSTOM_VIEWS = {
   { '2', 'g', 'the whole project file, by state', 'file' },
   { '3', 'w', 'in progress, bugs, features, chores, untagged and done', 'project' },
   { '4', 'p', 'open A/B priorities', 'project' },
+  { '5', 'y', 'wayfinder: the charted map, open leaves takeable', 'project' },
 }
 
 -- The group headers the custom views draw: the global super_agenda groups

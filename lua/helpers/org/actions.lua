@@ -44,6 +44,7 @@ local CUSTOM_VIEWS = {
   { '2', 'g', 'file' },
   { '3', 'w', 'project' },
   { '4', 'p', 'project' },
+  { '5', 'y', 'project' },
 }
 
 --- One picker item: the label, a `Comment`-highlighted suffix naming the
