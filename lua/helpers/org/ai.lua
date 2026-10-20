@@ -3,13 +3,22 @@
 -- :ID: and file. Over a Visual selection it is that same launch applied to
 -- every entry the selection covers (M.launch_range), one instance each.
 --
--- A group node -- a headline with at least one child in an open TODO state --
--- is a container, not a ticket of its own: the launch fans out to its
--- subnodes in todo (expand_target), one instance each, and the container
--- itself is stamped with nothing. The subnodes are the open children one
--- level down: a child ticket owns its own subtree, so no two instances ever
--- claim the same headline. A headline with no open child -- a leaf ticket
--- above all -- launches itself, exactly as before.
+-- A launch lands on what is takeable under the headline, not on the headline
+-- itself: the frontier -- the tickets open with nothing open below them
+-- (expand_target's `frontier`) -- because a ticket nested under another is
+-- blocked by it (skill://wayfinder/org-tracker.md: the vault has no
+-- dependency relationship of its own, so "where a ticket sits is its
+-- blocking, children first"). A headline with open work under it is
+-- therefore a container, not a ticket of its own: the launch walks down
+-- through it, past every open ticket still waiting on its own subtree, to
+-- the leaves that block them, one instance each, and the containers
+-- themselves are stamped with nothing. Launching the root of a charted chain
+-- starts the task at its bottom, and once that task is done the ticket above
+-- it holds nothing open below it in turn, so the next launch lands on that
+-- one -- the frontier climbing the chain as its leaves close. A headline
+-- with nothing open under it -- a leaf ticket above all, and the map of an
+-- expedition whose tickets are all closed -- launches itself, exactly as
+-- before.
 --
 -- In an open capture buffer the same key finishes the capture first -- the
 -- entry is filed at its template's destination and the target file written --
@@ -336,34 +345,62 @@ local function ticket_at_cursor(mutate)
   return ticket_at(bufnr, lnum, mutate)
 end
 
---- The headlines a launch on the entry at `lnum` of `bufnr` covers: the entry
---- itself, or -- when it is a group node -- its subnodes in todo, one ticket
---- each. A group node is a headline with at least one child in an open TODO
---- state: it groups the work under it, so launching it would stamp the
---- container and leave the subnodes unstamped, and the container's own
---- :ID: / NEXT / hand-back would describe nothing. The subnodes are the open
---- children, one level down: a child ticket owns its own subtree (a
---- `*** TODO` under it is worked as part of it), so no two instances ever
---- claim the same headline. A headline with no open child -- a leaf ticket
---- above all -- is launched itself.
+--- The takeable tickets under `hl`, in file order: the wayfinder frontier --
+--- open, with nothing open below them. A ticket's children are its blockers
+--- (skill://wayfinder/org-tracker.md: blocking is the nesting, children
+--- first), so a ticket is not takeable while its own subtree still holds
+--- open work: the walk descends into every such subtree -- `hl`'s child when
+--- that child has unfinished work, however deep the frontier sits -- and
+--- collects the open headlines that hold none, the leaves blocking
+--- everything above them. A headline that is no ticket (no keyword: a
+--- grouping line) is walked through, never collected, and a subtree of done
+--- tickets holds nothing to collect either. `hl` itself is no candidate: it
+--- is what is being launched, and expand_target falls back to it when the
+--- walk finds nothing.
+---@param hl org.Headline
+---@param out org.Headline[]
+local function frontier(hl, out)
+  for _, child in ipairs(hl.children) do
+    if child:has_undone_children() then
+      frontier(child, out)
+    elseif child:is_todo() then
+      out[#out + 1] = child
+    end
+  end
+end
+
+--- The headlines a launch on the entry at `lnum` of `bufnr` covers: the
+--- frontier below it (see `frontier`), one instance each, or the entry
+--- itself when it has nothing open under it. An entry with open work below
+--- it is a container, not a ticket of its own: launching its root would
+--- stamp the container, whose :ID: / NEXT / hand-back describe the whole
+--- subtree, while the ticket the run could work -- the leaf blocking it --
+--- stayed untouched. So a launch walks down to those leaves, which is what
+--- makes launching a charted chain start the task at its bottom; once that
+--- task is done the ticket above it has nothing open below it in turn, and
+--- the next launch lands on that one -- the frontier climbing the chain as
+--- its leaves close. A leaf ticket, and the map of an expedition whose
+--- tickets are all closed, has no frontier below it and is launched itself.
+--- The leaves are distinct headlines, so no two instances claim the same
+--- one.
 ---@param bufnr integer
 ---@param lnum integer
 ---@return { bufnr: integer, lnum: integer }[]
 local function expand_target(bufnr, lnum)
   local file = require('org.files').get_buffer(bufnr)
   local hl = file and file:headline_on(lnum)
-  local children = {}
+  local leaves = {}
   if hl then
-    for _, child in ipairs(hl.children) do
-      if child:is_todo() then
-        children[#children + 1] = { bufnr = bufnr, lnum = child.line }
-      end
-    end
+    frontier(hl, leaves)
   end
-  if #children > 0 then
-    return children
+  if #leaves == 0 then
+    return { { bufnr = bufnr, lnum = lnum } }
   end
-  return { { bufnr = bufnr, lnum = lnum } }
+  local targets = {}
+  for _, leaf in ipairs(leaves) do
+    targets[#targets + 1] = { bufnr = bufnr, lnum = leaf.line }
+  end
+  return targets
 end
 
 --- Run `git` in `root` — the rest of `args` its argv — without a shell.
@@ -936,7 +973,8 @@ local function launch_targets(targets)
 end
 
 --- Report a multi-ticket launch: one instance is the ordinary case and says
---- nothing, a fan-out (a group node, a Visual selection) is worth a line.
+--- nothing, a fan-out (a container's frontier, a Visual selection) is worth
+--- a line.
 ---@param launched integer
 local function notify_launched(launched)
   if launched > 1 then
@@ -947,9 +985,10 @@ end
 --- `<leader>ai` in an org or orgagenda buffer: commit the project's pending
 --- work (the revert point for the run), then start omp on the headline. In an
 --- open capture buffer the capture is finished first (target_at_cursor), so
---- the ticket is the entry just stored. On a group node -- a headline with
---- subnodes in todo -- the run fans out to those subnodes, one instance each
---- (expand_target), the container itself untouched.
+--- the ticket is the entry just stored. On a headline with open work under
+--- it -- a group node, the map of a live expedition -- the run fans out to
+--- the frontier below it, one instance each (expand_target), the containers
+--- themselves untouched.
 function M.launch()
   local bufnr, lnum = target_at_cursor(true)
   if not bufnr then
@@ -964,9 +1003,9 @@ end
 --- `lnum` of `bufnr` gets exactly what `<leader>ai` gives the headline at
 --- point -- its own :ID: / :OMP_SESSION: link, its NEXT state, its checkpoint
 --- and its own omp pane. Unlike the mapping, the headline is launched itself
---- and never fanned out to open children: the caller has already decided
---- which headline, and the text it wrote (a note) sits on that one. This is
---- what a note on a TEST entry triggers (helpers/org/notes.lua).
+--- and never fanned out to the frontier below it: the caller has already
+--- decided which headline, and the text it wrote (a note) sits on that one.
+--- This is what a note on a TEST entry triggers (helpers/org/notes.lua).
 ---@param bufnr integer
 ---@param lnum integer
 function M.launch_at(bufnr, lnum)
@@ -977,11 +1016,13 @@ end
 --- `<leader>ai` over a Visual selection: the Visual-mode shape of M.launch.
 --- Every entry the selection covers is launched exactly as it would be on
 --- its own — its own :ID: / :OMP_SESSION: link, its NEXT state, its
---- checkpoint and its own omp pane; a selected group node fans out to its
---- subnodes in todo the same way. The entries are launched bottom-up, so the
+--- checkpoint and its own omp pane; a selected container fans out to the
+--- frontier below it the same way (so a covered ancestor and a covered
+--- descendant both resolve to the descendant's own ticket, which the `seen`
+--- set collapses into one). The entries are launched bottom-up, so the
 --- property drawer the launcher writes on one entry cannot shift the lines of
---- another still to come, and a headline reached twice (a group and one of
---- its own children both covered) is still one ticket.
+--- another still to come, and a headline reached twice (a container and one
+--- of its own leaves both covered) is still one ticket.
 function M.launch_range()
   local first, last = take_visual()
   local targets = targets_in_range(first, last)

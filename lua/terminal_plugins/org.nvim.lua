@@ -55,8 +55,10 @@
 --                   the ticket in a tmux pane and follows its write-back
 --                   (watch.lua reloads the changed org files live; the
 --                   FocusGained autocmd covers a change made while nvim
---                   was unfocused). A group node -- a headline with
---                   subnodes in todo -- fans out to those subnodes, one
+--                   was unfocused). A headline with open work under it --
+--                   a group node, a wayfinder map -- fans out to the
+--                   frontier below it instead of the container itself: the
+--                   tickets open with nothing open below them, one
 --                   instance each. In an open capture buffer the same key
 --                   files the capture at its destination first and launches
 --                   on the entry it stored

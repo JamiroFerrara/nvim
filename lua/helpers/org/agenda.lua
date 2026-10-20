@@ -1256,10 +1256,12 @@ end
 -- <leader>ai on an entry launches an `omp` instance for that ticket in a
 -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp terminal
 -- key in the agenda and in the TODO view, which renders into the same
--- buffer. Buffer-local, so it lands after org.nvim's own mappings. A group
--- node -- a headline with subnodes in todo -- launches those subnodes, one
--- instance each, instead of the container itself; a Visual selection
--- launches every entry the selection covers, the same way (launch_range).
+-- buffer. Buffer-local, so it lands after org.nvim's own mappings. On a
+-- headline with open work under it -- a group node, a wayfinder map -- it
+-- launches the frontier below it instead of the container itself: the
+-- tickets open with nothing open below them, one instance each; a Visual
+-- selection launches every entry the selection covers, the same way
+-- (launch_range).
 -- <leader>aj focuses the pane of that ticket's already-running instance,
 -- resuming its session when none is running.
 local function setup_ai()
