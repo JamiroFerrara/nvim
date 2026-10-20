@@ -88,13 +88,20 @@
 -- the agent directory, so a later launch `--continue`s that ticket's original
 -- session — full context — instead of starting a fresh one.
 --
--- The tree moves up from there. A ticket with a ticket above it is offered
--- the climb at the end of its run (M.climb_up): the ticket it hangs under is
--- launched when that run closed the last thing open below it. A frontier
--- launched together therefore does not race for the parent -- each run offers
--- the climb and only the last one to finish finds it takeable, so the duty
--- lands on that one by construction, and the run it starts is the ordinary
--- launch of the parent.
+-- The tree moves up from there, and it rises a level at a time. A ticket with
+-- a ticket above it is offered the climb at the end of its run (M.climb_up):
+-- the ordinary launch applied to the headline it hangs under, narrowed to the
+-- tickets no run has touched yet (`TODO`). So the climb starts what the level
+-- above leaves takeable -- that headline itself when nothing under it is open,
+-- and every ticket left open and takeable under it otherwise (a sibling this
+-- run did not close, a ticket charted into that subtree since the level was
+-- last launched) -- one instance each, where the single launch it replaces
+-- took only the one. A ticket a run already took is left where it stands:
+-- `NEXT` is a run on it, `TEST` a change awaiting validation, `PEND` the
+-- user's, `WARN` a failure. That is also what keeps a frontier launched
+-- together from racing for the parent: the leaves still in flight are `NEXT`,
+-- so the run that finds untouched work left below the parent is the last one
+-- to finish, and the climb starts there.
 --
 -- The run ends by killing its own pane. omp runs interactively, so the user
 -- watches the ticket's TUI in the pane; an interactive omp then waits at its
@@ -440,35 +447,45 @@ local function frontier(hl, out)
   end
 end
 
---- The headlines a launch on the entry at `lnum` of `bufnr` covers: the
---- frontier below it (see `frontier`), one instance each, or the entry
---- itself when it has nothing open under it. An entry with open work below
---- it is a container, not a ticket of its own: launching its root would
---- stamp the container, whose :ID: / NEXT / hand-back describe the whole
---- subtree, while the ticket the run could work -- the leaf blocking it --
---- stayed untouched. So a launch walks down to those leaves, which is what
---- makes launching a charted chain start the task at its bottom; once that
---- task is done the ticket above it has nothing open below it in turn, and
---- the next launch lands on that one -- the frontier climbing the chain as
---- its leaves close. A leaf ticket, and the map of an expedition whose
---- tickets are all closed, has no frontier below it and is launched itself.
---- The leaves are distinct headlines, so no two instances claim the same
---- one.
+--- The headlines a launch on `hl` covers: the frontier below it (see
+--- `frontier`), one instance each, or `hl` itself when it has nothing open
+--- under it. A headline with open work below it is a container, not a ticket
+--- of its own: launching its root would stamp the container, whose :ID: /
+--- NEXT / hand-back describe the whole subtree, while the ticket the run
+--- could work -- the leaf blocking it -- stayed untouched. So a launch walks
+--- down to those leaves, which is what makes launching a charted chain start
+--- the task at its bottom; once that task is done the ticket above it has
+--- nothing open below it in turn, and the next launch lands on that one --
+--- the frontier climbing the chain as its leaves close. A leaf ticket, and
+--- the map of an expedition whose tickets are all closed, has no frontier
+--- below it and is launched itself. The leaves are distinct headlines, so no
+--- two instances claim the same one.
+---@param hl org.Headline
+---@return org.Headline[]
+local function expand_headline(hl)
+  local leaves = {}
+  frontier(hl, leaves)
+  if #leaves == 0 then
+    return { hl }
+  end
+  return leaves
+end
+
+--- The same expansion as { bufnr, lnum } in the order the headlines appear,
+--- for a launch that has an entry rather than its headline in hand: the entry
+--- at `lnum` of `bufnr` is `expand_headline`'d, and an entry with no headline
+--- under the cursor is passed through unchanged.
 ---@param bufnr integer
 ---@param lnum integer
 ---@return { bufnr: integer, lnum: integer }[]
 local function expand_target(bufnr, lnum)
   local file = require('org.files').get_buffer(bufnr)
   local hl = file and file:headline_on(lnum)
-  local leaves = {}
-  if hl then
-    frontier(hl, leaves)
-  end
-  if #leaves == 0 then
+  if not hl then
     return { { bufnr = bufnr, lnum = lnum } }
   end
   local targets = {}
-  for _, leaf in ipairs(leaves) do
+  for _, leaf in ipairs(expand_headline(hl)) do
     targets[#targets + 1] = { bufnr = bufnr, lnum = leaf.line }
   end
   return targets
@@ -1058,19 +1075,28 @@ function M.launch_at(bufnr, lnum)
   M.sync()
 end
 
---- The climb up the tree, offered to every run at its end: the ticket above
---- `id` in `file`, launched when this run closed the last thing open under
---- it. A leaf queued by launching its container is one of a frontier
---- (expand_target), and the tree only moves on once every leaf of that
---- frontier is closed -- so the duty is not split between them but given to
---- the last one to finish: each run offers the climb, and the one that finds
---- its parent takeable takes it. Takeable here is the frontier's own reading,
---- read off the file at that moment: the parent is still open, and nothing is
---- open below it (org's `has_undone_children`; a sibling still in flight
---- leaves it blocked, and that sibling's own run makes the climb). The launch
---- is the ordinary one -- :ID: / :OMP_SESSION: / :OMP_LAUNCH:, the claim, the project
---- checkpoint, its own pane -- and, the parent having nothing open below it,
---- it lands on the parent itself. A ticket whose parent is no ticket (the
+--- The climb up the tree, offered to every run at its end: the ordinary
+--- launch applied to the ticket `id` hangs under, once this run closed the
+--- last thing open below it. A leaf queued by launching its container is one
+--- of a frontier (expand_target), and the tree only moves on once every leaf
+--- of that frontier is closed -- so the duty is not split between them but
+--- given to the last one to finish: each run offers the climb, and the one
+--- that finds the level above it takeable takes it.
+---
+--- The climb is a launch, not one headline: it covers what `expand_headline`
+--- reads off the file at that moment -- the parent itself when nothing is
+--- open below it, and the tickets left open and takeable under the parent
+--- otherwise (a sibling this run did not close, a ticket charted into that
+--- subtree since the level was last launched) -- so a level that rises with
+--- several tickets takeable at once starts all of them, one instance each,
+--- exactly as launching the parent would. What no run has touched is what it
+--- starts: the tickets are narrowed to `TODO`, so a sibling a run already
+--- claimed (`NEXT`), one awaiting the user's validation (`TEST`), one parked
+--- on the user (`PEND`) or one that failed (`WARN`) is left alone -- that
+--- keeps the duty on the last leaf to finish, which is the only run whose
+--- climb finds untouched work left to start. The launch is the ordinary one
+--- -- :ID: / :OMP_SESSION: / :OMP_LAUNCH:, the claim, the project checkpoint,
+--- its own pane, one per ticket. A ticket whose parent is no ticket (the
 --- project's own headline, a grouping line) has nowhere to climb to and says
 --- so.
 ---
@@ -1109,15 +1135,36 @@ function M.climb_up(file, id)
     say('nothing above ' .. hl:plain_title() .. ' to climb to')
     return
   end
-  if parent:has_undone_children() then
-    say(parent:plain_title() .. ' still has open work below it; the last leaf climbs')
+
+  -- the level above, as a launch on the parent would cover it, narrowed to
+  -- the tickets no run has touched (the launcher's own reading of untouched:
+  -- CLAIMABLE): the parent when it is free, the untouched tickets left
+  -- takeable below it otherwise
+  local targets, titles = {}, {}
+  for _, cand in ipairs(expand_headline(parent)) do
+    if CLAIMABLE[cand.todo] then
+      targets[#targets + 1] = { bufnr = buf, lnum = cand.line }
+      titles[#titles + 1] = cand:plain_title()
+    end
+  end
+
+  if #targets == 0 then
+    if parent:has_undone_children() then
+      say(parent:plain_title() .. ' has no untouched ticket left below it; the one that closed made the climb')
+    else
+      say(parent:plain_title() .. ' is not takeable (' .. (parent.todo or 'no keyword') .. ')')
+    end
     return
   end
-  local launched = launch_targets { { bufnr = buf, lnum = parent.line } }
-  if launched > 0 then
-    say('climbed to ' .. parent:plain_title())
+
+  local launched = launch_targets(targets)
+  local list = table.concat(titles, ', ')
+  if launched == 0 then
+    say('could not launch ' .. list .. ' (see the notification)')
+  elseif launched == 1 then
+    say('climbed to ' .. list)
   else
-    say('could not launch ' .. parent:plain_title() .. ' (see the notification)')
+    say(('climbed to %d tickets at or under %s: %s'):format(launched, parent:plain_title(), list))
   end
 end
 
