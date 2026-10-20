@@ -22,7 +22,9 @@
 --                   TODO view's checkbox line takes `<CR>` for the toggle,
 --                   helpers/org/tree.lua) and
 --                   the `L` preview pane beside the view, the fold state
---                   after entering an entry from the list, and the insert
+--                   after entering an entry from the list, the category
+--                   column of the entry lists (widened to the longest
+--                   category of the block), and the insert
 --                   mode a terminal window would leave in the agenda
 --   tagging.lua     one-key tag/priority toggles (B/F/C, <M-a>/<M-b>/<M-c>)
 --                   in org buffers and, via agenda.lua, in the view
@@ -437,12 +439,20 @@ return {
       -- recent ("today 15:53", "3d ago") and as "9 Oct" past a week.
       -- The same date is what the group view (`2`) sorts its sections by
       -- (`changed-down`, registered by that module's setup).
-      -- `%?-13(...)` is the `%(lua expression)` element: an entry with no
-      -- timestamp drops the field instead of leaving a gap. The other kinds
+      -- `%-13(...)` is the `%(lua expression)` element, a fixed 13-wide
+      -- column: an entry with no timestamp leaves it blank rather than
+      -- dropping it, so its keyword still lands where the dated entries'
+      -- ones do. The other kinds
       -- (agenda, tags, search) keep their default formats -- a table here
       -- merges into the defaults.
+      -- The `12` of the category column is a floor, not the column: for the
+      -- kinds that list entries (todo, tags, search) helpers/org/agenda.lua
+      -- widens it to the longest category the block shows, so a project
+      -- whose name overflows the column -- "Maydaysound.com", the norm --
+      -- does not push its own line's date, keyword and title to the right of
+      -- the other lines'.
       prefix_format = {
-        todo = ' %i %-12:c %?-13(require("helpers.org.changed").label(hl))',
+        todo = ' %i %-12:c %-13(require("helpers.org.changed").label(hl))',
       },
       -- Emacs' org-agenda-show-outline-path: echo the outline path of the
       -- entry at point on every cursor move. Off here, because org.nvim

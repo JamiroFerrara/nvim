@@ -12,7 +12,10 @@
 -- the insert mode a terminal window would
 -- otherwise leave in the agenda, the re-render after a capture filed from
 -- it (with the subtree range of a headline project's `°` view kept in step,
--- else the entry it just wrote falls outside it), the `§` / `°` launch keys
+-- else the entry it just wrote falls outside it), the category column of
+-- the entry lists -- its width measured off the entries a block shows, so
+-- long project names do not push their own line's date, keyword and title
+-- right of the neighbours (setup_category_width) --, the `§` / `°` launch keys
 -- hiding the view they already opened (toggle_view), and the 1..3 switch
 -- between the custom views of
 -- agenda.custom_commands. All of them plug into modules
@@ -1130,6 +1133,123 @@ local function setup_item_category()
   end)
 end
 
+-- The category column is a fixed width -- the `%-12:c` of the prefix format
+-- -- so a project whose name is longer than that (the norm: "Maydaysound.com"
+-- is 15) overflowed it and pushed the changed-date, the keyword and the
+-- title of its own line to the right of the lines around it: one column of
+-- the view, as many widths as there are category lengths. The list is aligned
+-- by measuring the entries a block actually shows -- the widest category
+-- among them decides the column, and every line of that block pads to it.
+--
+-- `render.apply_limits` is the one hook that sees a list block's entries
+-- after the filters, the sort and the limits -- the list the lines are then
+-- built from -- and the ctx it is handed is the one those lines carry
+-- (`b.line_ctx`, the context org-agenda-change-all-lines re-formats a line
+-- with), so the width is recorded there and read back per line by
+-- `render.item_parts` through the format `render.prefix_format` builds -- the
+-- one M.prefix compiles: the width goes into the format's category spec, the
+-- rest of the format (the changed-date column, a `%(lua expression)`) is left
+-- alone. The context of the line being built is kept in `active`, because
+-- M.prefix -- the call inside item_parts -- is passed the kind alone; the
+-- tree (helpers/org/tree.lua) passes its own context to `render.prefix`
+-- explicitly, since the prefix it trims has to be the one the line carries.
+--
+-- An empty category draws nothing whatever the width (fmt_width skips an
+-- empty field), so such a line cannot be aligned and is left as it is. The
+-- configured width is a floor: a block whose widest category is shorter than
+-- the format asks for keeps the format's column, so a small project's view
+-- reads as it did.
+local function setup_category_width()
+  require('org.lazy').on_load('org.agenda.render', 'item_category_width', function(render)
+    local prefix_format = render.prefix_format
+    local item_parts = render.item_parts
+    local prefix = render.prefix
+    local apply_limits = render.apply_limits
+    -- the kinds whose entries carry the category column; the day agenda's
+    -- grid lines keep the format they always had
+    local KINDS = { todo = true, tags = true, search = true }
+    -- the category spec of a prefix format: `%c`, with its optional `?`, its
+    -- width, its precision, and the separator that follows the category (`:`
+    -- in `%-12:c`) -- the field's padding covers the separator too
+    local SPEC = '%%(%??)([-+]?[%d]*)([%.]?[%d]*)([ .;,:!?=|/<>]?)c'
+    -- the context of the line being built; M.prefix gets the kind alone
+    local active
+
+    --- The separator the format puts after the category.
+    local function cat_sep(fmt)
+      local _, _, _, sep = fmt:match(SPEC)
+      return sep or ''
+    end
+
+    --- The width the format asks the category column to have.
+    local function cat_width(fmt)
+      local _, w = fmt:match(SPEC)
+      return tonumber((w or ''):match '^[-+]?(%d+)' or '') or 0
+    end
+
+    --- The category the line will carry: the name of the project a headline
+    --- claim names, the override item_parts applies around the build.
+    local function category_of(item)
+      return require('helpers.org.project').item_name(item.headline) or item.category or ''
+    end
+
+    --- Run `fn` with `ctx` the context of the line being built, so the format
+    --- the prefix is compiled from carries its width.
+    local function with_context(ctx, fn)
+      if not ctx then
+        return fn()
+      end
+      local prev = active
+      active = ctx
+      local ok, out = pcall(fn)
+      active = prev
+      if not ok then
+        error(out, 0)
+      end
+      return out
+    end
+
+    render.prefix_format = function(kind)
+      local fmt = prefix_format(kind)
+      local width = active and active.category_width
+      if not width or not KINDS[kind] then
+        return fmt
+      end
+      return (fmt:gsub(SPEC, function(opt, _, prec, sep)
+        return '%' .. opt .. '-' .. width .. prec .. sep .. 'c'
+      end))
+    end
+
+    render.item_parts = function(item, ctx)
+      return with_context(ctx, function()
+        return item_parts(item, ctx)
+      end)
+    end
+
+    render.prefix = function(item, kind, ctx)
+      return with_context(ctx or active, function()
+        return prefix(item, kind)
+      end)
+    end
+
+    render.apply_limits = function(list, kind, ctx)
+      local out = apply_limits(list, kind, ctx)
+      if ctx and KINDS[kind or ''] then
+        local fmt = prefix_format(kind)
+        local sep, width = cat_sep(fmt), cat_width(fmt)
+        for _, it in ipairs(out) do
+          local w = vim.api.nvim_strwidth(category_of(it))
+          if w > 0 and w + #sep > width then
+            width = w + #sep
+          end
+        end
+        ctx.category_width = width
+      end
+      return out
+    end
+  end)
+end
+
 -- <leader>ai on an entry launches an `omp` instance for that ticket in a
 -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp terminal
 -- key in the agenda and in the TODO view, which renders into the same
@@ -1229,6 +1349,7 @@ function M.setup()
   setup_board_sections()
   setup_board_view()
   setup_item_category()
+  setup_category_width()
   setup_restrict_refresh()
   setup_capture_refresh()
   setup_ai()

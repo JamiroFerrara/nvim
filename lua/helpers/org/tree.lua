@@ -635,12 +635,14 @@ local function transform(view, b, render, ctx)
 
     --- An item's line without the agenda prefix (category, date): the
     --- keyword/priority/title/tags columns, for a child line that is nested
-    --- under an ancestor rather than listed on its own.
+    --- under an ancestor rather than listed on its own. The context goes to
+    --- render.prefix too, so the prefix cut is the one the line carries (the
+    --- category column is as wide as the block's, not the format's).
     local function no_prefix(nd)
       local c = nd.unit.ctx or ctx
       local kind = c.kind or (c.agenda and 'agenda' or 'todo')
       local text, hls = render.line_text(render.item_parts(nd.item, c))
-      local cut = #render.prefix(nd.item, kind)
+      local cut = #render.prefix(nd.item, kind, c)
       if cut <= 0 or #text <= cut then
         return text, hls
       end
@@ -730,7 +732,7 @@ local function transform(view, b, render, ctx)
     for _, nd in ipairs(run_roots) do
       local c = nd.unit.ctx or ctx
       local kind = c.kind or (c.agenda and 'agenda' or 'todo')
-      local prefix = render.prefix(nd.item, kind)
+      local prefix = render.prefix(nd.item, kind, c)
       walk(nd, vim.fn.strdisplaywidth(prefix), '', '', true)
     end
     run = {}

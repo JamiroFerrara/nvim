@@ -11,8 +11,9 @@
 -- change is the CLOSED planning timestamp, a date edited from a view is an
 -- active one. M.label takes the maximum of all of them. Only CLOSED is read
 -- from the planning line: a SCHEDULED/DEADLINE is a plan, not a change, and a
--- future one must not win the column. An entry that carries no timestamp at
--- all renders as nothing (the `%?` in the format drops the field).
+-- future one must not win the column. An entry that carries no timestamp
+-- at all renders as a blank column (the format's `%-13(...)` keeps the field,
+-- so the entry's keyword still lands where the dated entries' ones do).
 --
 -- Recent dates read relative -- today, yest, "3d ago" -- the day's time
 -- appended where the timestamp has one; past a week they are a plain "9 Oct",
