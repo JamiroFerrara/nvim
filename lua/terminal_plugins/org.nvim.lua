@@ -184,6 +184,33 @@ local function board_section(match, header)
   }
 end
 
+-- A wayfinder kind's section (the `y` view's per-kind blocks, key `5`): the
+-- open tickets carrying that kind's label, wherever they sit in the tree,
+-- listed flat -- `flat` is what the tree helper needs (helpers/org/tree.lua):
+-- these entries are a map's tickets, so as a tree block the section would list
+-- nothing at all (a listed entry under a TODO ancestor is hidden unless the
+-- block lists the ancestor too, and the ancestor -- the map -- belongs to the
+-- block above). `wf_<type>` is the label the tracker doc writes,
+-- `wayfinder_<type>` the longer spelling of the maps charted before it, so the
+-- match takes both; `hide_empty` matches the board's sections. The order is
+-- the board's own for a list of open work: keyword first (NEXT, the claimed
+-- one, above the untouched TODO), then priority, urgency settling the ties --
+-- and no `category-keep`, so the categories interleave, as a map's tickets
+-- all carry the project's.
+---@param kind string research / prototype / grilling / task
+---@return table
+local function wf_type_section(kind)
+  return {
+    type = 'tags_todo',
+    match = 'wf_' .. kind .. '|wayfinder_' .. kind .. '/!',
+    header = kind:gsub('^%l', string.upper) .. ', open',
+    hide_empty = true,
+    flat = true,
+    super_groups = false,
+    sorting = { 'todo-state-up', 'priority-down', 'urgency-down' },
+  }
+end
+
 -- The `p` view below lists the entries carrying a priority cookie, so its
 -- two blocks skip the ones that carry none. A `PRIORITY` match cannot tell
 -- them apart: a cookie-less entry resolves to the file's default priority,
@@ -315,8 +342,9 @@ return {
       -- changes state. A section holding nothing is not drawn -- the "In
       -- progress" and Done blocks included -- and the sections are told
       -- apart by a blank line, not a rule (a rule only under a section's
-      -- header); `p` the open A/B priorities; `y` the wayfinder map, as the
-      -- charted tree. A block's
+      -- header); `p` the open A/B priorities; `y` the wayfinder map -- the
+      -- charted tree, then one section per ticket kind (`wf_type_section`
+      -- above). A block's
       -- `header` labels the group; a composite command shows its blocks one
       -- after the other, in this order.
       custom_commands = {
@@ -461,6 +489,25 @@ return {
               super_groups = false,
               sorting = { 'category-keep' },
             },
+            -- Then one section per ticket kind, the tracker's own labels --
+            -- what the map is made of, read by kind instead of by route:
+            -- every open `research` ticket with every open `grilling` one,
+            -- wherever they sit in the tree. `flat` (helpers/org/tree.lua)
+            -- is what makes the section possible at all: without it the
+            -- sub-task rule would drop a ticket from a section that does not
+            -- list its ancestor, the map, and every one of these sections
+            -- would come out empty. `hide_empty` matches the board: a kind
+            -- this map charts none of is not drawn. Each section's entries
+            -- are the map's -- `match` is one kind's label, the shorter
+            -- `wf_<type>` and the longer `wayfinder_<type>` of the maps
+            -- charted before it -- and the order inside is the states' own
+            -- (a claimed NEXT above the untouched TODO) then priority, like
+            -- the board's lists; the categories interleave, since a map's
+            -- tickets all carry the project's.
+            wf_type_section 'research',
+            wf_type_section 'prototype',
+            wf_type_section 'grilling',
+            wf_type_section 'task',
           },
         },
       },

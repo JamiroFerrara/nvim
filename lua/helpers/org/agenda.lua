@@ -678,8 +678,8 @@ end
 -- TODOs across every project, 2 the group view -- the whole project file,
 -- split by state, not just the headline cwd's project resolved to -- 3 the
 -- board (in progress, bugs, features, chores, untagged, done), 4 priorities,
--- 5 the wayfinder map of the cwd project, drawn as its charted tree (the `y`
--- command, lua/terminal_plugins/org.nvim.lua).
+-- 5 the wayfinder map of the cwd project: the charted tree, then a section
+-- per ticket kind (the `y` command, lua/terminal_plugins/org.nvim.lua).
 -- Buffer-local to orgagenda -- the TODO view renders into the same buffer,
 -- so it switches from there too -- which is why the keys are the plain
 -- digits and not the `<leader>o` ones: a count typed in the agenda
