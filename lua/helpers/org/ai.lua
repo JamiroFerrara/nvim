@@ -73,6 +73,14 @@
 -- the agent directory, so a later launch `--continue`s that ticket's original
 -- session — full context — instead of starting a fresh one.
 --
+-- The tree moves up from there. A ticket with a ticket above it is offered
+-- the climb at the end of its run (M.climb_up): the ticket it hangs under is
+-- launched when that run closed the last thing open below it. A frontier
+-- launched together therefore does not race for the parent -- each run offers
+-- the climb and only the last one to finish finds it takeable, so the duty
+-- lands on that one by construction, and the run it starts is the ordinary
+-- launch of the parent.
+--
 -- The run ends by killing its own pane. omp runs interactively, so the user
 -- watches the ticket's TUI in the pane; an interactive omp then waits at its
 -- own prompt forever, so the skill's last step is the agent killing the pane
@@ -970,6 +978,67 @@ end
 function M.launch_at(bufnr, lnum)
   notify_launched(launch_targets { { bufnr = bufnr, lnum = lnum } })
   M.sync()
+end
+
+--- The climb up the tree, offered to every run at its end: the ticket above
+--- `id` in `file`, launched when this run closed the last thing open under
+--- it. A leaf queued by launching its container is one of a frontier
+--- (expand_target), and the tree only moves on once every leaf of that
+--- frontier is closed -- so the duty is not split between them but given to
+--- the last one to finish: each run offers the climb, and the one that finds
+--- its parent takeable takes it. Takeable here is the frontier's own reading,
+--- read off the file at that moment: the parent is still open, and nothing is
+--- open below it (org's `has_undone_children`; a sibling still in flight
+--- leaves it blocked, and that sibling's own run makes the climb). The launch
+--- is the ordinary one -- :ID: / :OMP_SESSION: / NEXT, the project
+--- checkpoint, its own pane -- and, the parent having nothing open below it,
+--- it lands on the parent itself. A ticket whose parent is no ticket (the
+--- project's own headline, a grouping line) has nowhere to climb to and says
+--- so.
+---
+--- This is the run's own entry point, called from the shell of an
+--- omp-org-ticket run as its last act before the pane goes (the skill), with
+--- the ticket's :ID: and file -- the pair the launch message already gives
+--- it:
+---
+---   nvim --headless -u <init.lua> -c "lua require('helpers.org.ai').climb_up('<file>', '<id>')" -c 'qa!'
+---
+--- Its answer is written to stdout for that shell (the notify a run would
+--- otherwise read is not what a headless instance leaves behind).
+---@param file string the ticket's org file
+---@param id string the ticket's :ID:
+function M.climb_up(file, id)
+  local say = function(msg)
+    vim.api.nvim_out_write('org ai: ' .. msg .. '\n')
+    notify('org ai: ' .. msg)
+  end
+  local buf = vim.fn.bufadd(vim.fs.normalize(file))
+  vim.fn.bufload(buf)
+  local parsed = require('org.files').get_buffer(buf)
+  local hl
+  for _, h in ipairs((parsed and parsed.headlines) or {}) do
+    if h.properties.ID == id then
+      hl = h
+      break
+    end
+  end
+  if not hl then
+    say('no headline carries :ID: ' .. id .. ' in ' .. file)
+    return
+  end
+  local parent = hl.parent
+  if not (parent and parent:is_todo()) then
+    say('nothing above ' .. hl:plain_title() .. ' to climb to')
+    return
+  end
+  if parent:has_undone_children() then
+    say(parent:plain_title() .. ' still has open work below it; the last leaf climbs')
+    return
+  end
+  local launched = launch_targets { { bufnr = buf, lnum = parent.line } }
+  if launched > 0 then
+    say('climbed to ' .. parent:plain_title())
+  end
 end
 
 --- `<leader>ai` over a Visual selection: the Visual-mode shape of M.launch.
