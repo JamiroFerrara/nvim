@@ -486,9 +486,9 @@ end
 local function omp_argv(ticket)
   local dir = session_dir(ticket)
   if not dir then
-    return { 'omp', '--append-system-prompt', SKILL, prompt(ticket) }
+    return { 'omp', '--print', '--append-system-prompt', SKILL, prompt(ticket) }
   end
-  local argv = { 'omp', '--session-dir', dir }
+  local argv = { 'omp', '--print', '--session-dir', dir }
   if has_session(dir) then
     argv[#argv + 1] = '--continue'
   end
