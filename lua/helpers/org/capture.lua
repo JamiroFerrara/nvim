@@ -137,8 +137,10 @@ end
 --- The template's `%?` sits on the headline, so a line typed below the title
 --- lands *between* the headline and the date header, pushing the header one
 --- line down; a captured entry should instead open its chronological log the
---- same way a note does. Returns the reordered lines and the header's index
---- **in the input**, or nil when there is nothing to move.
+--- same way a note does. The template's `%a` is its last line, so the
+--- annotation link back to the origin (org.nvim.lua, the `t` template) keeps
+--- following the description. Returns the reordered lines and the header's
+--- index **in the input**, or nil when there is nothing to move.
 ---@param lines string[]
 ---@return string[]|nil, integer|nil
 local function reorder(lines)
@@ -158,9 +160,10 @@ local function reorder(lines)
 end
 
 --- org.nvim store filter for the Task template: the same reorder, once, at
---- store time, so the placed entry reads title, header, description even when
---- the capture buffer was not kept in order (a multi-line paste that the hook
---- missed, say). When the header is already first, any body line left at
+--- store time, so the placed entry reads title, header, description (and the
+--- `%a` annotation last) even when the capture buffer was not kept in order
+--- (a multi-line paste that the hook missed, say). When the header is already
+--- first, any body line left at
 --- column 0 (a description typed before the header, or pasted) is still
 --- indented like the header. The timestamp is the one the capture buffer
 --- carries (`%U`, the capture time), so the header is only moved, never

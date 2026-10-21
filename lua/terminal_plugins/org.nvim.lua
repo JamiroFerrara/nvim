@@ -617,9 +617,16 @@ return {
       -- reads one project, so the path said little anyway.
       show_outline_path = false,
     },
-    -- The stock Task template (org.capture.templates DEFAULT_TEMPLATES.t)
-    -- ends with `%a`, the annotation link back to the file/headline the
-    -- capture was started from; it is dropped here. `target`/`olp` come from
+    -- The Task template keeps the stock one's trailing `%a`, the annotation
+    -- link back to the file/headline the capture was started from: a ticket
+    -- captured while reading a project file carries the `file:...::*Headline`
+    -- link to it, so an entry read on its own -- the TODO view's line, the
+    -- agent working the ticket -- points back at the file it came from. It
+    -- expands to nothing when the origin offers no link (a terminal, the
+    -- capture buffer itself), and `trim_blank` drops that empty last line;
+    -- org.nvim uses an existing `:ID:` on the origin headline and only falls
+    -- back to the `file:` link, so no ID is minted here (links.use_id is off).
+    -- `target`/`olp` come from
     -- helpers/org/capture.lua: the working directory decides the project
     -- first (helpers/org/project.lua), so the entry goes straight under that
     -- project's headline -- a headline of a shared file included, which is
@@ -634,8 +641,11 @@ return {
     -- and the header; the template's `hook` (helpers/org/capture.lua) keeps
     -- the header back directly under the headline as the entry is typed --
     -- the description, and the cursor, below it -- and the store filter there
-    -- finishes the same reorder (title, header, description) and indents the
-    -- description like it, for a buffer that was not kept in order.
+    -- finishes the same reorder (title, header, description, annotation) and
+    -- indents the description like it, for a buffer that was not kept in
+    -- order. `%a` is the template's last line, so the annotation sits after
+    -- the header when nothing was typed and after the description when
+    -- something was.
     --
     -- The tags a capture inherits are appended to its headline by the second
     -- store filter there (`capture_tags`): the destination headline's own and
@@ -653,7 +663,7 @@ return {
           olp = function()
             return capture.olp()
           end,
-          template = '* TODO %?\n  %U ' .. string.rep('-', notes.DASHES),
+          template = '* TODO %?\n  %U ' .. string.rep('-', notes.DASHES) .. '\n  %a',
           -- Keep the buffer in title/header/description order while the
           -- entry is typed (lua/helpers/org/capture.lua `hook`).
           hook = capture.hook,
