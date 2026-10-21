@@ -29,8 +29,11 @@
 -- A note on an entry in TEST starts the same run without the key: the entry
 -- is waiting on the user's validation, so a note there is their answer to it
 -- and helpers/org/notes.lua hands the headline to M.launch_at once the note
--- is stored -- the agent reads the note as the ticket's new body. Every
--- other state just stores the note.
+-- is stored -- the agent reads the note as the ticket's new body. That launch
+-- claims the entry back to `NEXT` (M.launch_at's `claim`): the hand-back the
+-- last run wrote has been answered, so what stands is a run on the ticket
+-- again, not a change still awaiting validation. Every other state just
+-- stores the note.
 --
 -- Layout: the first launch splits the nvim pane once with a vertical divider
 -- (`split-window -h`, omp on the right). Once anything already sits beside
@@ -55,8 +58,10 @@
 -- omp. The claim is the launcher's, but only over an untouched ticket: a
 -- state a run already wrote (`PEND`, `TEST`, `WARN`, `DONE`) states what that
 -- run left behind, and relaunching is not a reason to erase it -- the state
--- goes back to `NEXT` only from `TODO` (or from no keyword at all). The
--- launch number rides along (`:OMP_LAUNCH:`), and the message omp starts with
+-- goes back to `NEXT` only from `TODO` (or from no keyword at all), or when
+-- the launch is the user's own answer to the hand-back (the note on a TEST
+-- entry, M.launch_at's `claim`). The launch number rides along
+-- (`:OMP_LAUNCH:`), and the message omp starts with
 -- says which launch this is, so a run that finds its own unanswered round in
 -- the ticket can tell a relaunch from an answer instead of reading silence as
 -- consent (the relaunch rule is the omp-org-ticket skill's).
@@ -176,7 +181,8 @@ local LAUNCH_PROP = 'OMP_LAUNCH'
 --- The keywords that mean a run has already worked the ticket: what it left
 --- behind is the outcome (the omp-org-ticket skill's States), so a relaunch
 --- may not overwrite it. Only `TODO` -- and an unkeyworded headline -- is the
---- launcher's to claim.
+--- launcher's to claim on its own; another state needs the caller's record
+--- that it was answered (ticket_at's `claim`).
 local CLAIMABLE = { TODO = true }
 
 --- The directory holding the ticket's omp session, or nil when the ticket
@@ -328,11 +334,18 @@ end
 --- org buffer. With `mutate` set (the launch) a missing :ID: is created, the
 --- the state is claimed (NEXT) when the ticket is untouched, the buffer saved; without it (the jump)
 --- nothing is written -- the headline is only read.
+---
+--- `claim` widens the claim past the untouched ticket (CLAIMABLE): the caller
+--- has read the state itself and knows it was consumed, so the run starting
+--- now is what the entry holds. M.launch_at is the one caller that does -- the
+--- note it was handed answered the `TEST` hand-back the entry stood in, so the
+--- entry goes back to `NEXT` for the run that reads the note.
 ---@param bufnr integer
 ---@param lnum integer
 ---@param mutate boolean
+---@param claim? boolean
 ---@return OrgTicket|nil
-local function ticket_at(bufnr, lnum, mutate)
+local function ticket_at(bufnr, lnum, mutate, claim)
   local file = require('org.files').get_buffer(bufnr)
   local hl = file:headline_on(lnum)
   if not hl then
@@ -380,9 +393,12 @@ local function ticket_at(bufnr, lnum, mutate)
     -- this", and a state a run already wrote says what it left behind. A
     -- relaunch therefore finds `PEND`/`TEST`/`WARN`/`DONE` and leaves it --
     -- the run that follows reads the state and the launch number, and the
-    -- omp-org-ticket skill decides what a relaunch means. `force` skips
-    -- blockers so the claim is deterministic whatever the map looks like.
-    if state == nil or CLAIMABLE[state] then
+    -- omp-org-ticket skill decides what a relaunch means. Unless the caller
+    -- says the state it found was answered (`claim`, M.launch_at's note):
+    -- then the entry is a run's again and `NEXT` is what it holds. `force`
+    -- skips blockers so the claim is deterministic whatever the map looks
+    -- like.
+    if state == nil or claim or CLAIMABLE[state] then
       require('org.todo').change_state({ bufnr = bufnr, lnum = hl.line }, 'NEXT', { force = true })
       state, claimed = 'NEXT', true
     end
@@ -1005,10 +1021,13 @@ end
 --- its checkpoint and its own omp pane. The buffers are launched in order and
 --- the lines within one biggest first, so the property drawer the launcher
 --- writes on one entry cannot shift the lines of a ticket still to come.
+--- `claim` is handed to ticket_at: the caller has read the state of what it
+--- launches and knows it was answered, so the launch stamps `NEXT` over it.
 --- Returns how many instances started.
 ---@param targets { bufnr: integer, lnum: integer }[]
+---@param claim? boolean
 ---@return integer
-local function launch_targets(targets)
+local function launch_targets(targets, claim)
   table.sort(targets, function(a, b)
     if a.bufnr == b.bufnr then
       return a.lnum > b.lnum
@@ -1018,7 +1037,7 @@ local function launch_targets(targets)
 
   local launched = 0
   for _, target in ipairs(targets) do
-    local ticket = ticket_at(target.bufnr, target.lnum, true)
+    local ticket = ticket_at(target.bufnr, target.lnum, true, claim)
     if ticket then
       checkpoint(ticket)
       if in_tmux() then
@@ -1065,13 +1084,17 @@ end
 --- its checkpoint and its own omp pane. Unlike the mapping, the headline is
 --- launched itself and never fanned out to the frontier below it: the caller
 --- has already decided which headline, and the text it wrote (a note) sits on
---- that one. This is what a note on a TEST entry triggers
---- (helpers/org/notes.lua), and there the state is a run's own: the launch
---- leaves it standing and the run that answers the note writes the next one.
+--- that one.
+---
+--- This is what a note on a TEST entry triggers (helpers/org/notes.lua), and
+--- there the state is a run's own: the note is the user's answer to the
+--- hand-back, so the launch claims the entry back to `NEXT` (`claim`) instead
+--- of leaving `TEST` standing, and the run that reads the note starts from a
+--- ticket the board shows as taken.
 ---@param bufnr integer
 ---@param lnum integer
 function M.launch_at(bufnr, lnum)
-  notify_launched(launch_targets { { bufnr = bufnr, lnum = lnum } })
+  notify_launched(launch_targets({ { bufnr = bufnr, lnum = lnum } }, true))
   M.sync()
 end
 

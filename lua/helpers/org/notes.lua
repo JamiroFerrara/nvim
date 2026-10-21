@@ -21,7 +21,9 @@
 -- and storing it also launches the ticket -- helpers/org/ai.lua's launch, run
 -- on the entry the note landed on (never fanned out to its children: the note
 -- is on that headline). The agent then starts on the entry with the note in
--- its body, the launcher re-stamping NEXT. Every other state stores the note
+-- its body, and the launcher re-stamps `NEXT`: the state it found was
+-- answered by that very note, so the claim is not limited to an untouched
+-- `TODO` (helpers/org/ai.lua's `claim`). Every other state stores the note
 -- and nothing else.
 --
 -- The omp write-back (skill omp-org-ticket) writes the same block; its header
@@ -105,10 +107,10 @@ end
 --- A note on an entry in TEST reads the note back to the agent: the entry has
 --- been handed back for validation, so the note is the user's answer to it,
 --- and storing it also launches the ticket (helpers/org/ai.lua's launch,
---- `M.launch_at`) -- the launcher re-stamps the entry NEXT and omp starts
---- with the note in the body. Any other state stores the note and stops
---- there. TEST is read off the headline as it was found, before the note
---- lands below it.
+--- `M.launch_at`) -- the launcher claims the entry back to NEXT (the note is
+--- the answer the hand-back was waiting for) and omp starts with the note in
+--- the body. Any other state stores the note and stops there. TEST is read
+--- off the headline as it was found, before the note lands below it.
 ---@param target? table
 ---@return boolean|nil
 function M.add(target)
