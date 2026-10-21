@@ -18,7 +18,8 @@
 --                   the auto-DONE of an entry whose child headlines are all
 --                   finished, and the reopen of a finished parent when a
 --                   capture files an open entry under it
---   agenda.lua      `D` toggle_done action, the `<CR>` entry scratch (a
+--   agenda.lua      `D` toggle_done and `T` set_todo actions, the `<CR>`
+--                   entry scratch (a
 --                   TODO view's checkbox line takes `<CR>` for the toggle,
 --                   helpers/org/tree.lua) and
 --                   the `L` preview pane beside the view, the fold state
@@ -851,6 +852,17 @@ return {
         -- same keys reach the TODO view, which renders into an orgagenda
         -- buffer too.
         todo_next = { '<C-S-Right>', 'N' },
+        -- `T` sends the entry at point back to TODO -- the state the
+        -- launcher claims (helpers/org/ai.lua's CLAIMABLE) -- so a ticket a
+        -- run left TEST or WARN, or one the user parked PEND, is takeable by
+        -- <leader>ai again. `D` only toggles DONE and TODO and `N` only
+        -- cycles the keyword, so neither reaches TODO from an open state.
+        -- The action is helpers/org/agenda.lua's `M.set_todo`, registered as
+        -- the `set_todo` action in the config function below; `mappings.org`
+        -- binds the same key in an org buffer. It takes over the default `T`
+        -- (show_tags, unbound here).
+        set_todo = 'T',
+        show_tags = false,
         -- `t` adds/edits the tags of the entry at point (org-set-tags: the
         -- fast-selection menu, where <Tab> types one with completion). It
         -- takes over the default `t` (org-agenda-todo, a fast state
@@ -987,6 +999,14 @@ return {
         -- <prefix>Tf, ...): those still win once their next key is typed,
         -- `T` alone just waits out 'timeoutlen' first.
         set_tags = '<prefix>T',
+        -- `T` (bare) sends the headline at point back to TODO, the same key
+        -- the TODO view binds (helpers/org/agenda.lua `M.set_todo`,
+        -- registered as the `set_todo` action in config() below). It is not
+        -- `<prefix>T` (set_tags, just above): the two keys differ by the
+        -- <prefix> in front, and org.nvim's `<prefix>T`-table is untouched.
+        -- org.nvim binds no bare `T` in a buffer, so the key is new here,
+        -- not taken.
+        set_todo = 'T',
         -- next/previous visible heading on <C-j>/<C-k> (replaces ]]/[[).
         -- The action already jumps only to headings org.fold reports as
         -- visible, so a folded subtree is skipped. Buffer-local, so it
@@ -1195,6 +1215,17 @@ return {
       'helpers.org.roll',
       'unarchive',
       desc = 'Un-archive the entry at point into its board',
+    }
+    -- `T` hands the entry at point back to the backlog: TODO is the state
+    -- the launcher claims (helpers/org/ai.lua's CLAIMABLE), so a ticket a run
+    -- left TEST or WARN, or one the user parked PEND, is takeable by
+    -- <leader>ai again. Helpers/org/agenda.lua holds the function and the
+    -- agenda action the view needs; the registry entry is what makes the
+    -- `mappings.org` key work in a buffer.
+    require('org.actions').list.set_todo = {
+      'helpers.org.agenda',
+      'set_todo',
+      desc = 'Change the TODO state to TODO',
     }
     require('org').setup(opts)
 

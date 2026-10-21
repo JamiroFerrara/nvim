@@ -1,6 +1,9 @@
 -- Agenda-side customizations for org.nvim (wired in
 -- lua/terminal_plugins/org.nvim.lua): the `D` toggle_done action (and the
--- cursor it leaves on the line it acted on), the one-key tag/priority
+-- cursor it leaves on the line it acted on), the `T` set_todo that hands the
+-- entry at point back to the backlog (`M.set_todo`, registered in the config
+-- as the `set_todo` action, so the key reaches an org buffer too), the
+-- one-key tag/priority
 -- toggles (helpers/org/tagging.lua), the fold state
 -- left behind by entering an entry, the editable scratch view `<CR>` opens
 -- with only that entry (wrapped by default, written back into its file on
@@ -65,6 +68,37 @@ local function setup_toggle_done()
       end
       local done = file.settings.todo:is_done(hl.todo)
       return require('org.todo').change_state({ bufnr = bufnr, lnum = hl.line }, done and 'TODO' or 'DONE')
+    end, 'lines')
+  end)
+end
+
+--- `T`: the entry at point goes back to TODO, the state the launcher claims
+--- (helpers/org/ai.lua's CLAIMABLE), so a ticket a run left TEST or WARN --
+--- or one the user parked PEND -- is takeable by `<leader>ai` again. `D` only
+--- toggles DONE and TODO, and `N` only cycles the keyword, so neither reaches
+--- TODO from an open state. change_state runs the full org semantics (CLOSED
+--- timestamp, state logging, the DONE guard -- a change *to* TODO is never
+--- blocked). The one key reaches both surfaces: the agenda action below, and
+--- org.actions (`set_todo`, registered in the config before setup(), which
+--- the `mappings.org` key resolves in a buffer).
+---@param target? org.Target the entry (default: at the cursor)
+---@return table|nil, boolean -- as org.todo.change_state
+function M.set_todo(target)
+  local bufnr, _, hl = require('org.edit').resolve_headline(target)
+  if not bufnr then
+    return false
+  end
+  return require('org.todo').change_state({ bufnr = bufnr, lnum = hl.line }, 'TODO')
+end
+
+-- The agenda half of `M.set_todo`: the entry of the view at point, the way
+-- toggle_done is registered above. The mapping table only addresses actions
+-- by name (`mappings.agenda.set_todo` in the plugin spec), so the action is
+-- added to org.agenda.view.actions here.
+local function setup_set_todo()
+  require('org.lazy').on_load('org.agenda.view', 'set_todo', function(view)
+    view.actions.set_todo = view.on_item(function(target)
+      return M.set_todo(target)
     end, 'lines')
   end)
 end
@@ -1583,6 +1617,7 @@ end
 function M.setup()
   setup_file_caches()
   setup_toggle_done()
+  setup_set_todo()
   setup_redo_stay()
   setup_one_key()
   setup_entry_folds()
