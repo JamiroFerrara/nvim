@@ -25,7 +25,8 @@
 --              carries, so nothing an unforced write would have preserved can
 --              be lost -- and the write itself re-syncs nvim's bookkeeping
 --              (ml_timestamp), so the buffer is not asked about again until
---              something writes the file once more.
+--              something writes the file once more. `no_prompt` is its
+--              second half, for a caller that cannot answer: see below.
 --
 -- When the file moved on since the read (an agent wrote after nvim read, so
 -- the buffer's own edits sit on an older text), the write is left to nvim: the
@@ -39,7 +40,12 @@
 -- `nvim --headless` climb, where the unforced `:write` is a W12 question
 -- nothing answers -- the step hangs rather than failing -- and a forced one
 -- drops the other writer's text. It reloads what it can and refuses the
--- launch on a stale buffer.
+-- launch on a stale buffer. The check and the write are two steps, though --
+-- the launcher writes the drawer and the claim into the buffer in between,
+-- and another writer can land in that window -- so the write it makes is
+-- `no_prompt` (`M.save`): a write it cannot prove safe is refused, the
+-- launch aborts, and the question is never put to a nvim that would wait on
+-- it (the mapping froze there, the headless climb had nobody to type for it).
 --
 -- M.setup() replaces `require('org.utils').save_buffer` with M.save: org's own
 -- view actions (a state change, a note, a checkbox, a refile) all write
@@ -212,13 +218,25 @@ end
 --- skipped, `org.files`' disk cache invalidated after -- but forced when the
 --- file is still the one the buffer was read from (see the module comment).
 --- Returns false and a one-line error when the write fails.
+---
+--- `opts.no_prompt` is the caller's word that it cannot answer the W12
+--- question: a write it cannot prove safe -- the file is not the one the
+--- buffer was read from (`M.fresh`) and the buffer's text is not the file's
+--- (`content_equal`) -- is refused instead of asked, so the caller aborts
+--- with a reason instead of a nvim waiting on an answer nobody types. The
+--- launcher of helpers/org/ai.lua is that caller (see the module comment).
+---@param bufnr integer
+---@param opts? { no_prompt: boolean }
 ---@return boolean ok, string? err
-function M.save(bufnr)
+function M.save(bufnr, opts)
   if not (vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].modified and vim.api.nvim_buf_get_name(bufnr) ~= '') then
     return true
   end
   local path = vim.api.nvim_buf_get_name(bufnr)
   local force = M.fresh(bufnr) or content_equal(bufnr, path)
+  if not force and opts and opts.no_prompt then
+    return false, 'the file changed since the buffer was read'
+  end
   local hooks = require 'org.write_hooks'
   local hok, herr, run = hooks.run_pre(bufnr, 'save_buffer')
   if not hok then
@@ -256,6 +274,17 @@ function M.setup()
       M.remember(ev.buf)
     end,
   })
+  -- The org file a session starts on is read before these hooks exist: its
+  -- BufReadPost runs, then FileType, and only then does org.nvim -- and so
+  -- this module -- load. Its text is the file's, so the stat now is the one
+  -- it was read at: record it, or the freshness proof (`M.fresh`) the writes
+  -- are made on would fail on it and refuse a launch it should allow.
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    local name = vim.api.nvim_buf_get_name(buf)
+    if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buftype == '' and (name:match '%.org$' or name:match '%.org_archive$') then
+      M.remember(buf)
+    end
+  end
   vim.api.nvim_create_autocmd('BufWipeout', {
     callback = function(ev)
       reads[ev.buf] = nil

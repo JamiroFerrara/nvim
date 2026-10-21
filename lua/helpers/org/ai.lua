@@ -466,9 +466,17 @@ local function ticket_at(bufnr, lnum, mutate, claim, link)
 
   local path = vim.api.nvim_buf_get_name(bufnr)
   if mutate then
-    local saved = write.save(bufnr)
+    -- The write may not ask: `M.stale` above proved the buffer fresh when it
+    -- read it, but the drawer and the claim are written in between, and
+    -- another writer (an agent working the same file) can land in that
+    -- window. `no_prompt` then refuses the write instead of putting nvim's
+    -- W12 question up -- a question a mapping freezes on, and the headless
+    -- climb has nobody to answer. The launch aborts: a run whose ticket file
+    -- lacks the drawer and the claim it just wrote is not worth starting.
+    local saved = write.save(bufnr, { no_prompt = true })
     if not saved then
-      notify('org ai: could not save ' .. vim.fn.fnamemodify(path, ':t'), vim.log.levels.WARN)
+      notify('org ai: ' .. vim.fn.fnamemodify(path, ':t') .. ' changed on disk — save or :e! before launching', vim.log.levels.WARN)
+      return nil
     end
   end
 
