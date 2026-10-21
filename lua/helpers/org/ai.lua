@@ -88,11 +88,15 @@
 -- that never saw it would drop it (helpers/org/write.lua, `M.stale`), and an
 -- unforced write there is the W12 question nothing answers.
 --
--- Before that hand-off it also commits whatever the
--- ticket's project leaves pending (helpers/org/project.lua's
+-- Before that hand-off it also commits the ticket's project's pending
+-- *tracked* work (helpers/org/project.lua's
 -- `#+PROJECT_DIRS:` claims, one commit per repo, never a push): that commit
 -- is the revert point, so a run that goes wrong is undone with
--- `git reset --hard` back to it instead of unpicking a dirty tree.
+-- `git reset --hard` back to it instead of unpicking a dirty tree. The
+-- untracked files are left out of it -- a `reset --hard` never touches them
+-- -- because a repo can hold a pile of them (a scratch checkout, a clone)
+-- and staging those is what froze the UI: the checkpoint runs inside the
+-- mapping, on the ticket's keypress (`snapshot`'s own note).
 -- `<leader>aj` is the other direction: it jumps to the
 -- pane of the ticket's already-running instance (the tmux `<prefix> i`
 -- panel's jump); when nothing runs it, it resumes the ticket's session
@@ -597,19 +601,29 @@ end
 --- One commit of everything pending in `root`, never a push. `true` when it
 --- committed, `false` when the tree was already clean, nil plus the error
 --- when git failed (bad repo, a rejected hook, nothing to commit).
+---
+--- The commit carries the *tracked* work, not untracked files: the caller
+--- runs inside a mapping, and a repo that is a scratch checkout -- a personal
+--- `bin` holding clones, hundreds of thousands of files -- would be staged
+--- and hashed **whole** by `add -A`, gigabytes of it, while nvim's UI waits
+--- (this repo: `git add -A -n` alone, no objects written, took 23s over
+--- 61k paths). Nothing is lost for the revert point: `git reset --hard`
+--- never touches a file the index does not hold, so an untracked file
+--- survives the reset whether or not the checkpoint committed it. Work the
+--- user has already staged -- a new file they `git add`ed -- rides along in
+--- the commit, `-a` adding the tracked modifications to it.
 ---@param root string
 ---@param subject string
 ---@return boolean|nil committed, string|nil err
 local function snapshot(root, subject)
-  local status = git(root, { 'status', '--porcelain' })
+  local status = git(root, { 'status', '--porcelain', '--untracked-files=no' })
   if status.code ~= 0 then
     return nil, git_error(status)
   end
   if not status.stdout:match '%S' then
     return false
   end
-  git(root, { 'add', '-A' })
-  local commit = git(root, { 'commit', '--quiet', '-m', subject })
+  local commit = git(root, { 'commit', '--quiet', '-a', '-m', subject })
   if commit.code ~= 0 then
     return nil, git_error(commit)
   end
@@ -632,13 +646,14 @@ local function checkpoint_subject(title)
   return prefix .. summary
 end
 
---- Commit the pending work of every repo the ticket's project claims — the
---- repository as the user left it, before the agent touches it. This is the
---- revert point: a run that goes wrong is undone with `git reset --hard` to
---- it, so it costs little. Never a push, and never a commit on a clean tree.
---- The ticket's file names the repos through its `#+PROJECT_DIRS:` claims
---- (helpers/org/project.lua); a repo that will not commit is reported and
---- the launch goes on.
+--- Commit the pending *tracked* work of every repo the ticket's project
+--- claims — the repository as the user left it, before the agent touches it.
+--- This is the revert point: a run that goes wrong is undone with
+--- `git reset --hard` to it, so it costs little. Never a push, and never a
+--- commit on a clean tree (`snapshot` for what "pending" leaves out, and
+--- why). The ticket's file names the repos through its `#+PROJECT_DIRS:`
+--- claims (helpers/org/project.lua); a repo that will not commit is reported
+--- and the launch goes on.
 ---@param ticket OrgTicket
 local function checkpoint(ticket)
   local dirs = require('helpers.org.project').dirs(ticket.file, ticket.lnum)
