@@ -20,7 +20,7 @@
 -- with the year once it is not this one.
 --
 -- The same date is an org.nvim sorting strategy, `changed-up` /
--- `changed-down`, registered by M.setup(): the group view (`2` in
+-- `changed-down`, registered by M.setup(): the group view (`4` in
 -- lua/terminal_plugins/org.nvim.lua) orders each of its per-state sections by
 -- it, so the column and the list agree on what "recent" means. An entry with
 -- no timestamp at all sinks below the dated ones, whichever direction the

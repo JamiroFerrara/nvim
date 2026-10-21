@@ -578,7 +578,7 @@ end
 --- the cwd's project -- the same view the agenda's `3` key opens
 --- (helpers.org.agenda.custom_view), and to every agenda file when there is
 --- no project. A headline claim is restricted to its subtree; the agenda's
---- `2` group view (helpers/org/agenda.lua) is instead the `g` open-TODO list
+--- `4` group view (helpers/org/agenda.lua) is instead the `g` open-TODO list
 --- over the cwd project's whole file, split into a section per open keyword.
 --- The view takes over the focused window
 --- (agenda.window = 'current' in the plugin spec) rather than splitting

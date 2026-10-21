@@ -715,10 +715,12 @@ end
 
 -- Number keys open the custom views configured in
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
--- TODOs across every project, 2 the group view -- the whole project file,
--- split by state, not just the headline cwd's project resolved to -- 3 the
--- board (in progress, bugs, features, chores, untagged, done), 4 priorities,
--- 5 the wayfinder map of the cwd project: the charted tree, then a section
+-- TODOs across every project, 2 the same cross-project list cut to the
+-- states in flight (NEXT, TEST, WARN, PEND -- the untouched TODO backlog
+-- left out), 3 the board (in progress, bugs, features, chores, untagged,
+-- done), 4 the group view -- the whole project file, split by state, not
+-- just the headline cwd's project resolved to -- 5 priorities, 6 the
+-- wayfinder map of the cwd project: the charted tree, then a section
 -- per ticket kind (the `y` command, lua/terminal_plugins/org.nvim.lua).
 -- Buffer-local to orgagenda -- the TODO view renders into the same buffer,
 -- so it switches from there too -- which is why the keys are the plain
@@ -728,11 +730,11 @@ end
 -- the same buffer is refilled and this reads as switching view rather than
 -- stacking a second agenda.
 --
--- 2's group view exists because one file can host several projects, one per
+-- 4's group view exists because one file can host several projects, one per
 -- top-level headline (a `:PROJECT_DIRS:` headline claim each, like
 -- allitude.org's "Classificazioni EVO" / "Controlla EVO" / "PMS"): cwd
 -- resolves to the one headline covering it, and that is a sub-header of a
--- file holding the whole group. `2` lists the whole file -- every headline
+-- file holding the whole group. `4` lists the whole file -- every headline
 -- of it -- by keeping the file scope (`files`, so no other project leaks
 -- in) but dropping the subtree restriction, and by running the `g` command
 -- (lua/terminal_plugins/org.nvim.lua): one section per open keyword
@@ -740,23 +742,24 @@ end
 -- shows, under the file's own name (open_custom_view heads a file-scope
 -- block with it). What the old division -- a section per project inside the
 -- file -- said, the entry lines now say themselves: the category column
--- carries the sub-project's name (helpers/org/project.lua item_name). 3, 4
--- and 5 (and `°`, which opens the same `w` board through M.custom_view) are
+-- carries the sub-project's name (helpers/org/project.lua item_name). 3, 5
+-- and 6 (and `°`, which opens the same `w` board through M.custom_view) are
 -- scoped to the project of the working directory the way `°` was: each
 -- block's `files` becomes the project's file and a headline claim adds its
 -- subtree restriction. A cwd that names no project -- or one whose file
 -- does not exist yet -- opens the full view, the same one the dispatcher
 -- menu's `w` / `p` / `y` give. Resolution runs per key press (project.current
 -- reads getcwd, or the job cwd of a terminal buffer), so a `cd` moves the
--- scope with it. 1 is global: it never scopes, so it lists the open TODOs
--- of every project.
+-- scope with it. 1 and 2 are global: they never scope, so they list the
+-- open TODOs of every project -- 2 the ones in flight only.
 local CUSTOM_VIEWS = {
   -- key, custom_commands key, desc, scope (see open_custom_view)
   { '1', 'o', 'all open TODOs', 'global' },
-  { '2', 'g', 'the whole project file, by state', 'file' },
+  { '2', 'f', 'everything in flight, every project', 'global' },
   { '3', 'w', 'in progress, bugs, features, chores, untagged and done', 'project' },
-  { '4', 'p', 'open A/B priorities', 'project' },
+  { '4', 'g', 'the whole project file, by state', 'file' },
   { '5', 'y', 'wayfinder: the charted map, open leaves takeable', 'project' },
+  { '6', 'p', 'open A/B priorities', 'project' },
 }
 
 -- The group headers the custom views draw: the global super_agenda groups
@@ -765,7 +768,8 @@ local CUSTOM_VIEWS = {
 -- (the "Nvim" of "Nvim [30/35]") instead of "Category: nvim" -- and, in the
 -- agenda, no header at all (the entries follow the last named group). The
 -- map depends on the scope:
---   * `'global'` (key 1) heads every file's entries with the file title;
+--   * `'global'` (keys 1 and 2) heads every file's entries with the file
+--     title;
 --   * `'project'` (the board, priorities) returns '' (an empty section name
 --     draws no header, and every item still lands in a section, so the
 --     "Other items" heading does not appear either): the category is the
@@ -773,9 +777,9 @@ local CUSTOM_VIEWS = {
 --     block header already names the project ("Nvim - Bugs, open").
 -- A block that brings its own `super_groups` -- the board's Bugs / Features
 -- / Chores / Untagged sections and the group view's per-state ones, which
--- both split by state -- keeps them (open_custom_view below); key 1's `o`
--- block sets none, so it takes the map above. The "In progress" block sets
--- `super_groups = false` and is not grouped at all.
+-- both split by state -- keeps them (open_custom_view below); the `o` and
+-- `f` blocks set none, so they take the map above. The "In progress" block
+-- sets `super_groups = false` and is not grouped at all.
 -- The list is read and copied at open time, so the agenda's own groups --
 -- the day view keeps the globals -- are untouched.
 local function view_groups(scope)
@@ -860,9 +864,9 @@ end
 
 --- Open a `custom_commands` view by its key, the same the agenda buffer's
 --- number keys run (helpers.org.project.todo_view opens the `w` board this
---- way). Scoped to the cwd's project like the `3` / `4` keys; `global`
---- (`1`) skips the scope, and `file` lists the cwd
---- project's whole file (the `2` group view's command brings the per-state
+--- way). Scoped to the cwd's project like the `3` / `5` / `6` keys;
+--- `global` (`1` / `2`) skips the scope, and `file` lists the cwd
+--- project's whole file (the `4` group view's command brings the per-state
 --- groups itself). The `label` the keymaps pass is only their `desc`,
 --- so the key stands in for it.
 ---@param key string a key of agenda.custom_commands

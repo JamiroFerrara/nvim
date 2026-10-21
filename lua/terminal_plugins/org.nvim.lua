@@ -117,7 +117,7 @@ local TODO_KEYWORDS = { 'TODO NEXT PEND TEST WARN | DONE' }
 -- sequence.
 local BOARD_STATE_ORDER = { 'TEST', 'NEXT', 'TODO', 'PEND', 'WARN' }
 
--- The order the group view's (`2`) per-state sections read in: the states
+-- The order the group view's (`4`) per-state sections read in: the states
 -- asking for action first -- TEST, the entry waiting on validation, then
 -- NEXT, the one being worked on -- the parked PEND and the problematic WARN
 -- after them, and TODO last: the untouched rest is what the view is read
@@ -166,7 +166,7 @@ end
 -- between the subsections.
 local BOARD_SECTIONS = state_sections(BOARD_STATE_ORDER)
 
--- The group view's state list (the `g` block below, key `2`): the open
+-- The group view's state list (the `g` block below, key `4`): the open
 -- entries of the cwd project's whole file, one section per keyword, in
 -- GROUP_STATE_ORDER. Inside a section the entries are ordered by their
 -- last-changed date -- the one helpers/org/changed.lua prints in the column,
@@ -336,9 +336,10 @@ return {
       -- picker) reads one project, so the tags and priorities the ticket
       -- lines already carry are only visible here. Reached from the
       -- dispatcher menu or `:Org agenda <key>`, which give the whole set;
-      -- the agenda buffer's 1 / 2 / 3 / 4 / 5 (helpers/org/agenda.lua) open
-      -- them, 1 global, 2 the whole file of the cwd's project (the `g` list,
-      -- its entries split per open keyword), and the rest
+      -- the agenda buffer's 1 / 2 / 3 / 4 / 5 / 6 (helpers/org/agenda.lua)
+      -- open them: 1 and 2 global (every open TODO, and the same list cut
+      -- to the states in flight), 4 the whole file of the cwd's project
+      -- (the `g` list, its entries split per open keyword), and the rest
       -- narrowed to cwd's project. `°` (helpers/org/project.lua) opens
       -- the `w` board the same scoped way, so it is an alias for the `3`
       -- key; `5` is the wayfinder map of the cwd project (`y` below). The
@@ -348,7 +349,9 @@ return {
       -- (tags/property match, TODO entries only) -- the `/!` trailing the
       -- match is the TODO part of |org-match-syntax|, "not done", and the
       -- `-NEXT-TEST` after it excludes those keywords. `o` is every open
-      -- TODO (`type = 'todo'`, org's `alltodo`); `w` is the board --
+      -- TODO (`type = 'todo'`, org's `alltodo`), and `f` the same list cut
+      -- to the states in flight (NEXT, TEST, WARN, PEND -- the TODO
+      -- backlog left out); `w` is the board --
       -- the "In progress" block (every NEXT and TEST entry, any tag), then
       -- the classification sections -- bug tag, feat tag, chore tag, the
       -- untagged rest -- and DONE last, in that order, so a ticket moves
@@ -374,7 +377,27 @@ return {
             { type = 'todo', header = 'All open TODOs' },
           },
         },
-        -- Key `2`'s view: the `o` list of the cwd project's whole file --
+        -- Key `2`'s view: `o`'s cross-project list cut down to the states
+        -- that ask for something -- NEXT, the entry being worked on, TEST,
+        -- the one waiting on validation, then the parked PEND and the
+        -- problematic WARN -- with the untouched TODO backlog left out, so
+        -- a `2` press answers "what is going on right now" for every
+        -- project at once. It brings no `super_groups`, so it takes the
+        -- global map the view's scope gives it (helpers/org/agenda.lua
+        -- view_groups): the named groups first, then one section per file
+        -- headed by the file's title, the same structure `o` draws.
+        f = {
+          description = 'Everything in flight, every project',
+          types = {
+            {
+              type = 'todo',
+              match = 'NEXT|TEST|WARN|PEND',
+              header = 'Everything in flight',
+              hide_empty = true,
+            },
+          },
+        },
+        -- Key `4`'s view: the `o` list of the cwd project's whole file --
         -- every headline of it, the projects a shared file hosts included --
         -- split into one section per open keyword (GROUP_SECTIONS,
         -- NEXT/PEND/WARN/TODO), each ordered by the entry's last-changed date
@@ -550,13 +573,13 @@ return {
       tags_match_list_sublevels = false,
       -- Line prefix (org-agenda-prefix-format) for the entry lists. The stock
       -- `" %i %-12:c"` is kept, and the `todo` kind -- the board (digit 3 /
-      -- `°`) and the global `o` (digit 1, and `2`'s whole-file group view)
+      -- `°`) and the global `o` (digit 1, and `4`'s whole-file group view)
       -- gains the entry's last-changed date before the keyword, the date
       -- the entry last moved: helpers/org/
       -- changed.lua takes the newest timestamp the entry carries (CLOSED, a
       -- note/capture header, an edited date) and reads it relative while
       -- recent ("today 15:53", "3d ago") and as "9 Oct" past a week.
-      -- The same date is what the group view (`2`) sorts its sections by
+      -- The same date is what the group view (`4`) sorts its sections by
       -- (`changed-down`, registered by that module's setup).
       -- `%-13(...)` is the `%(lua expression)` element, a fixed 13-wide
       -- column: an entry with no timestamp leaves it blank rather than
