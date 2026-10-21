@@ -1,8 +1,7 @@
---- The preview sidebar: the entry under the cursor in a wide split beside a
---- narrow oil column, so browsing reads files without leaving the list. Oil
---- opening in a window that was not showing oil brings it up by itself
---- (`<S-p>` closes it, and brings it back), and `J` / `K` page it
---- (helpers/preview_pane), the way the org agenda's `L` preview does.
+--- The preview sidebar: `<S-p>` puts the entry under the cursor in a wide split
+--- beside a narrow oil column, so browsing reads files without leaving the list
+--- (`<S-p>` again closes it), and `J` / `K` page it (helpers/preview_pane), the
+--- way the org agenda's `L` preview does.
 local SIDEBAR_RATIO = 0.22
 local SIDEBAR_MIN = 24
 
@@ -43,19 +42,6 @@ local function sidebar_open()
       end
     end)
   end)
-end
-
---- Whether oil here should bring the sidebar up by itself: only in a window that
---- was showing something other than oil -- a fresh `:Oil`, a jump from a file --
---- never when oil moves from one directory to the next, which leaves oil the
---- alternate file of its window, and never in a preview window's own oil buffer.
----@return boolean
-local function sidebar_wanted()
-  if vim.wo.previewwindow or oil_preview() then
-    return false
-  end
-  local alt = vim.fn.bufnr '#'
-  return alt < 0 or vim.bo[alt].filetype ~= 'oil'
 end
 
 return {
@@ -290,20 +276,6 @@ return {
     },
   },
   dependencies = { 'nvim-tree/nvim-web-devicons' },
-  init = function()
-    vim.api.nvim_create_autocmd('FileType', {
-      group = vim.api.nvim_create_augroup('OilSidebar', { clear = true }),
-      pattern = 'oil',
-      desc = 'oil: bring the sidebar preview up with the browser',
-      callback = function()
-        -- The view is rendered after the filetype is set, and only then is
-        -- there an entry under the cursor (sidebar_open waits for it).
-        if sidebar_wanted() then
-          sidebar_open()
-        end
-      end,
-    })
-  end,
   keys = {
     -- TODO: Extract a function for both of theese
     {
