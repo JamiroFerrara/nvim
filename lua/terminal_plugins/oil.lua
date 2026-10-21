@@ -66,6 +66,14 @@ return {
       ['<C-s>'] = 'actions.select_vsplit',
       ['<C-h>'] = 'actions.select_vsplit',
       ['<C-t>'] = 'actions.select_tab',
+      -- Preview the entry under the cursor in a vertical split window instead of
+      -- the floating one (<C-p>), keeping the cursor in oil so browsing updates it.
+      ['<S-p>'] = {
+        'actions.preview',
+        opts = { vertical = true },
+        mode = 'n',
+        desc = 'Preview entry in a vertical split',
+      },
       ['<C-p>'] = {
         callback = function()
           Snacks.picker.zoxide {
