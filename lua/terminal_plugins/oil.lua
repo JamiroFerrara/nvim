@@ -1,8 +1,68 @@
+--- The preview sidebar: the entry under the cursor in a wide split beside a
+--- narrow oil column, so browsing reads files without leaving the list. Oil
+--- opening in a window that was not showing oil brings it up by itself
+--- (`<S-p>` closes it, and brings it back), and `J` / `K` page it
+--- (helpers/preview_pane), the way the org agenda's `L` preview does.
+local SIDEBAR_RATIO = 0.22
+local SIDEBAR_MIN = 24
+
+---@return integer? the preview window, when oil has one open
+local function oil_preview()
+  return require('oil.util').get_preview_win()
+end
+
+---@return integer? the preview window, when it is a split rather than the float
+local function oil_preview_split()
+  local win = oil_preview()
+  if win and vim.api.nvim_win_get_config(win).relative == '' then
+    return win
+  end
+end
+
+--- Oil's own column: a fraction of the screen, wide enough for a file name and
+--- narrow enough to leave the preview the rest of it (and the preview at least
+--- forty columns).
+---@return integer
+local function sidebar_width()
+  local total = vim.o.columns
+  return math.min(math.max(SIDEBAR_MIN, math.floor(total * SIDEBAR_RATIO)), total - 40)
+end
+
+--- Put the sidebar up on the entry under the cursor, oil shrunk to its column.
+local function sidebar_open()
+  local util = require 'oil.util'
+  util.run_after_load(0, function()
+    require('oil').open_preview({ vertical = true, split = 'belowright' }, function(err)
+      if err then
+        return
+      end
+      local oil_win = vim.api.nvim_get_current_win()
+      local win = util.get_preview_win { include_not_owned = true }
+      if win and win ~= oil_win then
+        pcall(vim.api.nvim_win_set_width, oil_win, sidebar_width())
+      end
+    end)
+  end)
+end
+
+--- Whether oil here should bring the sidebar up by itself: only in a window that
+--- was showing something other than oil -- a fresh `:Oil`, a jump from a file --
+--- never when oil moves from one directory to the next, which leaves oil the
+--- alternate file of its window, and never in a preview window's own oil buffer.
+---@return boolean
+local function sidebar_wanted()
+  if vim.wo.previewwindow or oil_preview() then
+    return false
+  end
+  local alt = vim.fn.bufnr '#'
+  return alt < 0 or vim.bo[alt].filetype ~= 'oil'
+end
+
 return {
   'stevearc/oil.nvim',
   -- lazy = false,
   -- enabled = not _G.NVIM_TERMINAL_ONLY,
-  cmd = {'Oil'},
+  cmd = { 'Oil' },
   opts = {
     -- Oil will take over directory buffers (e.g. `vim .` or `:e src/`)
     -- Set to false if you still want to use netrw.
@@ -66,36 +126,36 @@ return {
       ['<C-s>'] = 'actions.select_vsplit',
       ['<C-h>'] = 'actions.select_vsplit',
       ['<C-t>'] = 'actions.select_tab',
-      -- Preview the entry under the cursor in a vertical split window: oil keeps a
-      -- narrow column on the left and the preview takes the rest of the screen.
+      -- The sidebar preview: `<S-p>` closes it when it shows the entry under the
+      -- cursor, and brings it back otherwise.
       ['<S-p>'] = {
         callback = function()
-          local oil = require 'oil'
-          local util = require 'oil.util'
-
-          local entry = oil.get_cursor_entry()
-          local preview = util.get_preview_win()
-          if preview and entry and vim.w[preview].oil_entry_id == entry.id then
-            vim.api.nvim_win_close(preview, true)
+          local entry = require('oil').get_cursor_entry()
+          local win = oil_preview_split()
+          if win and entry and vim.w[win].oil_entry_id == entry.id then
+            vim.api.nvim_win_close(win, true)
             return
           end
-
-          oil.open_preview({ vertical = true, split = 'belowright' }, function(err)
-            if err then
-              return
-            end
-            local oil_win = vim.api.nvim_get_current_win()
-            local pwin = util.get_preview_win { include_not_owned = true }
-            if not pwin or pwin == oil_win then
-              return
-            end
-            local total = vim.o.columns
-            local width = math.min(math.max(30, math.floor(total * 0.3)), total - 40)
-            pcall(vim.api.nvim_win_set_width, oil_win, width)
-          end)
+          sidebar_open()
         end,
         mode = 'n',
-        desc = 'Preview entry in a sidebar split',
+        desc = 'Close the preview sidebar, or open it',
+      },
+      -- `J` / `K` are the global half-page scroll; here they page the sidebar,
+      -- and are that scroll again when it has nothing more to show.
+      ['<S-j>'] = {
+        callback = function()
+          require('helpers.preview_pane').page(oil_preview(), '\6', true)
+        end,
+        mode = 'n',
+        desc = 'Page the preview down, else the list',
+      },
+      ['<S-k>'] = {
+        callback = function()
+          require('helpers.preview_pane').page(oil_preview(), '\21', false)
+        end,
+        mode = 'n',
+        desc = 'Page the preview up, else the list',
       },
       ['<C-p>'] = {
         callback = function()
@@ -230,6 +290,20 @@ return {
     },
   },
   dependencies = { 'nvim-tree/nvim-web-devicons' },
+  init = function()
+    vim.api.nvim_create_autocmd('FileType', {
+      group = vim.api.nvim_create_augroup('OilSidebar', { clear = true }),
+      pattern = 'oil',
+      desc = 'oil: bring the sidebar preview up with the browser',
+      callback = function()
+        -- The view is rendered after the filetype is set, and only then is
+        -- there an entry under the cursor (sidebar_open waits for it).
+        if sidebar_wanted() then
+          sidebar_open()
+        end
+      end,
+    })
+  end,
   keys = {
     -- TODO: Extract a function for both of theese
     {
