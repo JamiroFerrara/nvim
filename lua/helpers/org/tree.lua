@@ -14,23 +14,25 @@
 --     it, depth-first, siblings keeping the agenda's sort order. Runs are
 --     what the grouper left between its headers, so nesting never crosses a
 --     category heading or a board section;
---   * a TODO nested under another TODO the view lists -- a subtask -- never
---     shows as a line of its own: its listed line is dropped from whatever
---     block matched it (so a sub-task does not surface at the top level of a
---     section its ancestor is not in) and it reappears, folded, under the
---     ancestor. A subtask no listed TODO ancestor claims -- a ticket in
---     flight under a map the view's filter leaves out, say -- keeps its own
---     line, an ordinary entry: dropping it would put the entry nowhere. The
---     view's first level is always the top-level entries;
+--   * a TODO nested under another TODO the SAME RUN lists -- a subtask --
+--     never shows as a line of its own there: its listed line is dropped and
+--     it reappears, folded, under the ancestor. A subtask whose TODO
+--     ancestors this run does not list keeps its own line, an ordinary entry:
+--     a run is what one section lists, so a ticket belongs on the line the
+--     section that matched it drew -- the map lists the maps, a kind section
+--     its kind, a state section its state -- and the map's own line shows the
+--     whole route anyway, its subtree walked off the file. A subtask no
+--     listed TODO ancestor claims -- a ticket in flight under a map the
+--     view's filter leaves out, say -- keeps its own line for the same
+--     reason: dropping it would put the entry nowhere;
 --   * a block marked `flat` opts out of all of it -- the marker the wayfinder
 --     view's per-kind sections set (lua/terminal_plugins/org.nvim.lua): its
 --     entries are listed in the block's own order, no nesting and no
 --     synthetic subheadline lines, and the block neither hides its entries as
 --     subtasks nor counts as listing them, so a sibling block's tree keeps
 --     nesting them. That is what lets one view show the same tickets as a
---     tree and again, flat, under a section of their own kind: without it the
---     sub-task rule would drop every ticket from a section that does not also
---     list its ancestor (the map);
+--     tree and again, flat, under a section of their own kind: the section
+--     reads as the list of that kind, not as a second copy of the route;
 --   * a done entry is not a subtask, whatever it is nested under: the run it
 --     belongs to keeps its line, so a sub-task marked DONE leaves the open
 --     entry it hung under and shows in the Done section of the board, if the
@@ -435,88 +437,25 @@ local function transform(view, b, render, ctx)
   -- listed as org.nvim drew them, in the block's own order, no nesting and
   -- no synthetic subheadline lines. It also takes no part in the tree of the
   -- other blocks -- its lines are neither hidden as subtasks nor counted as
-  -- listing an entry (see `listed` below) -- so a view can draw the same
+  -- listing an entry (see `run_units` below) -- so a view can draw the same
   -- entries both as a tree and as flat sections, which is what the wayfinder
-  -- view does (lua/terminal_plugins/org.nvim.lua): the board's sub-task rule
-  -- would otherwise hide a `wf_research` ticket from its own section,
-  -- because its ancestor, the map, is listed in another block.
+  -- view does (lua/terminal_plugins/org.nvim.lua): the map's route and, under
+  -- it, one section per kind whose tickets read as a list of that kind
+  -- instead of as a second copy of the route the tree above already draws.
   ---@param l integer
   local function flat(l)
     local c = b.line_ctx and b.line_ctx[l]
     return (c and c.block and c.block.flat) == true
   end
 
-  -- The lines the view lists in a tree run, per file: a flat block's lines
-  -- are not among them (that block lists its entries itself, with no
-  -- nesting), and a subtask is only one for as long as one of its TODO
-  -- ancestors is here -- an ancestor this set does not hold has no line for
-  -- the subtask to be re-added under, so the subtask is a line of its own.
-  local tree_listed = {}
-  for l, item in pairs(items) do
-    local hl = item.headline
-    if hl and item.filename and not flat(l) then
-      local set = tree_listed[item.filename]
-      if not set then
-        set = {}
-        tree_listed[item.filename] = set
-      end
-      set[hl.line] = true
-    end
-  end
-
-  -- A TODO nested under another TODO the same view lists is a subtask: it
-  -- never shows as a line of its own (org.nvim lists such sublevels flat,
-  -- once per block that matches them), it shows folded under its ancestor's
-  -- line. `hidden` marks those listed lines so the run drops them;
-  -- plain_children then re-adds each under its ancestor (an unlisted
-  -- headline is a child there). A subtask no listed TODO ancestor claims --
-  -- a ticket in flight under a map the view filters out, say -- keeps its
-  -- own line: dropping it would leave the entry nowhere at all.
-  -- A done entry is never a subtask: it is finished, so it stays on the line
-  -- its own block put it on -- the board's Done section at the bottom -- and
-  -- does not follow its open ancestor into that ancestor's section.
-  local hidden = {}
-  local function is_subtask(item)
-    local hl = item.headline
-    if not hl or hl:is_done() then
-      return false
-    end
-    local set = item.filename and tree_listed[item.filename]
-    if not set then
-      return false
-    end
-    local p = hl.parent
-    while p do
-      if p.todo and set[p.line] then
-        return true
-      end
-      p = p.parent
-    end
-    return false
-  end
-  for l, item in pairs(items) do
-    if not flat(l) and is_subtask(item) then
-      hidden[l] = true
-    end
-  end
-
-  -- lines the view already lists, per file: a subheadline that is itself a
-  -- listed entry stays where the agenda put it, never a synthetic child. A
-  -- hidden subtask is left out, so plain_children picks it up under its
-  -- ancestor instead; a flat block's lines too, so the tree a sibling block
-  -- draws keeps nesting them.
-  local listed = {}
-  for l, item in pairs(items) do
-    local hl = item.headline
-    if hl and item.filename and not hidden[l] and not flat(l) then
-      local set = listed[item.filename]
-      if not set then
-        set = {}
-        listed[item.filename] = set
-      end
-      set[hl.line] = true
-    end
-  end
+  -- What nests under what is read off the RUN, never off the view: a run is
+  -- the entries one section lists, and `flush` reads each of them on its own
+  -- (the comment there). It cannot be read off the view because a view's
+  -- sections are cut out of the same entries: the map of a route is listed
+  -- in one section and its tickets in another, so a ticket has to keep its
+  -- own line in the section that matched it while the map's section nests it
+  -- under the map -- plain_children walks the file, so an ancestor's line
+  -- still shows its whole subtree.
 
   --- The File object behind a headline: the entry's own file while the
   --- headline carries it (a File while it is in the buffer, a path once the
@@ -555,7 +494,12 @@ local function transform(view, b, render, ctx)
   --- (not TODO) subheadlines org.nvim never feeds an agenda. A listed entry
   --- still shows its whole subtree, as an org file does; a listed
   --- subheadline's own subtree is left to its own unit, not repeated here.
-  local function plain_children(item)
+  --- `listed` is the run's own set (see `flush`): an entry listed in another
+  --- section of the same view is no line of this run, so it is added here,
+  --- under its ancestor, the way an unlisted one is.
+  ---@param item org.AgendaItem
+  ---@param listed table<string, table<integer, boolean>> the run's lines
+  local function plain_children(item, listed)
     local hl = item.headline
     local file = headline_file(hl)
     local all = file and file.headlines
@@ -633,26 +577,32 @@ local function transform(view, b, render, ctx)
     }
   end
 
-  -- units: an item line with the entry-text lines that follow it, plus a
-  -- line per checkbox item of the entry's own section and one per plain
-  -- subheadline of it; every other line is a break between runs. The boxes
-  -- come first: they sit in the entry's text, above every child headline of
-  -- the file.
+  -- units: an item line with the entry-text lines that follow it. Whether
+  -- the line is dropped as a subtask, and the boxes and plain subheadlines
+  -- that hang under it, are the run's to say -- the same entry is a subtask
+  -- in a section that lists its ancestor and a line of its own in one that
+  -- does not -- so they are applied in `flush` (run_units there). Every
+  -- other line is a break between runs.
   local units = {}
   --- The checkbox lines of headline `hl`, one node each, nested under the
-  --- unit `owner` (the entry line they follow).
-  local function add_boxes(hl, owner, item)
+  --- unit `owner` (the entry line they follow). They are appended to `out`,
+  --- the run being expanded.
+  ---@param hl org.Headline|nil
+  ---@param owner table the unit the boxes hang under
+  ---@param item org.AgendaItem
+  ---@param out table[] the run's units
+  local function add_boxes(hl, owner, item, out)
     if not hl then
       return
     end
     for _, bx in ipairs(checkbox_children(hl, headline_file(hl)) or {}) do
-      units[#units + 1] = box_unit(bx, owner, item)
+      out[#out + 1] = box_unit(bx, owner, item)
     end
   end
 
   local l = 1
   while l <= n do
-    if items[l] and not hidden[l] then
+    if items[l] then
       local u = { item = items[l], rows = { l }, ctx = b.line_ctx and b.line_ctx[l], flat = flat(l) }
       local k = l + 1
       while k <= n and b.entry_text_lines and b.entry_text_lines[k] do
@@ -660,27 +610,6 @@ local function transform(view, b, render, ctx)
         k = k + 1
       end
       units[#units + 1] = u
-      if not u.flat then
-        add_boxes(items[l].headline, u, items[l])
-        -- the plain subheadlines: a hidden subtask is re-added here, and its
-        -- own boxes come with it, so a subtree nested under a listed entry
-        -- shows its checkboxes the same way the listed entry does
-        for _, h in ipairs(plain_children(items[l]) or {}) do
-          local cu = plain_unit(h, u.ctx)
-          if cu then
-            units[#units + 1] = cu
-            add_boxes(h, cu, cu.item)
-          end
-        end
-      end
-      l = k
-    elseif items[l] then
-      -- a hidden subtask (and its body): dropped here, plain_children
-      -- re-added it under its ancestor's unit
-      local k = l + 1
-      while k <= n and b.entry_text_lines and b.entry_text_lines[k] do
-        k = k + 1
-      end
       l = k
     else
       units[#units + 1] = { sep = true, rows = { l } }
@@ -709,7 +638,93 @@ local function transform(view, b, render, ctx)
     run = {}
   end
 
+  --- True once a run dropped a subtask: the view was reshaped, so the
+  --- transform is not a no-op even when no tree was built.
+  local hidden_any = false
+
+  --- The run's units, expanded, read on their own: what nests under what is
+  --- a property of the section, not of the view. A subtask -- a TODO nested
+  --- under another TODO of the SAME run -- never shows as a line of its own:
+  --- it is dropped here, and plain_children re-adds it under its ancestor's
+  --- line. An entry whose TODO ancestors this run does not list keeps its own
+  --- line -- that is the section's own business (a ticket of a map the
+  --- section above lists still belongs in its kind's section) -- and it is
+  --- its own line that the map's run, walking the file, still shows under the
+  --- map. A flat block is neither a subtask nor a lister (`flat` above). A
+  --- done entry is never a subtask: it is finished, so it stays on the line
+  --- its own block put it on -- the board's Done section at the bottom -- and
+  --- does not follow its open ancestor into that ancestor's section.
+  local function run_units(run_list)
+    local tree_listed = {}
+    for _, u in ipairs(run_list) do
+      local item, hl = u.item, u.item and u.item.headline
+      if hl and item.filename and not u.flat then
+        local set = tree_listed[item.filename]
+        if not set then
+          set = {}
+          tree_listed[item.filename] = set
+        end
+        set[hl.line] = true
+      end
+    end
+    local hidden = {}
+    for _, u in ipairs(run_list) do
+      local hl = u.item and u.item.headline
+      if hl and not hl:is_done() and not u.flat then
+        local set = u.item.filename and tree_listed[u.item.filename]
+        local p = set and hl.parent
+        while p do
+          if p.todo and set[p.line] then
+            hidden[u] = true
+            break
+          end
+          p = p.parent
+        end
+      end
+    end
+    -- the lines of this run already listed, per file: a subheadline that is
+    -- itself listed here stays on its own line, never a synthetic child. A
+    -- hidden subtask is left out, so plain_children picks it up under its
+    -- ancestor instead; a flat block's lines too, so the tree a sibling block
+    -- draws keeps nesting them.
+    local listed = {}
+    for _, u in ipairs(run_list) do
+      local item, hl = u.item, u.item and u.item.headline
+      if hl and item.filename and not hidden[u] and not u.flat then
+        local set = listed[item.filename]
+        if not set then
+          set = {}
+          listed[item.filename] = set
+        end
+        set[hl.line] = true
+      end
+    end
+    local out = {}
+    for _, u in ipairs(run_list) do
+      if hidden[u] then
+        hidden_any = true
+      else
+        out[#out + 1] = u
+        if u.item and not u.flat then
+          add_boxes(u.item.headline, u, u.item, out)
+          -- the plain subheadlines: a hidden subtask is re-added here, and
+          -- its own boxes come with it, so a subtree nested under a listed
+          -- entry shows its checkboxes the same way the listed entry does
+          for _, h in ipairs(plain_children(u.item, listed) or {}) do
+            local cu = plain_unit(h, u.ctx)
+            if cu then
+              out[#out + 1] = cu
+              add_boxes(h, cu, cu.item, out)
+            end
+          end
+        end
+      end
+    end
+    return out
+  end
+
   local function flush()
+    run = run_units(run)
     local flat_run = false
     for _, u in ipairs(run) do
       if u.flat then
@@ -857,7 +872,7 @@ local function transform(view, b, render, ctx)
   end
   flush()
 
-  if not tree_built and not next(hidden) then
+  if not tree_built and not hidden_any then
     return nil
   end
   reorder(b, order, n)

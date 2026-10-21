@@ -207,16 +207,18 @@ end
 -- A wayfinder kind's section (the `y` view's per-kind blocks, key `5`): the
 -- open tickets carrying that kind's label, wherever they sit in the tree,
 -- listed flat -- `flat` is what the tree helper needs (helpers/org/tree.lua):
--- these entries are a map's tickets, so as a tree block the section would list
--- nothing at all (a listed entry under a TODO ancestor is hidden unless the
--- block lists the ancestor too, and the ancestor -- the map -- belongs to the
--- block above). `wf_<type>` is the label the tracker doc writes,
+-- these entries are a map's tickets, and a ticket nested under another one is
+-- a subtask the helper folds under it whenever the ancestor is listed in the
+-- same run, so a tree block would show the section as the route the map block
+-- above already draws, one chain of the kind's tickets under another. Flat,
+-- it reads as the list of the kind: the tickets in the section's own order,
+-- each on its own line. `wf_<type>` is the label the tracker doc writes,
 -- `wayfinder_<type>` the longer spelling of the maps charted before it, so the
 -- match takes both; `hide_empty` matches the board's sections. The order is
--- the board's own for a list of open work: keyword first (NEXT, the claimed
--- one, above the untouched TODO), then priority, urgency settling the ties --
--- and no `category-keep`, so the categories interleave, as a map's tickets
--- all carry the project's.
+-- the board's own for a list of open work: keyword first, in the keyword
+-- sequence's own order (an untouched TODO, then a claimed NEXT, then the
+-- PENDs), then priority, urgency settling the ties -- and no `category-keep`,
+-- so the categories interleave, as a map's tickets all carry the project's.
 --
 -- The header opens with the kind's icon (helpers/org/wayfinder.lua), the
 -- same glyph its tickets' lines carry before their state keyword: the
@@ -497,14 +499,11 @@ return {
         --
         -- One block, not two. The frontier -- the tickets the wayfinder
         -- tracker would show as takeable: open, with nothing open under them
-        -- -- is the LEAVES of this tree, and it cannot be listed as a
-        -- section of its own: the tree helper hides a listed entry that sits
-        -- under a TODO ancestor from every block but the one its ancestor is
-        -- listed in (`is_subtask`, helpers/org/tree.lua), so a block of
-        -- leaves alone renders empty. The fold state carries the same
-        -- information: a node with a `… (N)` count still waits on its
-        -- subtree, and an open entry with no count is what a session can
-        -- claim now.
+        -- -- is the LEAVES of this tree, and the fold state is what reads it:
+        -- a node with a `… (N)` count still waits on its subtree, and an open
+        -- entry with no count is what a session can claim now. A section of
+        -- the leaves would repeat the ends of the route the block above
+        -- already draws, one line per leg.
         --
         -- The one `wf` tag goes on the map and on every ticket, so one match
         -- lists a whole expedition; the map additionally carries `wf_map` and
@@ -566,16 +565,22 @@ return {
       -- may use a user-defined strategy or it would sort by completion date
       -- too.
       cmp_user_defined = done_recency,
-      -- The entry lists show the top level only: a TODO / tag block lists a
-      -- matched top-level entry and skips its subtree
-      -- (org-agenda-todo-list-sublevels / org-tags-match-list-sublevels
-      -- off), so a sub-task never appears as a line of its own. In a TODO
-      -- view helpers/org/tree.lua re-adds a listed entry's subheadlines --
-      -- the sub-TODOs included -- nested under it, folded at level 1: a
-      -- sub-task shows only when its entry is expanded. The date views
+      -- Every matched entry reaches the view, sub-TODOs included
+      -- (org-agenda-todo-list-sublevels / org-tags-match-list-sublevels on):
+      -- org.nvim's own listing is what feeds a block, and a block that skips
+      -- a matched entry's subtree never hands the entry to a section at all
+      -- -- the tree below could not put it back (it re-adds a listed entry's
+      -- own subheadlines, not the entries another block matched). A ticket
+      -- nested under another would then be missing from the section that
+      -- matched it: the `y` view's kind sections listed the shallowest ticket
+      -- of each kind and nothing below it, and the `4` group view drew no
+      -- PEND section at all. What nests, and what keeps its own line, is
+      -- then the tree's to decide, per run (helpers/org/tree.lua): an entry
+      -- folds under an ancestor listed in the same section, and stands alone
+      -- in a section that lists no ancestor of it. The date views
       -- (agenda_block) don't list entries this way and are untouched.
-      todo_list_sublevels = false,
-      tags_match_list_sublevels = false,
+      todo_list_sublevels = true,
+      tags_match_list_sublevels = true,
       -- Line prefix (org-agenda-prefix-format) for the entry lists. The stock
       -- `" %i %-12:c"` is kept, and the `todo` kind -- the board (digit 3 /
       -- `°`) and the global `o` (digit 1, and `4`'s whole-file group view)
