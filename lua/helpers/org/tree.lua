@@ -14,10 +14,13 @@
 --     it, depth-first, siblings keeping the agenda's sort order. Runs are
 --     what the grouper left between its headers, so nesting never crosses a
 --     category heading or a board section;
---   * a TODO nested under another TODO -- a subtask -- never shows as a line
---     of its own: its listed line is dropped from whatever block matched it
---     (so a sub-task does not surface at the top level of a section its
---     ancestor is not in) and it reappears, folded, under the ancestor. The
+--   * a TODO nested under another TODO the view lists -- a subtask -- never
+--     shows as a line of its own: its listed line is dropped from whatever
+--     block matched it (so a sub-task does not surface at the top level of a
+--     section its ancestor is not in) and it reappears, folded, under the
+--     ancestor. A subtask no listed TODO ancestor claims -- a ticket in
+--     flight under a map the view's filter leaves out, say -- keeps its own
+--     line, an ordinary entry: dropping it would put the entry nowhere. The
 --     view's first level is always the top-level entries;
 --   * a block marked `flat` opts out of all of it -- the marker the wayfinder
 --     view's per-kind sections set (lua/terminal_plugins/org.nvim.lua): its
@@ -443,22 +446,48 @@ local function transform(view, b, render, ctx)
     return (c and c.block and c.block.flat) == true
   end
 
-  -- A TODO nested under another TODO is a subtask: by default it never shows
-  -- as a line of its own (org.nvim lists such sublevels flat, once per block
-  -- that matches them), it shows folded under its ancestor's line. `hidden`
-  -- marks those listed lines so the run drops them; plain_children then
-  -- re-adds each under its ancestor (an unlisted headline is a child there).
+  -- The lines the view lists in a tree run, per file: a flat block's lines
+  -- are not among them (that block lists its entries itself, with no
+  -- nesting), and a subtask is only one for as long as one of its TODO
+  -- ancestors is here -- an ancestor this set does not hold has no line for
+  -- the subtask to be re-added under, so the subtask is a line of its own.
+  local tree_listed = {}
+  for l, item in pairs(items) do
+    local hl = item.headline
+    if hl and item.filename and not flat(l) then
+      local set = tree_listed[item.filename]
+      if not set then
+        set = {}
+        tree_listed[item.filename] = set
+      end
+      set[hl.line] = true
+    end
+  end
+
+  -- A TODO nested under another TODO the same view lists is a subtask: it
+  -- never shows as a line of its own (org.nvim lists such sublevels flat,
+  -- once per block that matches them), it shows folded under its ancestor's
+  -- line. `hidden` marks those listed lines so the run drops them;
+  -- plain_children then re-adds each under its ancestor (an unlisted
+  -- headline is a child there). A subtask no listed TODO ancestor claims --
+  -- a ticket in flight under a map the view filters out, say -- keeps its
+  -- own line: dropping it would leave the entry nowhere at all.
   -- A done entry is never a subtask: it is finished, so it stays on the line
   -- its own block put it on -- the board's Done section at the bottom -- and
   -- does not follow its open ancestor into that ancestor's section.
   local hidden = {}
-  local function is_subtask(hl)
+  local function is_subtask(item)
+    local hl = item.headline
     if not hl or hl:is_done() then
+      return false
+    end
+    local set = item.filename and tree_listed[item.filename]
+    if not set then
       return false
     end
     local p = hl.parent
     while p do
-      if p.todo then
+      if p.todo and set[p.line] then
         return true
       end
       p = p.parent
@@ -466,7 +495,7 @@ local function transform(view, b, render, ctx)
     return false
   end
   for l, item in pairs(items) do
-    if not flat(l) and is_subtask(item.headline) then
+    if not flat(l) and is_subtask(item) then
       hidden[l] = true
     end
   end
