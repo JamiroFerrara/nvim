@@ -562,16 +562,16 @@ return {
       -- column: an entry with no timestamp leaves it blank rather than
       -- dropping it, so its keyword still lands where the dated entries'
       -- ones do.
-      -- The `tags` kind -- every tag/tag-TODO block, the board's own
-      -- sections and the `5` view's among them -- is the stock format plus
-      -- the space the wayfinder icon stands after: helpers/org/wayfinder.lua
-      -- puts the icon (or its blank field, on an entry of no kind) before
-      -- every keyword of such a block, and the space it needs is the
-      -- format's own, not the padded category column's -- a category that
-      -- fills the column leaves none. The `todo` kind needs no trailing
-      -- space: its date column pads to 13, and no label reaches that width.
-      -- The `agenda` and `search` kinds keep their default formats -- a
-      -- table here merges into the defaults.
+      -- The `tags` and `search` kinds -- the blocks that list entries by a
+      -- match or a text search, the board's own sections and the `5` view's
+      -- among them -- are the stock format plus the space the wayfinder
+      -- icon stands after: helpers/org/wayfinder.lua puts the icon (or its
+      -- blank field, on an entry of no kind) before every keyword of such a
+      -- block, and the space it needs is the format's own, not the padded
+      -- category column's -- a category that fills the column leaves none.
+      -- The `todo` kind needs no trailing space: its date column pads to 13,
+      -- and no label reaches that width. The `agenda` kind keeps its default
+      -- format -- a table here merges into the defaults.
       -- The `12` of the category column is a floor, not the column: for the
       -- kinds that list entries (todo, tags, search) helpers/org/agenda.lua
       -- widens it to the longest category the block shows, so a project
@@ -581,6 +581,7 @@ return {
       prefix_format = {
         todo = ' %i %-12:c %-13(require("helpers.org.changed").label(hl))',
         tags = ' %i %-12:c ',
+        search = ' %i %-12:c ',
       },
       -- Emacs' org-agenda-show-outline-path: echo the outline path of the
       -- entry at point on every cursor move. Off here, because org.nvim
