@@ -198,3 +198,75 @@ snippet caption
 # wherever it lands: a ticket body, a capture, a note.
 snippet agentsmd "Ask: fold this into AGENTS.md"
 	This should be incorporated into AGENTS.md
+
+# --- agent control ---------------------------------------------------------
+
+# What a ticket can say to the run working it (skill://omp-org-ticket). The
+# `AI:` lines are directives: `/skill:<name>` reads that skill and works the
+# ticket its way, a bare question is answered in place under the line. The body
+# around them is the instruction, so the guardrails are ordinary prose the run
+# reads, and `Resolved when` is the stop condition the hand-back is measured
+# against. Type them in a capture body or in a ticket written by hand.
+
+snippet aiq "Ask the agent working the ticket (answered under the line)"
+	AI: $0
+snippet aiskill "Directive: work the ticket by a skill"
+	AI: /skill:${1|kb,research,grilling,tdd,code-review,prototype,diagnosing-bugs,domain-modeling|} $0
+snippet aires "The ticket's stop condition"
+	Resolved when ${1:what has to hold}
+
+snippet aistop "Guardrail: triage this instead of working it"
+	Stop and hand back WARN with the reason; change nothing.
+snippet aiscope "Guardrail: limit what the run touches"
+	Touch only ${1:path}; leave ${2:the rest} alone.
+snippet aiprove "Guardrail: evidence over tests"
+	Prove it by running ${1:command} and quoting the output; a test on its own is not proof.
+snippet aiseq "Guardrail: an ordered run, one commit per step"
+	1. ${1:first step}
+	2. ${2:second step}
+	Commit each step on its own.
+snippet aichart "Guardrail: chart this before working it"
+	Chart this before working it: one child ticket per decision it needs, nested under the ticket it blocks.
+
+# Ticket shapes. `ait` writes a whole plain ticket -- no `:ID:` drawer, the
+# launcher mints that and owns `:OMP_SESSION:` / `NEXT`. The wayfinder shapes
+# (skill://wayfinder) are a map (`wf_map`) and the decision tickets hanging
+# under it (`wf_<type>`), which inherit the `:wf:` marker; a ticket's
+# `## Question` is what a run answers, and the map's sections are read in one
+# order -- Destination, Notes, Decisions so far, Not yet specified, Out of
+# scope.
+
+snippet ait "Ticket with an agent directive"
+	* TODO ${1:title} :${2:nvim}:
+	  AI: /skill:${3:research} ${4:}
+	  Resolved when $0
+snippet wft "Wayfinder ticket: a decision to take"
+	** TODO ${1:title} :wf:wf_${2|task,research,grilling,prototype|}:
+	  ## Question
+
+	  ${3:what must be decided, the options seen so far, and the ticket it blocks}
+
+	  Resolved when $0
+snippet wfmap "Wayfinder map skeleton"
+	* TODO ${1:title} :wf:wf_map:
+	  ## Destination
+
+	  ${2:the state this whole effort aims at}
+
+	  ## Notes
+
+	  - ${3:effort override, references, standing preferences}
+
+	  ## Decisions so far
+
+	  ## Not yet specified
+
+	  - ${4:a patch of fog}
+
+	  ## Out of scope
+snippet wfdec "Map decisions line"
+	- [[id:${1:}][${2:title}]]: ${3:what was decided, and what it opened}
+snippet wfny "Not-yet-specified line"
+	- ${1:the question} — waits on ${2:what}
+snippet wfoos "Out-of-scope ruling"
+	- ${1:gist} — out because ${2:reason} ([[id:${3:}][closed ticket]])
