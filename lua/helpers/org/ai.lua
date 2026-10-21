@@ -70,14 +70,15 @@
 -- ticket title first of all.
 --
 -- The launcher owns the start of the run: it puts an :ID: on the headline
--- (reusing one already there), claims it (`NEXT`) when nobody has claimed it
--- yet, counts the launch in the drawer, saves the file, and only then starts
--- omp. The claim is the launcher's, but only over an untouched ticket: a
--- state a run already wrote (`PEND`, `TEST`, `WARN`, `DONE`) states what that
--- run left behind, and relaunching is not a reason to erase it -- the state
--- goes back to `NEXT` only from `TODO` (or from no keyword at all), or when
--- the launch is the user's own answer to the hand-back (the note on a TEST
--- entry, M.launch_at's `claim`). The launch number rides along
+-- (reusing one already there), claims it (`NEXT`) when the ticket is the
+-- launcher's to claim -- an untouched one (`TODO`, or no keyword at all) and
+-- one parked on the user (`PEND`: pressing the key there is the user coming
+-- back to it) -- counts the launch in the drawer, saves the file, and only
+-- then starts omp. A state a run wrote as its outcome (`TEST` awaiting the
+-- user's validation, `WARN`, `DONE`) stands: relaunching is not a reason to
+-- erase it, and such a state goes back to `NEXT` only when the launch is the
+-- user's own answer to the hand-back (the note on a TEST entry,
+-- M.launch_at's `claim`). The launch number rides along
 -- (`:OMP_LAUNCH:`), and the message omp starts with
 -- says which launch this is, so a run that finds its own unanswered round in
 -- the ticket can tell a relaunch from an answer instead of reading silence as
@@ -96,7 +97,12 @@
 -- untracked files are left out of it -- a `reset --hard` never touches them
 -- -- because a repo can hold a pile of them (a scratch checkout, a clone)
 -- and staging those is what froze the UI: the checkpoint runs inside the
--- mapping, on the ticket's keypress (`snapshot`'s own note).
+-- mapping, on the ticket's keypress (`snapshot`'s own note). The commit is
+-- made with `--no-verify` for the same reason: a repo's own `pre-commit`
+-- gate is the user's, over the user's commits, and running it here would
+-- hold the UI for as long as the gate takes (the waypoint repo's `make
+-- check` is a build and a format check, 21s measured) while its verdict can
+-- only lose the revert point.
 -- `<leader>aj` is the other direction: it jumps to the
 -- pane of the ticket's already-running instance (the tmux `<prefix> i`
 -- panel's jump); when nothing runs it, it resumes the ticket's session
@@ -204,12 +210,23 @@ local SESSION_PROP = 'OMP_SESSION'
 --- unanswered round.
 local LAUNCH_PROP = 'OMP_LAUNCH'
 
---- The keywords that mean a run has already worked the ticket: what it left
---- behind is the outcome (the omp-org-ticket skill's States), so a relaunch
---- may not overwrite it. Only `TODO` -- and an unkeyworded headline -- is the
---- launcher's to claim on its own; another state needs the caller's record
---- that it was answered (ticket_at's `claim`).
-local CLAIMABLE = { TODO = true }
+--- The keywords a launch of the user's own overwrites with `NEXT`: the
+--- untouched ticket (`TODO`, and an unkeyworded headline) and one parked on
+--- the user (`PEND`) -- pressing `<leader>ai` on a pending entry is the user
+--- coming back to it, so the run the launch starts is what the entry holds.
+--- `TEST` (a change handed back for their validation), `WARN` (a run that
+--- failed) and `DONE` are a run's outcome or the user's word: those go back
+--- to `NEXT` only on the caller's record that it was answered (ticket_at's
+--- `claim`, the note on a `TEST` entry).
+local CLAIMABLE = { TODO = true, PEND = true }
+
+--- The keywords the climb starts: only what no run has touched. The climb is
+--- the run's own act, not the user's keypress, so a `PEND` (the user's to
+--- answer) and a `TEST` (theirs to validate) are left where they stand --
+--- the level above waits for the user, not for this run. `CLAIMABLE` is the
+--- launch's own set; this one is the climb's, and the two are deliberately
+--- apart.
+local UNTOUCHED = { TODO = true }
 
 --- The session key linking a ticket to the agent that works it: the
 --- :OMP_SESSION: link when the headline carries one; a ticket that never
@@ -385,14 +402,14 @@ end
 
 --- The ticket for the headline at `lnum` of `bufnr`, in an orgagenda or an
 --- org buffer. With `mutate` set (the launch) a missing :ID: is created, the
---- the state is claimed (NEXT) when the ticket is untouched, the buffer saved; without it (the jump)
---- nothing is written -- the headline is only read.
+--- state is claimed (NEXT) when the ticket is CLAIMABLE, the buffer saved;
+--- without it (the jump) nothing is written -- the headline is only read.
 ---
---- `claim` widens the claim past the untouched ticket (CLAIMABLE): the caller
---- has read the state itself and knows it was consumed, so the run starting
---- now is what the entry holds. M.launch_at is the one caller that does -- the
---- note it was handed answered the `TEST` hand-back the entry stood in, so the
---- entry goes back to `NEXT` for the run that reads the note.
+--- `claim` widens the claim past CLAIMABLE: the caller has read the state
+--- itself and knows it was consumed, so the run starting now is what the entry
+--- holds. M.launch_at is the one caller that does -- the note it was handed
+--- answered the `TEST` hand-back the entry stood in, so the entry goes back to
+--- `NEXT` for the run that reads the note.
 ---
 --- `link` is the key of the session that will work the ticket, when the
 --- caller already knows it: a ticket launched in a batch is the project
@@ -453,15 +470,16 @@ local function ticket_at(bufnr, lnum, mutate, claim, link)
     launch = launch + 1
     require('org.properties').entry_put(bufnr, hl.line, LAUNCH_PROP, tostring(launch))
 
-    -- Claim the ticket, but only an untouched one: `NEXT` means "a run is on
-    -- this", and a state a run already wrote says what it left behind. A
-    -- relaunch therefore finds `PEND`/`TEST`/`WARN`/`DONE` and leaves it --
-    -- the run that follows reads the state and the launch number, and the
-    -- omp-org-ticket skill decides what a relaunch means. Unless the caller
-    -- says the state it found was answered (`claim`, M.launch_at's note):
-    -- then the entry is a run's again and `NEXT` is what it holds. `force`
-    -- skips blockers so the claim is deterministic whatever the map looks
-    -- like.
+    -- Claim the ticket: `NEXT` means "a run is on this", which is what a
+    -- launch holds for an untouched ticket (`TODO`) and for one parked on the
+    -- user (`PEND`) -- pressing the key on a pending entry is the user coming
+    -- back to it (CLAIMABLE). The states a run's outcome lives in (`TEST`,
+    -- `WARN`, `DONE`) are left standing: the run that follows reads the state
+    -- and the launch number, and the omp-org-ticket skill decides what a
+    -- relaunch means. Unless the caller says the state it found was answered
+    -- (`claim`, M.launch_at's note): then the entry is a run's again whatever
+    -- it held. `force` skips blockers so the claim is deterministic whatever
+    -- the map looks like.
     if state == nil or claim or CLAIMABLE[state] then
       require('org.todo').change_state({ bufnr = bufnr, lnum = hl.line }, 'NEXT', { force = true })
       state, claimed = 'NEXT', true
@@ -612,6 +630,14 @@ end
 --- survives the reset whether or not the checkpoint committed it. Work the
 --- user has already staged -- a new file they `git add`ed -- rides along in
 --- the commit, `-a` adding the tracked modifications to it.
+---
+--- And it is made with `--no-verify`: a repo's `pre-commit` gate is the
+--- user's, over the user's own commits, and running it here holds the UI for
+--- as long as the gate takes -- the waypoint repo's `make check` is a `dotnet
+--- build` + `dotnet format` (measured: 21s inside the keypress) and minutes
+--- on a cold cache -- while its verdict can only *lose* the revert point (a
+--- failing gate refuses the commit, and the launch goes on without one).
+--- A snapshot of work the user already wrote is not a change to be gated.
 ---@param root string
 ---@param subject string
 ---@return boolean|nil committed, string|nil err
@@ -623,7 +649,7 @@ local function snapshot(root, subject)
   if not status.stdout:match '%S' then
     return false
   end
-  local commit = git(root, { 'commit', '--quiet', '-a', '-m', subject })
+  local commit = git(root, { 'commit', '--quiet', '--no-verify', '-a', '-m', subject })
   if commit.code ~= 0 then
     return nil, git_error(commit)
   end
@@ -689,10 +715,11 @@ end
 --- the state the launcher left the headline in, and whether the :ID: is the
 --- launcher's to remove. One line, so it survives shell quoting in the pane.
 ---
---- The state line says what the launcher did, not what it wishes: a first
---- launch claims the ticket (`NEXT`), a relaunch leaves whatever a run wrote
---- (`PEND` waiting on the user, `TEST` awaiting validation, `WARN`, `DONE`),
---- and the run has to read that rather than assume it was reset. The launch
+--- The state line says what the launcher did, not what it wishes: a launch
+--- claims the ticket (`NEXT`) when it is untouched or parked on the user
+--- (`PEND` -- the keypress there is the user coming back), and leaves what a
+--- run wrote as its outcome (`TEST` awaiting validation, `WARN`, `DONE`), so
+--- the run has to read that rather than assume it was reset. The launch
 --- number is the other half of the same fact: `#2` on a ticket whose body
 --- already holds this skill's own round is a relaunch, and the skill says what
 --- a relaunch means.
@@ -1458,12 +1485,12 @@ function M.climb_up(file, id)
   end
 
   -- the level above, as a launch on the parent would cover it, narrowed to
-  -- the tickets no run has touched (the launcher's own reading of untouched:
-  -- CLAIMABLE): the parent when it is free, the untouched tickets left
-  -- takeable below it otherwise
+  -- the tickets no run has touched (UNTOUCHED -- a `PEND` or a `TEST` the
+  -- level above holds is waiting on the user, not on this run): the parent
+  -- when it is free, the untouched tickets left takeable below it otherwise
   local targets, titles = {}, {}
   for _, cand in ipairs(expand_headline(parent)) do
-    if CLAIMABLE[cand.todo] then
+    if UNTOUCHED[cand.todo] then
       targets[#targets + 1] = { bufnr = buf, lnum = cand.line }
       titles[#titles + 1] = cand:plain_title()
     end
