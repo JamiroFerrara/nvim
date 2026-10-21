@@ -350,8 +350,8 @@ return {
       -- match is the TODO part of |org-match-syntax|, "not done", and the
       -- `-NEXT-TEST` after it excludes those keywords. `o` is every open
       -- TODO (`type = 'todo'`, org's `alltodo`), and `f` the same list cut
-      -- to the states in flight (NEXT, TEST, WARN, PEND -- the TODO
-      -- backlog left out); `w` is the board --
+      -- to the states in flight (NEXT, TEST, WARN -- the TODO backlog and
+      -- the user-parked PEND left out); `w` is the board --
       -- the "In progress" block (every NEXT and TEST entry, any tag), then
       -- the classification sections -- bug tag, feat tag, chore tag, the
       -- untagged rest -- and DONE last, in that order, so a ticket moves
@@ -379,8 +379,8 @@ return {
         },
         -- Key `2`'s view: `o`'s cross-project list cut down to the states
         -- that ask for something -- NEXT, the entry being worked on, TEST,
-        -- the one waiting on validation, then the parked PEND and the
-        -- problematic WARN -- with the untouched TODO backlog left out, so
+        -- the one waiting on validation, then the problematic WARN -- with
+        -- the untouched TODO backlog and the user-parked PEND left out, so
         -- a `2` press answers "what is going on right now" for every
         -- project at once. It brings no `super_groups`, so it takes the
         -- global map the view's scope gives it (helpers/org/agenda.lua
@@ -391,7 +391,7 @@ return {
           types = {
             {
               type = 'todo',
-              match = 'NEXT|TEST|WARN|PEND',
+              match = 'NEXT|TEST|WARN',
               header = 'Everything in flight',
               hide_empty = true,
             },

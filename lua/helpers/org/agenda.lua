@@ -716,9 +716,10 @@ end
 -- Number keys open the custom views configured in
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
 -- TODOs across every project, 2 the same cross-project list cut to the
--- states in flight (NEXT, TEST, WARN, PEND -- the untouched TODO backlog
--- left out), 3 the board (in progress, bugs, features, chores, untagged,
--- done), 4 the group view -- the whole project file, split by state, not
+-- states in flight (NEXT, TEST, WARN -- the untouched TODO backlog and the
+-- user-parked PEND left out), 3 the board (in progress, bugs, features,
+-- chores, untagged, done), 4 the group view -- the whole project file,
+-- split by state, not
 -- just the headline cwd's project resolved to -- 5 priorities, 6 the
 -- wayfinder map of the cwd project: the charted tree, then a section
 -- per ticket kind (the `y` command, lua/terminal_plugins/org.nvim.lua).
