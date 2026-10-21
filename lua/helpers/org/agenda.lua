@@ -344,6 +344,9 @@ end
 -- scroll -- page the pane rather than the entry list under the cursor, which
 -- would move the pane onto another entry instead of showing the rest of the
 -- one being read (page below; the pane's own `J` / `K` scroll it either way).
+-- An entry that fits the pane -- or one already scrolled to the end the key
+-- moves toward -- leaves the key the usual scroll of the view, so the list
+-- still pages the way it always did.
 -- The pane holds the very scratch `<CR>` opens, aimed at the
 -- pane's own window instead of the view's (entry_scratch above takes a
 -- target window), so it is editable and writes back the same way: an entry
@@ -480,18 +483,38 @@ local function setup_entry_preview()
     end)
   end
 
-  --- A half-page scroll of the pane, run for the view's `J` / `K`. It is the
-  --- scroll the global keys give (`<C-d>` / `<C-u>`, lua/mappings.lua), run
-  --- in the pane's own window so the pane's cursor and scrolloff rules
-  --- apply; the view's cursor and scroll are left alone.
-  local function page(key)
+  --- Whether the pane still has somewhere to scroll that way: its viewport
+  --- must not already show the end it would move toward. A copy of an entry
+  --- shorter than the pane, or one already scrolled to its last line, has
+  --- nowhere left to go.
+  local function can_page(win, down)
+    local info = vim.fn.getwininfo(win)[1]
+    if not info then
+      return false
+    end
+    if down then
+      return info.botline < vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(win))
+    end
+    return info.topline > 1
+  end
+
+  --- The half-page scroll the view's `J` / `K` carry (`<C-d>` / `<C-u>`,
+  --- lua/mappings.lua), run in the pane's own window so the pane's cursor
+  --- and scrolloff rules apply and the view is left alone. When the pane has
+  --- nothing more to show that way -- the entry fits it, or it is already at
+  --- that end -- the key is the usual scroll of the view, which pages the
+  --- entry list the way it always did rather than doing nothing.
+  local function page(key, down)
     return function()
-      if not (state.win and vim.api.nvim_win_is_valid(state.win)) then
+      local win = state.win
+      local arg = (vim.v.count > 0 and tostring(vim.v.count) or '') .. key
+      if win and vim.api.nvim_win_is_valid(win) and can_page(win, down) then
+        vim.api.nvim_win_call(win, function()
+          vim.cmd.normal { args = { arg }, bang = true }
+        end)
         return
       end
-      vim.api.nvim_win_call(state.win, function()
-        vim.cmd.normal { args = { key }, bang = true }
-      end)
+      vim.cmd.normal { args = { arg }, bang = true }
     end
   end
 
@@ -535,16 +558,17 @@ local function setup_entry_preview()
       callback = teardown,
       desc = 'org: forget the entry preview when its window closes',
     })
-    -- With the pane open the pane is what there is to read, so the view's
-    -- half-page keys page it -- the rest of the entry being read -- instead
-    -- of moving the cursor down the entry list, which would reload the pane
-    -- on another entry instead. Buffer-local to the view and dropped with
-    -- the pane (teardown); in the pane itself the global keys already scroll
-    -- it.
+    -- The view's half-page keys page the pane -- the rest of the entry being
+    -- read -- rather than moving the cursor down the entry list, which would
+    -- reload the pane on another entry instead. Only while the pane has more
+    -- to show that way (page above): an entry that fits it leaves `J` / `K`
+    -- the usual scroll of the view, so the list still pages as it always
+    -- did. Buffer-local to the view and dropped with the pane (teardown); in
+    -- the pane itself the global keys already scroll it.
     state.vbuf = vbuf
     -- `\6` / `\21` are `<C-d>` / `<C-u>`, the scroll the global keys carry.
-    vim.keymap.set('n', 'J', page '\6', { buffer = vbuf, desc = 'org: page the entry preview down' })
-    vim.keymap.set('n', 'K', page '\21', { buffer = vbuf, desc = 'org: page the entry preview up' })
+    vim.keymap.set('n', 'J', page('\6', true), { buffer = vbuf, desc = 'org: page the entry preview down, else the view' })
+    vim.keymap.set('n', 'K', page('\21', false), { buffer = vbuf, desc = 'org: page the entry preview up, else the view' })
     -- Fill now, not on the next tick: `open` runs on a key, not in an
     -- autocommand, so the pane can come up with the entry already in it
     -- instead of an empty split for a frame.
