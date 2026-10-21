@@ -2,9 +2,11 @@
 -- over the agent sessions of every finished ticket.
 --
 -- The ticket -> session link is helpers/org/ai.lua's: a launch stamps the
--- headline with `:OMP_SESSION:` (the key of the ticket's session directory
--- under the omp agent directory, `tickets/<key>`), so a finished ticket still
--- points at the whole history of the agent that worked it. `OrgRetro` walks
+-- headline with `:OMP_SESSION:` (the key of the session directory under the
+-- omp agent directory, `tickets/<key>` — or `orchestrators/<project>` for a
+-- ticket worked in a batch, whose session is the project's orchestrator), so a
+-- finished ticket still points at the whole history of the agent that worked
+-- it. `OrgRetro` walks
 -- the agenda files, takes every DONE headline that carries the property and
 -- holds at least one session file, and starts a single omp instance over all
 -- of them with the `retro` skill appended: one retrospective of the agent
@@ -49,11 +51,16 @@ local function agent_dir()
   return vim.fn.expand '~/.omp/agent'
 end
 
---- The session files of the ticket linked by `key` (its :OMP_SESSION:).
+--- The session files of the ticket linked by `key` (its :OMP_SESSION:). A key
+--- carrying a slash is a path of its own under the agent directory
+--- (`orchestrators/<project>`, the batch orchestrator that worked the ticket);
+--- a bare key is the ticket's own session directory — helpers/org/ai.lua's
+--- `session_dir` resolves the two the same way.
 ---@param key string
 ---@return string[]
 local function session_files(key)
-  return vim.fn.glob(agent_dir() .. '/tickets/' .. key .. '/*.jsonl', false, true)
+  local sub = key:find '/' and key or ('tickets/' .. key)
+  return vim.fn.glob(agent_dir() .. '/' .. sub .. '/*.jsonl', false, true)
 end
 
 --- Every DONE ticket of the agenda files that has run an agent, as

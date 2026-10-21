@@ -1,7 +1,19 @@
 -- OMP on an org ticket: `<leader>ai` in the TODO view (or an org buffer)
 -- opens an `omp` instance for the headline at point, seeded with the ticket's
 -- :ID: and file. Over a Visual selection it is that same launch applied to
--- every entry the selection covers (M.launch_range), one instance each.
+-- every entry the selection covers (M.launch_range); a launch that covers
+-- several tickets is one instance, the batch below.
+--
+-- A launch that covers several tickets is one instance, not one each: the
+-- container fan-out, a Visual selection and the level a climb rises to are
+-- all handled by a single orchestrator omp (`open_orchestrator`) with the
+-- omp-orchestrator skill appended, handed every ticket in one message. Its
+-- subagents do the working, so a frontier of eighteen costs one omp process
+-- and one tmux pane instead of eighteen -- which is what made a launch on a
+-- big container crawl the machine. The tickets still get everything a
+-- single-ticket launch gives them: their own :ID: / :OMP_LAUNCH:, the claim,
+-- the project checkpoint, and an :OMP_SESSION: linking them to the batch's
+-- session (`orchestrators/<project>`, resolved by `session_dir`).
 --
 -- A launch lands on what is takeable under the headline, not on the headline
 -- itself: the frontier -- the tickets open with nothing open below them
@@ -11,8 +23,9 @@
 -- blocking, children first"). A headline with open work under it is
 -- therefore a container, not a ticket of its own: the launch walks down
 -- through it, past every open ticket still waiting on its own subtree, to
--- the leaves that block them, one instance each, and the containers
--- themselves are stamped with nothing. Launching the root of a charted chain
+-- the leaves that block them -- one instance when the frontier is one ticket,
+-- one orchestrator batch when it is several -- and the containers themselves
+-- are stamped with nothing. Launching the root of a charted chain
 -- starts the task at its bottom, and once that task is done the ticket above
 -- it holds nothing open below it in turn, so the next launch lands on that
 -- one -- the frontier climbing the chain as its leaves close. A headline
@@ -41,9 +54,13 @@
 -- current one (`new-window -a`, the `prefix+n` equivalent) instead of stacking
 -- panes in the right column, so each instance gets a full window. Each pane
 -- carries the ticket's :ID: in its `@omp_ticket` pane option (the "already
--- running?" lookup) plus its window name / title. Splits and windows are
--- created detached (`-d`): the launch never moves the active pane or window
--- off nvim, so the cursor stays put.
+-- running?" lookup) plus its window name / title; an orchestrator pane carries
+-- its session key in `@omp_orchestrator` instead, which is both the lookup for
+-- a further batch of the same project and the guard on the pane's own close
+-- (the skill's last act). A batch handed to a project whose orchestrator is
+-- already running is typed into that instance (`deliver`) rather than started
+-- a second time. Splits and windows are created detached (`-d`): the launch
+-- never moves the active pane or window off nvim, so the cursor stays put.
 --
 -- The pane runs `nvim "+terminal sh <script>"`, the same shape as the tmux
 -- default-command (`nvim +terminal`) every other pane uses, so the instance
@@ -100,8 +117,9 @@
 -- above leaves takeable -- that headline itself when nothing under it is open,
 -- and every ticket left open and takeable under it otherwise (a sibling this
 -- run did not close, a ticket charted into that subtree since the level was
--- last launched) -- one instance each, where the single launch it replaces
--- took only the one. A ticket a run already took is left where it stands:
+-- last launched) -- where the single launch it replaces took only the one,
+-- and a level of several is one orchestrator batch. A ticket a run already
+-- took is left where it stands:
 -- `NEXT` is a run on it, `TEST` a change awaiting validation, `PEND` the
 -- user's, `WARN` a failure. That is also what keeps a frontier launched
 -- together from racing for the parent: the leaves still in flight are `NEXT`,
@@ -127,6 +145,10 @@
 local M = {}
 
 local SKILL = vim.fn.expand '~/.agents/skills/omp-org-ticket/SKILL.md'
+
+-- the skill appended instead when a launch covers several tickets: the same
+-- rules applied to subagents, one omp process for the whole batch
+local ORCHESTRATOR = vim.fn.expand '~/.agents/skills/omp-orchestrator/SKILL.md'
 
 -- every write of a ticket file goes through it: the file is written by the
 -- agents of the tickets already running too (helpers/org/write.lua)
@@ -185,22 +207,49 @@ local LAUNCH_PROP = 'OMP_LAUNCH'
 --- that it was answered (ticket_at's `claim`).
 local CLAIMABLE = { TODO = true }
 
---- The directory holding the ticket's omp session, or nil when the ticket
---- carries no key to key one on. The key is the :OMP_SESSION: link when there
---- is one; a ticket that never launched falls back to its :ID:, which is the
---- link the launch would have written — so a resume here and a later launch
---- land in the same directory.
+--- The session key linking a ticket to the agent that works it: the
+--- :OMP_SESSION: link when the headline carries one; a ticket that never
+--- launched falls back to its :ID:, which is the link a launch would have
+--- written — so a resume here and a later launch land in the same directory.
 ---@param ticket OrgTicket
 ---@return string|nil
-local function session_dir(ticket)
-  local key = ticket.session and ticket.session:match '%S' and ticket.session
-  if not key then
+local function session_key(ticket)
+  local key = ticket.session and ticket.session:match '%S' and vim.trim(ticket.session)
+  if not key or key == '' then
     key = ticket.id and ticket.id:match '%S' and ticket.id
   end
-  if not key then
-    return nil
-  end
-  return agent_dir() .. '/tickets/' .. key
+  return key
+end
+
+--- The directory holding the session `key` names. A key carrying a slash is a
+--- path of its own under the agent directory (`orchestrators/<project>`, the
+--- batch orchestrator of a multi-ticket launch); a bare key is one ticket's
+--- session (`tickets/<key>`). That keeps the :OMP_SESSION: a plain key for the
+--- per-ticket launches already on disk while letting a batch point every
+--- ticket at the one session that worked them all.
+---@param key string
+---@return string
+local function session_dir(key)
+  return agent_dir() .. '/' .. (key:find '/' and key or ('tickets/' .. key))
+end
+
+---@class OrgProject
+---@field dir string the directory the project is keyed on
+---@field key string session key of the project's orchestrator (a path under the agent dir)
+---@field name string short name for a window title
+
+--- The project the ticket at `lnum` of `file` belongs to: the first directory
+--- its file claims there (helpers/org/project.lua's `#+PROJECT_DIRS:`), else
+--- the directory the file lives in. One orchestrator serves one such project,
+--- keyed the way the session directories are named.
+---@param file string the ticket's org file
+---@param lnum integer the line of one of its headlines
+---@return OrgProject
+local function project_of(file, lnum)
+  local dirs = require('helpers.org.project').dirs(file, lnum)
+  local dir = vim.fs.normalize(dirs[1] or vim.fs.dirname(file))
+  local slug = (dir:gsub('[^%w]+', '-'):gsub('^%-+', ''):gsub('%-+$', ''))
+  return { dir = dir, key = 'orchestrators/' .. slug, name = vim.fn.fnamemodify(dir, ':t') }
 end
 
 --- Whether `dir` already holds a session file (so a launch there resumes).
@@ -340,12 +389,19 @@ end
 --- now is what the entry holds. M.launch_at is the one caller that does -- the
 --- note it was handed answered the `TEST` hand-back the entry stood in, so the
 --- entry goes back to `NEXT` for the run that reads the note.
+---
+--- `link` is the key of the session that will work the ticket, when the
+--- caller already knows it: a ticket launched in a batch is the project
+--- orchestrator's, and its :OMP_SESSION: is that session's key rather than its
+--- own :ID: -- a key the run that worked it before had set is replaced,
+--- because the property names the session that works the ticket now.
 ---@param bufnr integer
 ---@param lnum integer
 ---@param mutate boolean
 ---@param claim? boolean
+---@param link? string the session key to link the ticket to
 ---@return OrgTicket|nil
-local function ticket_at(bufnr, lnum, mutate, claim)
+local function ticket_at(bufnr, lnum, mutate, claim, link)
   local file = require('org.files').get_buffer(bufnr)
   local hl = file:headline_on(lnum)
   if not hl then
@@ -380,8 +436,12 @@ local function ticket_at(bufnr, lnum, mutate, claim)
 
     -- Link the ticket to its omp session: the key is the :ID: at the first
     -- launch, written to the drawer, so a later launch resumes the same
-    -- session instead of starting fresh.
-    if not (session and session:match '%S') then
+    -- session instead of starting fresh -- or the caller's key, when it knows
+    -- which session will work the ticket (a batch's orchestrator).
+    if link and session ~= link then
+      session = link
+      require('org.properties').entry_put(bufnr, hl.line, SESSION_PROP, session)
+    elseif not (session and session:match '%S') then
       session = id
       require('org.properties').entry_put(bufnr, hl.line, SESSION_PROP, session)
     end
@@ -464,7 +524,7 @@ local function frontier(hl, out)
 end
 
 --- The headlines a launch on `hl` covers: the frontier below it (see
---- `frontier`), one instance each, or `hl` itself when it has nothing open
+--- `frontier`), or `hl` itself when it has nothing open
 --- under it. A headline with open work below it is a container, not a ticket
 --- of its own: launching its root would stamp the container, whose :ID: /
 --- NEXT / hand-back describe the whole subtree, while the ticket the run
@@ -646,10 +706,79 @@ end
 --- its own. The skill's last step closes that gap: the agent kills the pane it
 --- runs in (the module header has the mechanism), so the argv stays the
 --- interactive one.
+---
+--- A ticket whose :OMP_SESSION: already names a project orchestrator (a batch
+--- launched it) is a batch of one instead: the same session, the orchestrator
+--- rules and a one-ticket message, `orchestrator_argv`, so the launch and the
+--- session it resumes agree on which rules they are running under.
 ---@param ticket OrgTicket
 ---@return string[]
+
+--- The message a batch orchestrator starts with — or is handed a further batch
+--- through, `deliver`. The identity the omp-org-ticket rules need, one line
+--- each, in the order they are to be worked, plus the session key its pane
+--- carries (the guard on the pane's own close). One line, like `prompt`: the
+--- pane runs it through `nvim "+terminal …"`, which executes the whole
+--- `+{cmd}` as Ex commands, so a newline would split it into a second (invalid)
+--- command, and `tmux send-keys` types it into an omp prompt as one message.
+---@param tickets OrgTicket[]
+---@param project OrgProject
+---@return string
+local function batch_prompt(tickets, project)
+  local ordered = vim.list_slice(tickets)
+  -- the launcher resolves them bottom-up (writing a drawer shifts the lines
+  -- below it), but the message reads top-down: the order the file holds them
+  table.sort(ordered, function(a, b)
+    return a.lnum < b.lnum
+  end)
+  local parts = {
+    ('Org tickets launched by nvim <leader>ai: %d of them, one batch.'):format(#ordered),
+    'File: ' .. ordered[1].file .. '.',
+    'Orchestrator session key: ' .. project.key .. ' (this pane carries it in its @omp_orchestrator option; it is what the last step of the rules closes).',
+    'Tickets, in order:',
+  }
+  local list = {}
+  for i, ticket in ipairs(ordered) do
+    local state = ticket.state and ('`' .. ticket.state .. '`') or 'none'
+    list[#list + 1] = ('%d. "%s" (:ID: %s, launch #%d, state %s).'):format(i, ticket.title, ticket.id, ticket.launch, state)
+  end
+  parts[#parts + 1] = table.concat(list, ' ')
+  parts[#parts + 1] = 'Follow the omp-orchestrator rules appended to your system prompt.'
+  return table.concat(parts, ' ')
+end
+
+--- The omp argv of a project's batch orchestrator: its session directory, the
+--- orchestrator rules, and the batch message. `--continue` resumes the
+--- project's orchestrator session when one exists, so a later batch of the same
+--- project starts from what the earlier one learned. A nil `message` opens the
+--- session without a batch — what the jump does when it finds no orchestrator
+--- running.
+---@param key string the orchestrator session key
+---@param message string|nil
+---@return string[]
+local function orchestrator_argv(key, message)
+  local dir = session_dir(key)
+  local argv = { 'omp', '--session-dir', dir }
+  if has_session(dir) then
+    argv[#argv + 1] = '--continue'
+  end
+  argv[#argv + 1] = '--append-system-prompt'
+  argv[#argv + 1] = ORCHESTRATOR
+  if message then
+    argv[#argv + 1] = message
+  end
+  return argv
+end
+
 local function omp_argv(ticket)
-  local dir = session_dir(ticket)
+  local key = session_key(ticket)
+  if key and key:find '/' then
+    -- the ticket already belongs to a project orchestrator session (a batch
+    -- launched it): the single launch is a batch of one, under that session's
+    -- own rules, so the two never disagree about which session they are in
+    return orchestrator_argv(key, batch_prompt({ ticket }, project_of(ticket.file, ticket.lnum)))
+  end
+  local dir = key and session_dir(key)
   if not dir then
     return { 'omp', '--append-system-prompt', SKILL, prompt(ticket) }
   end
@@ -693,11 +822,20 @@ end
 --- `<prefix> i` panel lists and jumps to. A ticket with a session resumes it
 --- (`--session-dir` + `--continue`, full context); one without starts fresh
 --- with the ticket prompt. A resumed session keeps the same interactive shape
---- as a launch: it is the user's pane, quit by hand.
+--- as a launch: it is the user's pane, quit by hand. A ticket in a project
+--- orchestrator session resumes that session — the rules it runs under are the
+--- orchestrator's, appended by `orchestrator_argv` when the session is opened
+--- instead.
 ---@param ticket OrgTicket
 ---@return string[]
 local function resume_argv(ticket)
-  local dir = session_dir(ticket)
+  local key = session_key(ticket)
+  if key and key:find '/' then
+    -- a ticket in a project orchestrator session: the interactive instance to
+    -- resume is the orchestrator, under the orchestrator's own rules
+    return orchestrator_argv(key, nil)
+  end
+  local dir = key and session_dir(key)
   if dir and has_session(dir) then
     return { 'omp', '--session-dir', dir, '--continue' }
   end
@@ -749,6 +887,40 @@ local function running_pane(id)
       return pane
     end
   end
+end
+
+--- The pane running the orchestrator of `key`, anywhere on the server.
+---@param key string the orchestrator session key
+---@return string|nil pane id
+local function orchestrator_pane(key)
+  local out = tmux { 'list-panes', '-a', '-F', '#{pane_id}\t#{@omp_orchestrator}' }
+  if not out then
+    return nil
+  end
+  for line in vim.gsplit(out, '\n', { plain = true }) do
+    local pane, k = line:match '^(.-)\t(.*)$'
+    if pane and k == key then
+      return pane
+    end
+  end
+end
+
+--- Hand `message` to the omp running in `pane`: typed into its own prompt and
+--- submitted, so the running instance takes it as its next message instead of
+--- a second instance starting on the same tickets. `-l` sends the text
+--- literally, and the message is one line, so no word of it is read as a key
+--- name.
+---@param pane string
+---@param message string
+---@return boolean
+local function deliver(pane, message)
+  local _, err = tmux { 'send-keys', '-t', pane, '-l', message }
+  if err then
+    notify('org ai: ' .. err, vim.log.levels.ERROR)
+    return false
+  end
+  tmux { 'send-keys', '-t', pane, 'Enter' }
+  return true
 end
 
 --- Put the attached client on `pane`: switch to its session, then select its
@@ -804,43 +976,20 @@ local function split_for_run(cur)
   return id or nil
 end
 
---- A detached tmux window inserted after the current one (`new-window -a`, the
---- `prefix+n` equivalent), its pane born running the ticket's omp instance —
---- `new-window` with a command runs it directly, so no respawn is needed. `-d`
---- leaves the current window selected, so nvim keeps focus.
----@param ticket OrgTicket
----@return string|nil new pane id
-local function window_for_run(ticket)
-  local id = tmux {
-    'new-window',
-    '-d',
-    '-a',
-    '-n',
-    '🤖 ' .. ticket.title,
-    '-c',
-    '#{pane_current_path}',
-    '-P',
-    '-F',
-    '#{pane_id}',
-    pane_command(omp_argv(ticket)),
-  }
-  return id or nil
-end
-
---- Start `ticket` for the headline and hand it to omp. Nothing here moves the
---- active pane or window: a ticket already running is reported instead of
---- focused, and a new split or window is created detached (and, for the split,
---- respawned) without taking over. The trailing `select-pane` back to nvim's
---- pane is belt and braces, so focus is nvim's whatever tmux version is behind
---- this.
----@param ticket OrgTicket
-local function open_pane(ticket)
-  local running = running_pane(ticket.id)
-  if running then
-    notify('org ai: ' .. ticket.title .. ' is already running in pane ' .. running)
-    return
-  end
-
+--- Open a pane running `argv` — a ticket's instance or a batch orchestrator:
+--- the right-hand split of the nvim pane while that column is free, its own
+--- tmux window inserted after the current one (`new-window -a`, the `prefix+n`
+--- equivalent) once it is taken. Nothing here moves the active pane or window
+--- (the split is created detached and respawned, the window with `-d`) and the
+--- active pane returns to nvim at the end. The new pane carries `value` in its
+--- `opt` pane option — what a later launch looks the instance up by. Returns
+--- the pane id, or nil with a notification.
+---@param argv string[]
+---@param title string window / pane title
+---@param opt string the pane option marking the instance
+---@param value string
+---@return string|nil pane
+local function open_instance_pane(argv, title, opt, value)
   local cur = vim.env.TMUX_PANE
   if not cur then
     notify('org ai: $TMUX_PANE is unset', vim.log.levels.ERROR)
@@ -856,40 +1005,132 @@ local function open_pane(ticket)
 
   local pane
   if right_column_taken(me, panes) then
-    pane = window_for_run(ticket)
+    pane = tmux {
+      'new-window',
+      '-d',
+      '-a',
+      '-n',
+      title,
+      '-c',
+      '#{pane_current_path}',
+      '-P',
+      '-F',
+      '#{pane_id}',
+      pane_command(argv),
+    }
     if not pane then
       notify('org ai: could not open a tmux window', vim.log.levels.ERROR)
       return
     end
-    tmux { 'set-option', '-p', '-t', pane, '@omp_ticket', ticket.id }
   else
     pane = split_for_run(cur)
     if not pane then
       notify('org ai: could not split the tmux window', vim.log.levels.ERROR)
       return
     end
-    tmux { 'set-option', '-p', '-t', pane, '@omp_ticket', ticket.id }
-    tmux { 'select-pane', '-t', pane, '-T', '🤖 ' .. ticket.title }
-    local _, err = tmux { 'respawn-pane', '-k', '-t', pane, pane_command(omp_argv(ticket)) }
+    tmux { 'select-pane', '-t', pane, '-T', title }
+    local _, err = tmux { 'respawn-pane', '-k', '-t', pane, pane_command(argv) }
     if err then
       notify('org ai: ' .. err, vim.log.levels.ERROR)
     end
   end
+  tmux { 'set-option', '-p', '-t', pane, opt, value }
   tmux { 'select-pane', '-t', cur }
+  return pane
+end
+
+--- Hand `message` to the project's orchestrator: the instance with that
+--- session key already running (`@omp_orchestrator`), or one opened for it --
+--- the right-hand split while that column is free, its own window once it is
+--- taken. Returns the pane and whether the message went to a running instance
+--- rather than opening one; nil when nothing could be reached (the failure is
+--- notified already).
+---@param project OrgProject
+---@param message string
+---@return string|nil pane
+---@return boolean delivered
+local function start_orchestrator(project, message)
+  local running = orchestrator_pane(project.key)
+  if running then
+    if not deliver(running, message) then
+      return nil, false
+    end
+    return running, true
+  end
+  local pane = open_instance_pane(orchestrator_argv(project.key, message), '🤖 ' .. project.name, '@omp_orchestrator', project.key)
+  return pane, false
+end
+
+--- Start `ticket` for the headline and hand it to omp. Nothing here moves the
+--- active pane or window: a ticket already running is reported instead of
+--- focused, and its pane is opened detached.
+---
+--- A ticket the board links to a project orchestrator (a batch launched it, so
+--- its :OMP_SESSION: is that session's key) is that instance's: handed over as
+--- a batch of one when it runs, and opened under the orchestrator's own rules,
+--- carrying `@omp_orchestrator` rather than a ticket's :ID:, when it does not
+--- -- a second omp over the same session would be two agents on one history.
+---@param ticket OrgTicket
+local function open_pane(ticket)
+  local key = session_key(ticket)
+  if key and key:find '/' then
+    local project = project_of(ticket.file, ticket.lnum)
+    local _, delivered = start_orchestrator(project, batch_prompt({ ticket }, project))
+    if delivered then
+      notify('org ai: handed ' .. ticket.title .. ' to the running ' .. project.name .. ' orchestrator')
+    end
+    return
+  end
+
+  local running = running_pane(ticket.id)
+  if running then
+    notify('org ai: ' .. ticket.title .. ' is already running in pane ' .. running)
+    return
+  end
+  open_instance_pane(omp_argv(ticket), '🤖 ' .. ticket.title, '@omp_ticket', ticket.id)
+end
+
+--- Start a batch of tickets on one omp: the project's orchestrator, whose
+--- subagents do the working, so a frontier of `#tickets` costs one process
+--- instead of one per ticket. A project whose orchestrator already runs is
+--- handed the batch (`deliver`) rather than started a second time — an
+--- orchestrator pane is looked up by its session key (`@omp_orchestrator`),
+--- never by a ticket's :ID:, so no ticket's run can mistake it for its own
+--- pane or close it.
+---@param tickets OrgTicket[]
+local function open_orchestrator(tickets)
+  local project = project_of(tickets[1].file, tickets[1].lnum)
+  local pane, delivered = start_orchestrator(project, batch_prompt(tickets, project))
+  if not pane then
+    return
+  end
+  if delivered then
+    notify(('org ai: handed %d tickets to the running %s orchestrator'):format(#tickets, project.name))
+  else
+    notify(('org ai: %d tickets -> one %s orchestrator in pane %s'):format(#tickets, project.name, pane))
+  end
 end
 
 --- Resume `ticket` with no pane of its own: open a tmux window running the
 --- ticket's interactive omp session — inserted after the current one and
 --- selected, so focus lands in it (what the jump is for). The pane carries the
---- ticket's :ID: in `@omp_ticket`, so the next `<leader>aj` finds and focuses
---- it instead of resuming again.
+--- ticket's :ID: in `@omp_ticket` — or, when the ticket's session is its
+--- project's orchestrator, the session key in `@omp_orchestrator` — so the
+--- next `<leader>aj` finds and focuses it instead of resuming again.
 ---@param ticket OrgTicket
 local function resume_pane(ticket)
+  local key = session_key(ticket)
+  local orchestrator = key and key:find '/' ~= nil
+  local project = orchestrator and project_of(ticket.file, ticket.lnum) or nil
+  if project then
+    project.key = key
+  end
+  local title = project and ('🤖 ' .. project.name) or ('🤖 ' .. ticket.title)
   local pane = tmux {
     'new-window',
     '-a',
     '-n',
-    '🤖 ' .. ticket.title,
+    title,
     '-c',
     '#{pane_current_path}',
     '-P',
@@ -901,20 +1142,22 @@ local function resume_pane(ticket)
     notify('org ai: could not open a tmux window', vim.log.levels.ERROR)
     return
   end
-  if ticket.id and ticket.id:match '%S' then
+  if orchestrator then
+    tmux { 'set-option', '-p', '-t', pane, '@omp_orchestrator', key }
+  elseif ticket.id and ticket.id:match '%S' then
     tmux { 'set-option', '-p', '-t', pane, '@omp_ticket', ticket.id }
   end
 end
 
---- Without tmux, the ticket still resolves: a plain nvim terminal in a right
---- split, closed again once the omp process exits (same end state as the
---- tmux pane). No pane is tracked, so a second launch on the same ticket
---- starts a second instance — the tmux path is the predictable one.
----@param ticket OrgTicket
-local function open_window(ticket)
+--- Without tmux, the run still resolves: a plain nvim terminal in a right
+--- split, closed again once the omp process exits (same end state as the tmux
+--- pane). No pane is tracked, so a second launch on the same ticket starts a
+--- second instance — the tmux path is the predictable one.
+---@param argv string[]
+local function open_window(argv)
   vim.cmd 'belowright vert new'
   local win = vim.api.nvim_get_current_win()
-  vim.fn.termopen(omp_argv(ticket), {
+  vim.fn.termopen(argv, {
     on_exit = function()
       vim.schedule(function()
         if vim.api.nvim_win_is_valid(win) then
@@ -1017,13 +1260,21 @@ function M.sync()
   end
 end
 
---- Launch every `target`: its own :ID: / :OMP_SESSION: / :OMP_LAUNCH: drawer, its claim,
---- its checkpoint and its own omp pane. The buffers are launched in order and
---- the lines within one biggest first, so the property drawer the launcher
---- writes on one entry cannot shift the lines of a ticket still to come.
+--- Launch every `target`: its own :ID: / :OMP_SESSION: / :OMP_LAUNCH: drawer, its claim
+--- and its checkpoint. The buffers are launched in order and the lines within
+--- one biggest first, so the property drawer the launcher writes on one entry
+--- cannot shift the lines of a ticket still to come.
+---
+--- One target starts one omp instance of its own. Several start one *batch*:
+--- a single orchestrator omp, its subagents working the tickets, because one
+--- process per ticket is what a frontier of eighteen wanted from the machine.
+--- The tickets still get everything the single launch gives them — the drawer,
+--- the claim, the checkpoint — and their :OMP_SESSION: links each of them to
+--- the batch's orchestrator session, so their jump and retro land there.
+---
 --- `claim` is handed to ticket_at: the caller has read the state of what it
 --- launches and knows it was answered, so the launch stamps `NEXT` over it.
---- Returns how many instances started.
+--- Returns how many tickets the launch found.
 ---@param targets { bufnr: integer, lnum: integer }[]
 ---@param claim? boolean
 ---@return integer
@@ -1035,20 +1286,36 @@ local function launch_targets(targets, claim)
     return a.bufnr < b.bufnr
   end)
 
-  local launched = 0
+  -- the batch is decided before a ticket is touched: the session each of them
+  -- is linked to (the project's orchestrator) is part of the drawer write, and
+  -- by the time the tickets are resolved their lines may already have moved
+  local batch = #targets > 1 and project_of(vim.api.nvim_buf_get_name(targets[1].bufnr), targets[1].lnum) or nil
+
+  local tickets = {}
   for _, target in ipairs(targets) do
-    local ticket = ticket_at(target.bufnr, target.lnum, true, claim)
+    local ticket = ticket_at(target.bufnr, target.lnum, true, claim, batch and batch.key)
     if ticket then
       checkpoint(ticket)
-      if in_tmux() then
-        open_pane(ticket)
-      else
-        open_window(ticket)
-      end
-      launched = launched + 1
+      tickets[#tickets + 1] = ticket
     end
   end
-  return launched
+
+  if #tickets == 0 then
+    return 0
+  end
+  if in_tmux() then
+    if #tickets == 1 then
+      open_pane(tickets[1])
+    else
+      open_orchestrator(tickets)
+    end
+  elseif #tickets == 1 then
+    open_window(omp_argv(tickets[1]))
+  else
+    local project = project_of(tickets[1].file, tickets[1].lnum)
+    open_window(orchestrator_argv(project.key, batch_prompt(tickets, project)))
+  end
+  return #tickets
 end
 
 --- Report a multi-ticket launch: one instance is the ordinary case and says
@@ -1066,8 +1333,9 @@ end
 --- open capture buffer the capture is finished first (target_at_cursor), so
 --- the ticket is the entry just stored. On a headline with open work under
 --- it -- a group node, the map of a live expedition -- the run fans out to
---- the frontier below it, one instance each (expand_target), the containers
---- themselves untouched.
+--- the frontier below it (expand_target), the containers themselves untouched:
+--- the one ticket is its own instance, several are one orchestrator
+--- (`launch_targets`).
 function M.launch()
   local bufnr, lnum = target_at_cursor(true)
   if not bufnr then
@@ -1111,17 +1379,17 @@ end
 --- open below it, and the tickets left open and takeable under the parent
 --- otherwise (a sibling this run did not close, a ticket charted into that
 --- subtree since the level was last launched) -- so a level that rises with
---- several tickets takeable at once starts all of them, one instance each,
---- exactly as launching the parent would. What no run has touched is what it
---- starts: the tickets are narrowed to `TODO`, so a sibling a run already
+--- several tickets takeable at once starts all of them, exactly as launching
+--- the parent would. What no run has touched is what it starts: the tickets are narrowed to `TODO`, so a sibling a run already
 --- claimed (`NEXT`), one awaiting the user's validation (`TEST`), one parked
 --- on the user (`PEND`) or one that failed (`WARN`) is left alone -- that
 --- keeps the duty on the last leaf to finish, which is the only run whose
 --- climb finds untouched work left to start. The launch is the ordinary one
 --- -- :ID: / :OMP_SESSION: / :OMP_LAUNCH:, the claim, the project checkpoint,
---- its own pane, one per ticket. A ticket whose parent is no ticket (the
---- project's own headline, a grouping line) has nowhere to climb to and says
---- so.
+--- its own pane -- so a level that is one ticket opens one instance and a
+--- level of several is one orchestrator batch (`launch_targets`). A ticket
+--- whose parent is no ticket (the project's own headline, a grouping line) has
+--- nowhere to climb to and says so.
 ---
 --- This is the run's own entry point, called from the shell of an
 --- omp-org-ticket run as its last act before the pane goes (the skill), with
@@ -1228,7 +1496,10 @@ end
 --- the ticket at point, like tmux's `<prefix> i` panel jump. When nothing runs
 --- it, the ticket's omp session is resumed instead — an interactive instance
 --- (`--continue` where a session exists) opened in its own tmux window and
---- focused. The headline itself is never written to.
+--- focused. A ticket launched in a batch is the project orchestrator's: the
+--- jump lands on that instance (its pane carries the session key, not a
+--- ticket's :ID:), never on a second omp over the same session. The headline
+--- itself is never written to.
 function M.jump()
   if not in_tmux() then
     notify('org ai: not in tmux', vim.log.levels.WARN)
@@ -1238,6 +1509,16 @@ function M.jump()
   if not ticket then
     return
   end
+  local key = session_key(ticket)
+  if key and key:find '/' then
+    local pane = orchestrator_pane(key)
+    if pane then
+      focus_pane(pane)
+      return
+    end
+    resume_pane(ticket)
+    return
+  end
   if ticket.id and ticket.id:match '%S' then
     local pane = running_pane(ticket.id)
     if pane then
@@ -1245,7 +1526,7 @@ function M.jump()
       return
     end
   end
-  if not session_dir(ticket) then
+  if not key then
     notify('org ai: no omp session for ' .. ticket.title, vim.log.levels.WARN)
     return
   end
