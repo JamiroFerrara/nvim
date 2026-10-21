@@ -10,7 +10,16 @@
 -- follows, so a ticket nested under its blocker draws its guide first and
 -- its kind next -- `└─ 🛠 TODO ...` -- while a listed line reads
 -- `  waypoint:    today 11:20  🛠 DONE ...`. The part's own face is left to
--- the theme, so the glyph draws in the line's colors.
+-- the theme, so the glyph draws in the line's colors, and the space before
+-- it comes from the prefix (or from the tree guide, on a nested line), which
+-- is why the `tags` `prefix_format` below ends in one.
+--
+-- The icon is a column, not a per-line spur: a block that shows any kind
+-- reserves its three columns on every line it lists, so the keywords of a
+-- section stay in one column where a wayfinder ticket sits among plain
+-- entries -- `🛠 DONE Discard the ai-backend conversion` above
+-- `   DONE IPP fix con Davide` -- and a block that shows no wayfinder
+-- ticket is drawn exactly as it was.
 --
 -- A kind is a label of the tracker (skill://wayfinder/org-tracker.md):
 -- `wf_map` on the map itself, `wf_<type>` -- research, prototype, grilling,
@@ -100,31 +109,57 @@ end
 --- kinds as icons, each immediately before the state keyword.
 function M.setup()
   require('org.lazy').on_load('org.agenda.render', 'wayfinder_icons', function(render)
+    local utils = require 'org.utils'
+
+    --- The field an entry's kind is drawn in: the glyph with the gap that
+    --- follows it, three display columns wide. A line that carries no kind
+    --- gets the same field in blanks, which is what keeps the keywords of a
+    --- block in one column when one entry of it is a ticket and the next is
+    --- not.
+    local function field(icon)
+      return icon .. string.rep(' ', math.max(3 - utils.width(icon), 1))
+    end
+
+    -- The field is the block's, not the line's: a block that shows any kind
+    -- reserves it on every line it lists, and one that shows none keeps the
+    -- layout it always had. The decision is taken on the list the block
+    -- settled on (`apply_limits`, before any of its lines is built) and kept
+    -- on the ctx org.nvim copies into every line of that block.
+    local apply_limits = render.apply_limits
+    if apply_limits then
+      render.apply_limits = function(list, kind, ctx)
+        local out = apply_limits(list, kind, ctx)
+        if ctx then
+          ctx.wayfinder_field = false
+          for _, item in ipairs(out) do
+            if M.kind(item.headline) then
+              ctx.wayfinder_field = true
+              break
+            end
+          end
+        end
+        return out
+      end
+    end
+
     local item_parts = render.item_parts
     if not item_parts then
       return
     end
     render.item_parts = function(item, ctx)
       local parts = item_parts(item, ctx)
-      -- no headline (the time-grid rows) and no label both answer ''
+      -- no headline at all (the time-grid rows) and no label both answer ''
       local icon = M.icon(item.headline)
-      if icon == '' then
+      if icon == '' and not (ctx and ctx.wayfinder_field) then
         return parts
       end
       local at = keyword_part(parts, item)
       if not at then
         return parts
       end
-      -- the prefix ends in a padded column, so it already left a space --
-      -- unless the line's category filled it, which is where the icon would
-      -- abut the `:`; the space the icon needs is added only then, so a
-      -- nested line (`└─ `, its prefix cut by helpers/org/tree.lua) keeps
-      -- one space on either side of the guide
-      local before = parts[at - 1]
-      local lead = before and before[1]:sub(-1) == ' ' and '' or ' '
-      table.insert(parts, at, { lead .. icon .. ' ', nil })
+      table.insert(parts, at, { field(icon), nil })
       -- the priority face runs to the keyword, measured off the parts before
-      -- it (org.agenda.render.item_line): the icon is one of them now
+      -- it (org.agenda.render.item_line): the field is one of them now
       if parts.priority_index and parts.priority_index >= at then
         parts.priority_index = parts.priority_index + 1
       end

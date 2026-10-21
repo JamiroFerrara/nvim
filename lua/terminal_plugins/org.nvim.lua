@@ -49,8 +49,10 @@
 --                   (the group view's sections)
 --   wayfinder.lua   a wayfinder ticket kind (`wf_<type>`, or the longer
 --                   `wayfinder_<type>` of the first maps) drawn as its icon
---                   on the entry line, right before the state keyword, and
---                   the glyph the `5` view's kind sections are headed by
+--                   on the entry line, right before the state keyword -- a
+--                   field reserved on every line of a block that shows one,
+--                   so the keywords stay in a column -- and the glyph the
+--                   `5` view's kind sections are headed by
 --   ai.lua          <leader>ai on an entry launches an `omp` instance for
 --                   the ticket in a tmux pane and follows its write-back
 --                   (watch.lua reloads the changed org files live; the
@@ -559,9 +561,17 @@ return {
       -- `%-13(...)` is the `%(lua expression)` element, a fixed 13-wide
       -- column: an entry with no timestamp leaves it blank rather than
       -- dropping it, so its keyword still lands where the dated entries'
-      -- ones do. The other kinds
-      -- (agenda, tags, search) keep their default formats -- a table here
-      -- merges into the defaults.
+      -- ones do.
+      -- The `tags` kind -- every tag/tag-TODO block, the board's own
+      -- sections and the `5` view's among them -- is the stock format plus
+      -- the space the wayfinder icon stands after: helpers/org/wayfinder.lua
+      -- puts the icon (or its blank field, on an entry of no kind) before
+      -- every keyword of such a block, and the space it needs is the
+      -- format's own, not the padded category column's -- a category that
+      -- fills the column leaves none. The `todo` kind needs no trailing
+      -- space: its date column pads to 13, and no label reaches that width.
+      -- The `agenda` and `search` kinds keep their default formats -- a
+      -- table here merges into the defaults.
       -- The `12` of the category column is a floor, not the column: for the
       -- kinds that list entries (todo, tags, search) helpers/org/agenda.lua
       -- widens it to the longest category the block shows, so a project
@@ -570,6 +580,7 @@ return {
       -- the other lines'.
       prefix_format = {
         todo = ' %i %-12:c %-13(require("helpers.org.changed").label(hl))',
+        tags = ' %i %-12:c ',
       },
       -- Emacs' org-agenda-show-outline-path: echo the outline path of the
       -- entry at point on every cursor move. Off here, because org.nvim
