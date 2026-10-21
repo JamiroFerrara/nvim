@@ -715,9 +715,11 @@ end
 ---@return string[]
 
 --- The message a batch orchestrator starts with — or is handed a further batch
---- through, `deliver`. The identity the omp-org-ticket rules need, one line
---- each, in the order they are to be worked, plus the session key its pane
---- carries (the guard on the pane's own close). One line, like `prompt`: the
+--- through, `deliver`. It opens with omp's `orchestrate` keyword, so the
+--- instance runs under omp's own orchestration contract instead of the
+--- single-ticket one, then gives the identity the omp-org-ticket rules need,
+--- one line each, in the order they are to be worked, plus the session key its
+--- pane carries (the guard on the pane's own close). One line, like `prompt`: the
 --- pane runs it through `nvim "+terminal …"`, which executes the whole
 --- `+{cmd}` as Ex commands, so a newline would split it into a second (invalid)
 --- command, and `tmux send-keys` types it into an omp prompt as one message.
@@ -732,6 +734,11 @@ local function batch_prompt(tickets, project)
     return a.lnum < b.lnum
   end)
   local parts = {
+    -- omp's own orchestration contract, by its magic keyword: standalone and
+    -- lowercase, it makes omp append the notice that has the agent dispatch
+    -- subagents, verify what came back and stop narrating -- the rules of the
+    -- harness the user runs, before any ticket is looked at
+    'orchestrate.',
     ('Org tickets launched by nvim <leader>ai: %d of them, one batch.'):format(#ordered),
     'File: ' .. ordered[1].file .. '.',
     'Orchestrator session key: ' .. project.key .. ' (this pane carries it in its @omp_orchestrator option; it is what the last step of the rules closes).',
