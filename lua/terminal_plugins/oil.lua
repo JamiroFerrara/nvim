@@ -66,13 +66,36 @@ return {
       ['<C-s>'] = 'actions.select_vsplit',
       ['<C-h>'] = 'actions.select_vsplit',
       ['<C-t>'] = 'actions.select_tab',
-      -- Preview the entry under the cursor in a vertical split window instead of
-      -- the floating one (<C-p>), keeping the cursor in oil so browsing updates it.
+      -- Preview the entry under the cursor in a vertical split window: oil keeps a
+      -- narrow column on the left and the preview takes the rest of the screen.
       ['<S-p>'] = {
-        'actions.preview',
-        opts = { vertical = true },
+        callback = function()
+          local oil = require 'oil'
+          local util = require 'oil.util'
+
+          local entry = oil.get_cursor_entry()
+          local preview = util.get_preview_win()
+          if preview and entry and vim.w[preview].oil_entry_id == entry.id then
+            vim.api.nvim_win_close(preview, true)
+            return
+          end
+
+          oil.open_preview({ vertical = true, split = 'belowright' }, function(err)
+            if err then
+              return
+            end
+            local oil_win = vim.api.nvim_get_current_win()
+            local pwin = util.get_preview_win { include_not_owned = true }
+            if not pwin or pwin == oil_win then
+              return
+            end
+            local total = vim.o.columns
+            local width = math.min(math.max(30, math.floor(total * 0.3)), total - 40)
+            pcall(vim.api.nvim_win_set_width, oil_win, width)
+          end)
+        end,
         mode = 'n',
-        desc = 'Preview entry in a vertical split',
+        desc = 'Preview entry in a sidebar split',
       },
       ['<C-p>'] = {
         callback = function()
