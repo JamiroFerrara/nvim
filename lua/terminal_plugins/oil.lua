@@ -2,47 +2,10 @@
 --- beside a narrow oil column, so browsing reads files without leaving the list
 --- (`<S-p>` again closes it), and `J` / `K` page it (helpers/preview_pane), the
 --- way the org agenda's `L` preview does.
-local SIDEBAR_RATIO = 0.22
-local SIDEBAR_MIN = 24
-
----@return integer? the preview window, when oil has one open
-local function oil_preview()
-  return require('oil.util').get_preview_win()
-end
-
----@return integer? the preview window, when it is a split rather than the float
-local function oil_preview_split()
-  local win = oil_preview()
-  if win and vim.api.nvim_win_get_config(win).relative == '' then
-    return win
-  end
-end
-
---- Oil's own column: a fraction of the screen, wide enough for a file name and
---- narrow enough to leave the preview the rest of it (and the preview at least
---- forty columns).
----@return integer
-local function sidebar_width()
-  local total = vim.o.columns
-  return math.min(math.max(SIDEBAR_MIN, math.floor(total * SIDEBAR_RATIO)), total - 40)
-end
-
---- Put the sidebar up on the entry under the cursor, oil shrunk to its column.
-local function sidebar_open()
-  local util = require 'oil.util'
-  util.run_after_load(0, function()
-    require('oil').open_preview({ vertical = true, split = 'belowright' }, function(err)
-      if err then
-        return
-      end
-      local oil_win = vim.api.nvim_get_current_win()
-      local win = util.get_preview_win { include_not_owned = true }
-      if win and win ~= oil_win then
-        pcall(vim.api.nvim_win_set_width, oil_win, sidebar_width())
-      end
-    end)
-  end)
-end
+--- `<C-e>` opens the plain Oil — the default view — and `<Tab>` the same with
+--- the sidebar already up; both are in helpers/oil.lua, which the terminal
+--- buffer's own keymaps (lua/autocommands.lua) call too.
+local oil = require 'helpers.oil'
 
 return {
   'stevearc/oil.nvim',
@@ -117,12 +80,12 @@ return {
       ['<S-p>'] = {
         callback = function()
           local entry = require('oil').get_cursor_entry()
-          local win = oil_preview_split()
+          local win = oil.preview_split()
           if win and entry and vim.w[win].oil_entry_id == entry.id then
             vim.api.nvim_win_close(win, true)
             return
           end
-          sidebar_open()
+          oil.sidebar_open()
         end,
         mode = 'n',
         desc = 'Close the preview sidebar, or open it',
@@ -131,14 +94,14 @@ return {
       -- and are that scroll again when it has nothing more to show.
       ['<S-j>'] = {
         callback = function()
-          require('helpers.preview_pane').page(oil_preview(), '\6', true)
+          require('helpers.preview_pane').page(oil.preview_win(), '\6', true)
         end,
         mode = 'n',
         desc = 'Page the preview down, else the list',
       },
       ['<S-k>'] = {
         callback = function()
-          require('helpers.preview_pane').page(oil_preview(), '\21', false)
+          require('helpers.preview_pane').page(oil.preview_win(), '\21', false)
         end,
         mode = 'n',
         desc = 'Page the preview up, else the list',
@@ -277,40 +240,23 @@ return {
   },
   dependencies = { 'nvim-tree/nvim-web-devicons' },
   keys = {
-    -- TODO: Extract a function for both of theese
-    {
-      '<Tab>',
-      function()
-        if vim.bo.buftype == 'terminal' and vim.b.terminal_job_id then
-          local tmpfile = '/tmp/nvim_term_cwd'
-          vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
-          vim.wait(80)
-          local cwd = vim.fn.readfile(tmpfile)[1]
-          if cwd and cwd ~= '' then
-            vim.cmd('Oil ' .. vim.fn.fnameescape(cwd))
-            return
-          end
-        end
-        vim.cmd 'Oil'
-      end,
-      desc = 'NeoTree reveal (terminal cwd aware)',
-    },
+    -- The plain Oil, at a terminal's own directory when there is one. (A
+    -- terminal buffer has its own `<C-e>`: lua/autocommands.lua.)
     {
       '<C-e>',
       function()
-        if vim.bo.buftype == 'terminal' and vim.b.terminal_job_id then
-          local tmpfile = '/tmp/nvim_term_cwd'
-          vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
-          vim.wait(80)
-          local cwd = vim.fn.readfile(tmpfile)[1]
-          if cwd and cwd ~= '' then
-            vim.cmd('Oil ' .. vim.fn.fnameescape(cwd))
-            return
-          end
-        end
-        vim.cmd 'Oil'
+        oil.open(false)
       end,
-      desc = 'NeoTree reveal (terminal cwd aware)',
+      desc = 'Oil (default view)',
+    },
+    -- The same, with the preview sidebar up on the entry under the cursor
+    -- (`<S-p>`, so a second `<S-p>` closes it again).
+    {
+      '<Tab>',
+      function()
+        oil.open(true)
+      end,
+      desc = 'Oil with the preview sidebar',
     },
   },
 }

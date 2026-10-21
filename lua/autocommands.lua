@@ -71,36 +71,23 @@ vim.api.nvim_create_autocmd('TermOpen', {
     vim.wo.signcolumn = 'no'
     vim.opt_local.modifiable = true
     vim.opt_local.readonly = false
+    -- Oil, on this buffer's own directory (helpers/oil.lua reads it back
+    -- through the shell): `<Tab>` with the preview sidebar, `<C-e>` without.
+    -- Buffer-local because that is the mapping a terminal buffer hears.
     vim.api.nvim_buf_set_keymap(0, 'n', '<Tab>', '', {
       noremap = true,
       silent = true,
-      desc = 'Open Oil at terminal cwd',
+      desc = 'Oil with the preview sidebar',
       callback = function()
-        local tmpfile = '/tmp/nvim_term_cwd'
-        vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
-        vim.wait(80)
-        local cwd = vim.fn.readfile(tmpfile)[1]
-        if cwd and cwd ~= '' then
-          vim.cmd('Oil ' .. vim.fn.fnameescape(cwd))
-        else
-          vim.cmd 'Oil'
-        end
+        require('helpers.oil').open(true)
       end,
     })
     vim.api.nvim_buf_set_keymap(0, 't', '<C-e>', '', {
       noremap = true,
       silent = true,
-      desc = 'Open Oil at terminal cwd',
+      desc = 'Oil (default view)',
       callback = function()
-        local tmpfile = '/tmp/nvim_term_cwd'
-        vim.fn.chansend(vim.b.terminal_job_id, 'pwd > ' .. tmpfile .. ' && clear\n')
-        vim.wait(80)
-        local cwd = vim.fn.readfile(tmpfile)[1]
-        if cwd and cwd ~= '' then
-          vim.cmd('Oil ' .. vim.fn.fnameescape(cwd))
-        else
-          vim.cmd 'Oil'
-        end
+        require('helpers.oil').open(false)
       end,
     })
     -- Highlight clickable paths (stack traces, compiler errors, etc.)
