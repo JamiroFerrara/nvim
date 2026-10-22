@@ -664,7 +664,35 @@ return {
     -- inherited tags, or its file's `#+FILETAGS:` -- so a `#+FILETAGS:
     -- allitude` file with a `PMS :pms:` headline captures `:allitude:pms:`,
     -- the same default tags the agenda shows through org tag inheritance.
+    --
+    -- `autotags` is the third store filter's map
+    -- (lua/helpers/org/autotags.lua): the words a capture's own text carries
+    -- tag the entry, each matched case-insensitively as a whole word, so a
+    -- capture titled "fix the crash in the picker" lands `:bug:` by itself.
+    -- The words are the plain ones a ticket is written in, the tags the
+    -- quick keys of helpers/org/tagging.lua write (`B` / `F` / `C`), and a
+    -- project file replaces the whole map for itself with a file keyword:
+    -- `#+AUTOTAGS: bug=bug crash=bug feature=feat` (a bare `#+AUTOTAGS:`
+    -- disables it there). Word matching keeps "debug" and "bugfix" off
+    -- `:bug:`; a word that should match is a rule of its own.
     capture = {
+      autotags = {
+        bug = 'bug',
+        bugfix = 'bug',
+        crash = 'bug',
+        crashes = 'bug',
+        regression = 'bug',
+        feature = 'feat',
+        feat = 'feat',
+        chore = 'chore',
+        cleanup = 'chore',
+        docs = 'docs',
+        documentation = 'docs',
+        perf = 'perf',
+        performance = 'perf',
+        test = 'test',
+        tests = 'test',
+      },
       templates = {
         t = {
           description = 'Task',

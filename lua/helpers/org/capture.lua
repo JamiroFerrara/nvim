@@ -40,6 +40,12 @@
 -- from `c` on a headline in an org file) go through the filter, so the
 -- setting covers either way in.
 --
+-- `capture_autotags` (helpers/org/autotags.lua) is the third store filter:
+-- the words the entry's own text carries it tags the entry with, so a
+-- capture that says "fix the crash" lands `:bug:` without a keypress. The
+-- map is word -> tag, the default one in the plugin's capture options, and a
+-- project file replaces it for itself with `#+AUTOTAGS: word=tag ...`.
+--
 -- The stock `%a` line -- the link back to the entry the capture was started
 -- from -- is not always the template's: `origin_link` answers whether this
 -- capture keeps it, and the Task template (org.nvim.lua) asks before
@@ -235,22 +241,17 @@ local function headline_line(lines)
   end
 end
 
---- org.nvim store filter: append the tags the destination inherits (see
---- `inherited_tags`) to the captured entry's headline, so a capture under
---- `allitude` lands `:allitude:pms:` instead of bare even though the agenda
---- would have shown it those tags anyway. Entry captures only; tags the
---- template already carries are kept (a tag is appended once), and the line
---- is realigned like org-align-tags (`org.edit.build_headline`). Returns nil
---- when nothing changed.
----@param tpl table
+--- Append `tags` to the captured entry's headline in `lines`, once each and
+--- in the order given, realigned like org-align-tags
+--- (`org.edit.build_headline`). `file` is the destination, whose TODO
+--- sequence the headline line is parsed with. Returns the new lines, or nil
+--- when the entry carries no headline line, `tags` is empty, or every tag is
+--- already there.
 ---@param lines string[]
----@param ctx table
+---@param file? table
+---@param tags string[]
 ---@return string[]|nil
-function M.capture_tags(tpl, lines, ctx)
-  if (tpl.type or 'entry') ~= 'entry' then
-    return nil
-  end
-  local tags = inherited_tags(ctx or {})
+function M.add_tags(lines, file, tags)
   if #tags == 0 then
     return nil
   end
@@ -259,7 +260,7 @@ function M.capture_tags(tpl, lines, ctx)
     return nil
   end
   local parser = require 'org.parser'
-  local p = parser.parse_headline_line(lines[at], ctx.target_file.settings and ctx.target_file.settings.todo)
+  local p = parser.parse_headline_line(lines[at], file and file.settings and file.settings.todo)
   if not p then
     return nil
   end
@@ -283,6 +284,23 @@ function M.capture_tags(tpl, lines, ctx)
   local out = vim.deepcopy(lines)
   out[at] = require('org.edit').build_headline(p)
   return out
+end
+
+--- org.nvim store filter: append the tags the destination inherits (see
+--- `inherited_tags`) to the captured entry's headline, so a capture under
+--- `allitude` lands `:allitude:pms:` instead of bare even though the agenda
+--- would have shown it those tags anyway. Entry captures only. Returns nil
+--- when nothing changed.
+---@param tpl table
+---@param lines string[]
+---@param ctx table
+---@return string[]|nil
+function M.capture_tags(tpl, lines, ctx)
+  if (tpl.type or 'entry') ~= 'entry' then
+    return nil
+  end
+  ctx = ctx or {}
+  return M.add_tags(lines, ctx.target_file, inherited_tags(ctx))
 end
 
 --- Whether the Task template keeps the stock `%a` line, the link back to the
@@ -347,6 +365,7 @@ function M.setup()
   require('org.lazy').on_load('org.capture', 'helper_capture', function(capture)
     capture.store_filters.capture_header = M.header_first
     capture.store_filters.capture_tags = M.capture_tags
+    capture.store_filters.capture_autotags = require('helpers.org.autotags').filter
   end)
 end
 
