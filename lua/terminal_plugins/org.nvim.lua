@@ -638,9 +638,14 @@ return {
     -- link back to the file/headline the capture was started from: a ticket
     -- captured while reading a project file carries the `file:...::*Headline`
     -- link to it, so an entry read on its own -- the TODO view's line, the
-    -- agent working the ticket -- points back at the file it came from. It
-    -- expands to nothing when the origin offers no link (a terminal, the
-    -- capture buffer itself), and `trim_blank` drops that empty last line;
+    -- agent working the ticket -- points back at the file it came from. Only
+    -- a capture started in a project file keeps it: the store filter
+    -- `origin_link` (helpers/org/capture.lua) drops the line when the origin
+    -- is anything else, the TODO view included -- there the link would just
+    -- carry the text of the node at point into a board the entry lands in
+    -- anyway. It expands to nothing when the origin offers no link (a
+    -- terminal, the capture buffer itself), and `trim_blank` drops that empty
+    -- last line;
     -- org.nvim uses an existing `:ID:` on the origin headline and only falls
     -- back to the `file:` link, so no ID is minted here (links.use_id is off).
     -- `target`/`olp` come from

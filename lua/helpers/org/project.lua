@@ -386,6 +386,20 @@ function M.current()
   return { name = name, file = norm(projects_dir .. '/' .. name .. '.org'), root = root, source = 'git' }
 end
 
+--- Whether `path` is one of the project files: a `.org` directly under
+--- `~/org/projects`, the boards the claim index scans. Only a capture started
+--- in one of them keeps the link back to its origin
+--- (helpers/org/capture.lua `origin_link`).
+---@param path string|nil
+---@return boolean
+function M.is_project_file(path)
+  if not path or path == '' then
+    return false
+  end
+  local dir, base = norm(path):match '^(.*)/([^/]+)$'
+  return dir == norm(projects_dir) and base:sub(-4) == '.org'
+end
+
 --- Name of the sub-project an agenda entry belongs to: the headline claim
 --- (`:PROJECT_DIRS:` on a headline, drawer or shorthand) whose subtree holds
 --- `hl`. A file may host several projects, one per top-level headline

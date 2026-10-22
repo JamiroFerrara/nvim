@@ -39,6 +39,12 @@
 -- `c` / <leader>aC capture-under-entry, `M.under`, from the TODO view and
 -- from `c` on a headline in an org file) go through the filter, so the
 -- setting covers either way in.
+--
+-- `origin_link`, the third store filter, is where the stock `%a` line is
+-- dropped again: only a capture started in a project file keeps the link
+-- back to the entry it was started from, so a capture made in the TODO view
+-- -- or in any other file that is not a board -- does not carry the text of
+-- the node at point into its own body (project.is_project_file).
 local M = {}
 
 local dest
@@ -276,6 +282,36 @@ function M.capture_tags(tpl, lines, ctx)
   return out
 end
 
+--- org.nvim store filter: drop the `%a` annotation -- the link back to the
+--- entry the capture was started from -- unless that entry was read in a
+--- project file. Started anywhere else (the TODO view, a knowledge-base note)
+--- the link carries the text of the node at point into an entry that says
+--- nothing about it, and the TODO view is the board of the file the entry
+--- lands in anyway. The line is the one org.nvim itself expanded
+--- (`ctx.annotation`), so a description the user typed is left alone, and
+--- `trim_blank` has already dropped the line when the origin offers no link
+--- at all. Returns nil when nothing changed.
+---@param tpl table
+---@param lines string[]
+---@param ctx table
+---@return string[]|nil
+function M.origin_link(tpl, lines, ctx)
+  local annotation = ctx and ctx.annotation
+  if not annotation or annotation == '' then
+    return nil
+  end
+  if require('helpers.org.project').is_project_file(ctx.origin_file) then
+    return nil
+  end
+  local last = lines[#lines]
+  if not last or vim.trim(last) ~= annotation then
+    return nil
+  end
+  local out = vim.deepcopy(lines)
+  table.remove(out)
+  return out
+end
+
 --- Template `hook`: keep the capture buffer itself in that order as the entry
 --- is typed. Without it the header sits below the description while the
 --- capture is open -- the cursor types *above* the date line -- and only the
@@ -318,6 +354,7 @@ function M.setup()
   require('org.lazy').on_load('org.capture', 'helper_capture', function(capture)
     capture.store_filters.capture_header = M.header_first
     capture.store_filters.capture_tags = M.capture_tags
+    capture.store_filters.capture_origin = M.origin_link
   end)
 end
 
