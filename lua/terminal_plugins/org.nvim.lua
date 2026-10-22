@@ -48,10 +48,6 @@
 --                   read per entry through the todo `prefix_format` below,
 --                   plus the `changed-up` / `changed-down` sorting strategies
 --                   (the group view's sections)
---   progress.lua    the progress column of the same lists: how far the omp
---                   run working an entry says it has gone, read from the
---                   entry's `:OMP_PROGRESS:` property, which the launcher
---                   seeds and the run keeps current as it works
 --   wayfinder.lua   a wayfinder ticket kind (`wf_<type>`, or the longer
 --                   `wayfinder_<type>` of the first maps) drawn as its icon
 --                   on the entry line, right before the state keyword -- a
@@ -595,13 +591,6 @@ return {
       -- column: an entry with no timestamp leaves it blank rather than
       -- dropping it, so its keyword still lands where the dated entries'
       -- ones do.
-      -- The second `%(lua expression)` element is the same kind of fixed
-      -- 5-wide column, between the date and the keyword: how far the omp run
-      -- working the entry says it has gone, the `:OMP_PROGRESS:` property
-      -- helpers/org/progress.lua reads ("40%", blank on an entry no run
-      -- reports on). The run writes the number and the watcher re-renders on
-      -- its write, so the column moves with the work; every other entry
-      -- keeps the blank field, and the keywords stay in their column.
       -- The `tags` and `search` kinds -- the blocks that list entries by a
       -- match or a text search, the board's own sections and the `5` view's
       -- among them -- are the stock format plus the space the wayfinder
@@ -619,7 +608,7 @@ return {
       -- does not push its own line's date, keyword and title to the right of
       -- the other lines'.
       prefix_format = {
-        todo = ' %i %-12:c %-13(require("helpers.org.changed").label(hl)) %-5(require("helpers.org.progress").label(hl))',
+        todo = ' %i %-12:c %-13(require("helpers.org.changed").label(hl))',
         tags = ' %i %-12:c ',
         search = ' %i %-12:c ',
       },

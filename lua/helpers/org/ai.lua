@@ -84,12 +84,6 @@
 -- the ticket can tell a relaunch from an answer instead of reading silence as
 -- consent (the relaunch rule is the omp-org-ticket skill's).
 --
--- The drawer also opens the run's progress report: `:OMP_PROGRESS:` is seeded
--- at `0`, and the run keeps it current as it works (the omp-org-ticket skill),
--- so the TODO views show how far it has gone on the ticket's own line
--- (helpers/org/progress.lua). The run removes the key in its write-back: the
--- number describes a run in flight, and a relaunch seeds it again.
---
 -- A launch whose buffer is stale is refused: an agent's write-back lands on
 -- disk while nvim holds the file, so writing the state back from a buffer
 -- that never saw it would drop it (helpers/org/write.lua, `M.stale`), and an
@@ -220,13 +214,6 @@ local SESSION_PROP = 'OMP_SESSION'
 --- relaunch — the one case where the ticket may already hold the run's own
 --- unanswered round.
 local LAUNCH_PROP = 'OMP_LAUNCH'
-
---- The headline property holding the run's own progress report: what the run
---- has done so far, as a bare percentage (`0`-`100`), rendered as the progress
---- column of the TODO views (helpers/org/progress.lua) and removed by the
---- run's own write-back. The launcher seeds it so the column is up from the
---- launch itself.
-local PROGRESS_PROP = 'OMP_PROGRESS'
 
 --- The keywords a launch of the user's own overwrites with `NEXT`: the
 --- untouched ticket (`TODO`, and an unkeyworded headline) and one parked on
@@ -499,12 +486,6 @@ local function ticket_at(bufnr, lnum, mutate, claim, link)
 
     launch = launch + 1
     require('org.properties').entry_put(bufnr, hl.line, LAUNCH_PROP, tostring(launch))
-
-    -- Open the run's progress report at 0 (PROGRESS_PROP): the ticket shows
-    -- the column from the launch on, and the run rewrites the number as it
-    -- works. Seeded unconditionally -- a relaunch is a run starting from its
-    -- own beginning, and the previous run's write-back removed its key.
-    require('org.properties').entry_put(bufnr, hl.line, PROGRESS_PROP, '0')
 
     -- Claim the ticket: `NEXT` means "a run is on this", which is what a
     -- launch holds for an untouched ticket (`TODO`) and for one parked on the
