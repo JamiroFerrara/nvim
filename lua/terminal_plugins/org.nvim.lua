@@ -636,15 +636,16 @@ return {
     },
     -- The Task template keeps the stock one's trailing `%a`, the annotation
     -- link back to the file/headline the capture was started from: a ticket
-    -- captured while reading a project file carries the `file:...::*Headline`
-    -- link to it, so an entry read on its own -- the TODO view's line, the
-    -- agent working the ticket -- points back at the file it came from. Only
-    -- a capture started in a project file keeps it: the store filter
-    -- `origin_link` (helpers/org/capture.lua) drops the line when the origin
-    -- is anything else, the TODO view included -- there the link would just
-    -- carry the text of the node at point into a board the entry lands in
-    -- anyway. It expands to nothing when the origin offers no link (a
-    -- terminal, the capture buffer itself), and `trim_blank` drops that empty
+    -- captured while reading a file carries the `file:...::*Headline` link to
+    -- it, so an entry read on its own -- the TODO view's line, the agent
+    -- working the ticket -- points back at the file it came from. The link
+    -- names a place, so only a capture started in a file gets the line: the
+    -- template is a function and asks `origin_link`
+    -- (helpers/org/capture.lua), which answers no for a view -- the TODO
+    -- view would otherwise carry the text of the node at point, in the
+    -- capture buffer itself, into an entry that lands in that same board --
+    -- and for a terminal or a scratch buffer. `%a` expands to nothing when
+    -- the origin offers no link at all, and `trim_blank` drops that empty
     -- last line;
     -- org.nvim uses an existing `:ID:` on the origin headline and only falls
     -- back to the `file:` link, so no ID is minted here (links.use_id is off).
@@ -685,7 +686,17 @@ return {
           olp = function()
             return capture.olp()
           end,
-          template = '* TODO %?\n  %U ' .. string.rep('-', notes.DASHES) .. '\n  %a',
+          -- `%a` only where the origin is a file: the stock template's
+          -- trailing line is spelled out only then, so a capture started in
+          -- a view never shows the text of the node at point
+          -- (lua/helpers/org/capture.lua `origin_link`).
+          template = function(ctx)
+            local text = '* TODO %?\n  %U ' .. string.rep('-', notes.DASHES)
+            if capture.origin_link(ctx) then
+              text = text .. '\n  %a'
+            end
+            return text
+          end,
           -- Keep the buffer in title/header/description order while the
           -- entry is typed (lua/helpers/org/capture.lua `hook`).
           hook = capture.hook,

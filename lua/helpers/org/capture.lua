@@ -40,11 +40,14 @@
 -- from `c` on a headline in an org file) go through the filter, so the
 -- setting covers either way in.
 --
--- `origin_link`, the third store filter, is where the stock `%a` line is
--- dropped again: only a capture started in a project file keeps the link
--- back to the entry it was started from, so a capture made in the TODO view
--- -- or in any other file that is not a board -- does not carry the text of
--- the node at point into its own body (project.is_project_file).
+-- The stock `%a` line -- the link back to the entry the capture was started
+-- from -- is not always the template's: `origin_link` answers whether this
+-- capture keeps it, and the Task template (org.nvim.lua) asks before
+-- spelling the line out. Only a capture started in a file keeps it, so a
+-- capture made in the TODO view -- or in any other view -- does not carry
+-- the text of the node at point into its own body, in the capture buffer or
+-- after storing. `M.under` (the `c` / <leader>aC capture-under-entry)
+-- builds on the same template, so either way in obeys the same rule.
 local M = {}
 
 local dest
@@ -282,34 +285,24 @@ function M.capture_tags(tpl, lines, ctx)
   return out
 end
 
---- org.nvim store filter: drop the `%a` annotation -- the link back to the
---- entry the capture was started from -- unless that entry was read in a
---- project file. Started anywhere else (the TODO view, a knowledge-base note)
---- the link carries the text of the node at point into an entry that says
---- nothing about it, and the TODO view is the board of the file the entry
---- lands in anyway. The line is the one org.nvim itself expanded
---- (`ctx.annotation`), so a description the user typed is left alone, and
---- `trim_blank` has already dropped the line when the origin offers no link
---- at all. Returns nil when nothing changed.
----@param tpl table
----@param lines string[]
+--- Whether the Task template keeps the stock `%a` line, the link back to the
+--- entry the capture was started from: it names a place, and only a capture
+--- started in a file has one. Anywhere else -- the TODO view, another view,
+--- a terminal, a scratch buffer -- the link would just carry the text of the
+--- node at point into an entry that lands in that same board, so the
+--- template leaves the line out and no phrase shows in the capture buffer. A
+--- link an org-protocol capture stored for itself (`link_store_props`, which
+--- builds no origin context at all) is a place too, and is kept.
 ---@param ctx table
----@return string[]|nil
-function M.origin_link(tpl, lines, ctx)
-  local annotation = ctx and ctx.annotation
-  if not annotation or annotation == '' then
-    return nil
+---@return boolean
+function M.origin_link(ctx)
+  if not (ctx and ctx.annotation) then
+    return false
   end
-  if require('helpers.org.project').is_project_file(ctx.origin_file) then
-    return nil
+  if ctx.origin_buf == nil then
+    return true
   end
-  local last = lines[#lines]
-  if not last or vim.trim(last) ~= annotation then
-    return nil
-  end
-  local out = vim.deepcopy(lines)
-  table.remove(out)
-  return out
+  return ctx.origin_file ~= nil and ctx.origin_file ~= ''
 end
 
 --- Template `hook`: keep the capture buffer itself in that order as the entry
@@ -354,7 +347,6 @@ function M.setup()
   require('org.lazy').on_load('org.capture', 'helper_capture', function(capture)
     capture.store_filters.capture_header = M.header_first
     capture.store_filters.capture_tags = M.capture_tags
-    capture.store_filters.capture_origin = M.origin_link
   end)
 end
 
