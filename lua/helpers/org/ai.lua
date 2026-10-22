@@ -137,7 +137,12 @@
 -- and a level of several is one orchestrator batch. A ticket a run already
 -- took is left where it stands:
 -- `NEXT` is a run on it, `TEST` a change awaiting validation, `PEND` the
--- user's, `WARN` a failure. That is also what keeps a frontier launched
+-- user's, `WARN` a failure. The headline above is the one exception, and only
+-- at `NEXT`: nothing under it open, that claim is the level's own marker while
+-- its work ran -- the map of an expedition reads `NEXT` exactly while its
+-- tickets are open -- so the climb rising onto it is what launches the map
+-- pass, and a run still holding it makes the launch refuse instead. That is
+-- also what keeps a frontier launched
 -- together from racing for the parent: the leaves still in flight are `NEXT`,
 -- so the run that finds untouched work left below the parent is the last one
 -- to finish, and the climb starts there.
@@ -233,13 +238,25 @@ local PROGRESS_PROP = 'OMP_PROGRESS'
 --- `claim`, the note on a `TEST` entry).
 local CLAIMABLE = { TODO = true, PEND = true }
 
---- The keywords the climb starts: only what no run has touched. The climb is
---- the run's own act, not the user's keypress, so a `PEND` (the user's to
---- answer) and a `TEST` (theirs to validate) are left where they stand --
---- the level above waits for the user, not for this run. `CLAIMABLE` is the
---- launch's own set; this one is the climb's, and the two are deliberately
---- apart.
+--- The keywords the climb starts below the level above: only what no run has
+--- touched. The climb is the run's own act, not the user's keypress, so a
+--- `PEND` (the user's to answer) and a `TEST` (theirs to validate) are left
+--- where they stand -- the level above waits for the user, not for this run.
+--- `CLAIMABLE` is the launch's own set; this one is the climb's, and the two
+--- are deliberately apart. The level above itself is read at `RISING`.
 local UNTOUCHED = { TODO = true }
+
+--- The keyword the climb takes the level above at on top of `UNTOUCHED`: a
+--- `NEXT` on the parent itself, when nothing under it is open. A launch never
+--- claims a headline that holds open work below it -- it fans out to that
+--- work (`expand_target`) and the containers are stamped with nothing -- so a
+--- `NEXT` there is not a run in flight: it is the claim the level carries
+--- while the work under it runs (an expedition's map reads `NEXT` exactly
+--- while its tickets are open), and the climb is what rises onto it once they
+--- close. The level itself only: a `NEXT` sibling *below* the parent is a run
+--- on that sibling, and the climb leaves it where it stands, which is what
+--- keeps a frontier launched together from racing for the parent.
+local RISING = { NEXT = true }
 
 --- The session key linking a ticket to the agent that works it: the
 --- :OMP_SESSION: link when the headline carries one; a ticket that never
@@ -1456,11 +1473,19 @@ end
 --- otherwise (a sibling this run did not close, a ticket charted into that
 --- subtree since the level was last launched) -- so a level that rises with
 --- several tickets takeable at once starts all of them, exactly as launching
---- the parent would. What no run has touched is what it starts: the tickets are narrowed to `TODO`, so a sibling a run already
+--- the parent would. What no run has touched is what it starts: the tickets
+--- are narrowed to `TODO`, so a sibling a run already
 --- claimed (`NEXT`), one awaiting the user's validation (`TEST`), one parked
 --- on the user (`PEND`) or one that failed (`WARN`) is left alone -- that
 --- keeps the duty on the last leaf to finish, which is the only run whose
---- climb finds untouched work left to start. The launch is the ordinary one
+--- climb finds untouched work left to start. The level above itself is the one
+--- exception, and only at `NEXT` (RISING): a claim on a headline that holds
+--- open work below it is impossible -- a launch fans out to that work and
+--- leaves the container unstamped -- so a `NEXT` there is the level's own
+--- marker while the work under it runs, the map of an expedition above all,
+--- and the climb rising onto it is what launches the map pass that closes the
+--- expedition. A run still on it is refused by the launch itself
+--- (`open_pane`), so nothing double-starts. The launch is the ordinary one
 --- -- :ID: / :OMP_SESSION: / :OMP_LAUNCH:, the claim, the project checkpoint,
 --- its own pane -- so a level that is one ticket opens one instance and a
 --- level of several is one orchestrator batch (`launch_targets`). A ticket
@@ -1504,12 +1529,16 @@ function M.climb_up(file, id)
   end
 
   -- the level above, as a launch on the parent would cover it, narrowed to
-  -- the tickets no run has touched (UNTOUCHED -- a `PEND` or a `TEST` the
-  -- level above holds is waiting on the user, not on this run): the parent
-  -- when it is free, the untouched tickets left takeable below it otherwise
+  -- what this run may start: the tickets no run has touched (UNTOUCHED -- a
+  -- `PEND` or a `TEST` the level above holds is waiting on the user, not on
+  -- this run) -- the parent when it is free, the untouched tickets left
+  -- takeable below it otherwise -- and the parent itself when it reads `NEXT`
+  -- and holds nothing open below it (RISING: the level rising, not a ticket a
+  -- run is on -- see its own note)
   local targets, titles = {}, {}
   for _, cand in ipairs(expand_headline(parent)) do
-    if UNTOUCHED[cand.todo] then
+    local rising = cand == parent -- nothing under it is open: the level itself
+    if UNTOUCHED[cand.todo] or (rising and RISING[cand.todo]) then
       targets[#targets + 1] = { bufnr = buf, lnum = cand.line }
       titles[#titles + 1] = cand:plain_title()
     end
