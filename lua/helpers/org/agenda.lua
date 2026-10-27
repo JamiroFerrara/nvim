@@ -781,9 +781,13 @@ end
 -- and 6 (and `°`, which opens the same `w` board through M.custom_view) are
 -- scoped to the project of the working directory the way `°` was: each
 -- block's `files` becomes the project's file and a headline claim adds its
--- subtree restriction. A cwd that names no project -- or one whose file
--- does not exist yet -- opens the full view, the same one the dispatcher
--- menu's `w` / `p` / `y` give. Resolution runs per key press (project.current
+-- subtree restriction. A cwd that names a project whose file the vault has
+-- not created yet keeps the scope (an empty view, with a warning naming the
+-- file) rather than widening: listing every project's TODOs under a key
+-- scoped to one is the wrong answer whether or not the file is there. Only
+-- a cwd that names no project at all -- no claim, no `.git` root -- opens
+-- the full view, the same one the dispatcher menu's `w` / `p` / `y` give.
+-- Resolution runs per key press (project.current
 -- reads getcwd, or the job cwd of a terminal buffer), so a `cd` moves the
 -- scope with it. 1 and 2 are global: they never scope, so they list the
 -- open TODOs of every project -- 2 the ones in flight only.
@@ -840,6 +844,20 @@ local function view_groups(scope)
   return out
 end
 
+local missing_warned = {} -- project file -> true, the missing-file warning once per file
+
+--- A project the cwd named but whose file has not been created yet: the
+--- view is scoped to it all the same (empty), and this says why instead of
+--- leaving a blank board unexplained.
+local function warn_missing(current)
+  local file = current.file
+  if missing_warned[file] then
+    return
+  end
+  missing_warned[file] = true
+  require('org.utils').warn(string.format('project: %s has no project file yet (%s) -- `^` creates it', current.name, vim.fn.fnamemodify(file, ':t')))
+end
+
 ---@param scope 'global'|'file'|'project' 'global' lists every agenda file;
 ---  'file' lists the cwd project's file whole (the command it opens brings
 ---  its own groups); 'project' narrows it to cwd's project (a headline
@@ -853,11 +871,19 @@ local function open_custom_view(key, label, scope)
   local spec, opts = vim.deepcopy(command), nil
   local project = require 'helpers.org.project'
   local current = scope ~= 'global' and project.current() or nil
-  local in_project = current ~= nil and vim.uv.fs_stat(current.file) ~= nil
   local groups = view_groups(scope)
   local files, title, group
-  if in_project then
+  if current then
+    -- Always the project's file, never the whole agenda set: a cwd that
+    -- named a project has no business listing another project's entries
+    -- (the reported bug -- a git repo whose ~/org/projects/<name>.org does
+    -- not exist yet used to fall through to every file's TODOs). A file
+    -- that is not there yet reads as a project with nothing open, and says
+    -- so once.
     files = project.files(current)
+    if not vim.uv.fs_stat(current.file) then
+      warn_missing(current)
+    end
     if scope == 'project' then
       title = project.title(current)
     else
@@ -886,7 +912,7 @@ local function open_custom_view(key, label, scope)
       end
     end
   end
-  if scope == 'project' and in_project then
+  if scope == 'project' and current then
     local restrict = project.restrict(current)
     if restrict then
       opts = { restrict = restrict }
