@@ -77,7 +77,10 @@ end
 ---@return string[]|nil
 local function file_olp(file)
   local first = file and file.children and file.children[1]
-  if first then
+  -- level 1 only: a flat board (ing.org, tickets appended at a deeper level,
+  -- no headline above them) has no project headline, and taking the first
+  -- ticket for one names the project after it
+  if first and first.level == 1 then
     return { first:plain_title() }
   end
 end
@@ -462,7 +465,7 @@ function M.title(project)
       return require('org.files').get(project.file)
     end)
     local first = ok and file and file.children and file.children[1]
-    if first then
+    if first and first.level == 1 then
       return first:plain_title()
     end
   end
@@ -480,7 +483,7 @@ function M.file_title(path)
     return require('org.files').get(path)
   end)
   local first = ok and file and file.children and file.children[1]
-  if first then
+  if first and first.level == 1 then
     local title = first:plain_title()
     if title and title ~= '' then
       return title
@@ -502,7 +505,7 @@ function M.group_title(path)
     return require('org.files').get(path)
   end)
   local children = ok and file and file.children or {}
-  if #children == 1 then
+  if #children == 1 and children[1].level == 1 then
     local title = children[1]:plain_title()
     if title and title ~= '' then
       return title
@@ -511,9 +514,12 @@ function M.group_title(path)
   return vim.fn.fnamemodify(path, ':t:r')
 end
 
---- Outline path the capture for `project` lands under. Both branches rely on
---- the node existing: a `.git`-derived file is written with its level-1
---- headline by `ensure`, and a headline claim resolves exactly.
+--- Outline path the capture for `project` lands under: a headline claim
+--- resolves exactly, a file project lands under its level-1 headline (the
+--- file is written with one by `ensure`, and `M.title` falls back to the
+--- file's own name when it has none -- a flat board, tickets appended with
+--- no headline above them, gets that name and capture then says the heading
+--- is missing instead of filing the entry somewhere nobody looks).
 ---@param project table
 ---@return string[]
 function M.olp(project)
