@@ -27,6 +27,10 @@
 --     text. So a ragged table (org pads a table only on TAB) and a cell
 --     whose markup Vim conceals both render framed and aligned: the
 --     written source does not decide the alignment, the display does.
+--     A block body (`#+begin_src`, `#+begin_example`, ...) is not Org text
+--     and holds no Org table: a markdown table in a `#+begin_src markdown`
+--     block is left to the markdown plugin, which renders the body as the
+--     injected markdown tree `queries/org/injections.scm` gives it.
 --
 -- The wrapper is installed when org.ui.decorations first loads, so the
 -- renderer stays out of startup.
@@ -168,6 +172,35 @@ local function revealed_row(bufnr)
   return vim.api.nvim_win_get_cursor(win)[1] - 1
 end
 
+--- Whether a verbatim block -- a `#+begin_src` body, or the rest of
+--- org.nvim's protecting blocks (`M.block_line`) -- is open at the start of
+--- 0-based row `row`: the nearest `#+begin_`/`#+end_` above decides, blocks
+--- not nesting, and a headline ends the search (org.nvim resets its block
+--- state there too).
+---@param bufnr integer
+---@param row integer
+---@return boolean
+local function block_open(bufnr, row)
+  local decorations = require 'org.ui.decorations'
+  local parser = require 'org.parser'
+  local e = row
+  while e > 0 do
+    local s = math.max(0, e - 256)
+    local chunk = vim.api.nvim_buf_get_lines(bufnr, s, e, false)
+    for k = #chunk, 1, -1 do
+      if parser.headline_level(chunk[k]) then
+        return false
+      end
+      local b = decorations.block_line(chunk[k])
+      if b ~= nil then
+        return b
+      end
+    end
+    e = s
+  end
+  return false
+end
+
 --- Render the tables of rows [first, last]. A table is the run of rows
 --- starting with `|` that carries the row; one row beyond the range is read
 --- on each side so a table cut by the viewport is not framed as if it
@@ -204,6 +237,21 @@ local function tables(bufnr, first, last, rows)
     end
     lines = vim.api.nvim_buf_get_lines(bufnr, lo, hi + 1, false)
   end
+  -- A block body is not Org text, so its `|` lines are not an Org table: a
+  -- markdown table in a `#+begin_src markdown` body is the markdown plugin's
+  -- to draw -- render-markdown reads the body as the injected markdown tree
+  -- queries/org/injections.scm hands it -- and framing it here as well drew
+  -- a second table over it: doubled borders, every column off by the other
+  -- grid's padding.
+  local decorations = require 'org.ui.decorations'
+  local blocked, open = {}, block_open(bufnr, lo)
+  for k = 1, #lines do
+    local b = decorations.block_line(lines[k])
+    if b ~= nil then
+      open = b
+    end
+    blocked[k] = open
+  end
   ---@param row integer
   ---@param col integer
   ---@param opts table
@@ -219,11 +267,11 @@ local function tables(bufnr, first, last, rows)
   local hl = 'OrgTableSeparator'
   local i = 1
   while i <= #lines do
-    if not lines[i]:match '^%s*|' then
+    if blocked[i] or not lines[i]:match '^%s*|' then
       i = i + 1
     else
       local s = i
-      while i <= #lines and lines[i]:match '^%s*|' do
+      while i <= #lines and not blocked[i] and lines[i]:match '^%s*|' do
         i = i + 1
       end
       -- The rows of the run, the `|---+---|` ones flagged: the dashes of a
