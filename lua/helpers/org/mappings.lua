@@ -1,8 +1,9 @@
 -- Buffer-local org mappings for org.nvim (wired in
 -- lua/terminal_plugins/org.nvim.lua): normal-mode <CR> like the markdown
 -- config's smart action (obsidian util.toggle_checkbox) -- except in a
--- capture buffer, where it stores the entry and starts OMP on it, the same
--- as <leader>ai --, plus following
+-- capture buffer, where it opens a new line to type on, and saving that
+-- buffer (`:w`) is what stores the entry and starts OMP on it --, plus
+-- following
 -- the link under the cursor, insert-mode <CR> continuing lists like
 -- bullets.vim, dd deleting a whole subtree, the
 -- one-key tag/priority toggles (helpers/org/tagging.lua), and the
@@ -24,6 +25,35 @@ local function is_roam(bufnr)
 end
 
 function M.setup()
+  -- A capture buffer was saved: the finalize that follows is a launch, not
+  -- just a store (the capture branch below marks it).
+  local write_launch = false
+
+  -- org.capture announces every stored capture -- `OrgCaptureAfterFinalize`,
+  -- with the buffer and line the entry landed on -- whatever finished it: the
+  -- capture key, `<leader>ai`, or a write. Only the write asks for a run (the
+  -- BufWriteCmd in the capture branch marks it), so the mark decides; it is
+  -- cleared here and in the mark's own scheduled reset, whichever comes
+  -- first, so one saved capture starts one launch.
+  vim.api.nvim_create_autocmd('User', {
+    pattern = 'OrgCaptureAfterFinalize',
+    callback = function(args)
+      if not write_launch then
+        return
+      end
+      write_launch = false
+      local data = args.data or {}
+      if not (data.bufnr and data.line) then
+        return
+      end
+      -- out of the write's own autocmd run: the launch writes the ticket's
+      -- drawer, saves the file and makes the run's checkpoint commit
+      vim.schedule(function()
+        require('helpers.org.ai').launch_at(data.bufnr, data.line)
+      end)
+    end,
+    desc = 'org: start OMP on a capture stored by a write',
+  })
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'org',
     callback = function(args)
@@ -166,17 +196,37 @@ function M.setup()
           utils.run(capture.refile, buf)
         end, 'org: refile capture')
 
-        -- Normal-mode <CR> in a capture buffer is <leader>ai there: store the
-        -- entry, then start the run on the headline it landed on
-        -- (helpers/org/ai.lua, target_at_cursor with store_capture). The
-        -- entry itself is typed in insert mode, where <CR> stays a newline
-        -- (and a list continuation); only the Escape-then-Enter reaches this,
-        -- where the smart action of an org buffer has nothing to act on -- an
-        -- unfiled entry is no headline yet. The capture stays open, with its
-        -- text, when it could not be stored, and the launch reports why.
+        -- Normal-mode <CR> in a capture buffer opens a new line and leaves
+        -- the cursor typing on it: the entry is written in insert mode, and a
+        -- normal-mode key there only ever serves getting back to the text.
+        -- The launch is the save's (BufWriteCmd below), not a keystroke's.
         vim.keymap.set('n', '<CR>', function()
-          require('helpers.org.ai').launch()
-        end, { buffer = buf, desc = 'org: store the capture and start OMP on it' })
+          local lnum = vim.api.nvim_win_get_cursor(0)[1]
+          local indent = (get_line(lnum) or ''):match '^[ \t]*'
+          vim.api.nvim_buf_set_lines(buf, lnum, lnum, false, { indent })
+          vim.api.nvim_win_set_cursor(0, { lnum + 1, #indent })
+          vim.cmd 'startinsert!'
+        end, { buffer = buf, desc = 'org: new line in the capture' })
+
+        -- Saving the capture starts the run on the entry it stored. The
+        -- buffer is acwrite, so `:w` is org.nvim's BufWriteCmd: it stores the
+        -- entry and closes the capture, announcing the result as the User
+        -- event `OrgCaptureAfterFinalize` (with the target buffer and line).
+        -- This only marks the write as a launch -- the storing stays
+        -- org.nvim's own -- and the hook in M.setup starts the run once the
+        -- entry exists, the same launch `<leader>ai` gives. The mark is
+        -- dropped on the next loop, so a write that could not store anything
+        -- leaves no launch armed for a later finalize.
+        vim.api.nvim_create_autocmd('BufWriteCmd', {
+          buffer = buf,
+          callback = function()
+            write_launch = true
+            vim.schedule(function()
+              write_launch = false
+            end)
+          end,
+          desc = 'org: mark the capture write as a launch',
+        })
 
         -- The entry is typed in insert mode, but org.nvim only starts
         -- insert when it opens the buffer: coming back to it (a window
@@ -257,10 +307,11 @@ function M.setup()
       --
       -- In an open capture buffer <leader>ai finishes the capture first and
       -- launches on the entry it stored (one key: capture, then run); the
-      -- capture stays open when it could not be stored. <CR> in normal mode
-      -- there is the same launch (the capture branch below rebinds it), so
-      -- Escape-then-Enter also captures and runs. <leader>aj writes
-      -- nothing there -- there is no ticket until the capture is filed.
+      -- capture stays open when it could not be stored. Saving the capture
+      -- (`:w`) does the same (the capture branch above), so a write is the
+      -- buffer's "done" while <CR> there stays a plain new line.
+      -- <leader>aj writes nothing there -- there is no ticket until the
+      -- capture is filed.
       -- Normal mode only: in insert mode the leader sequence would be typed
       -- text, and org.nvim's capture buffer already re-enters insert on
       -- every return to it, so Escape first.
