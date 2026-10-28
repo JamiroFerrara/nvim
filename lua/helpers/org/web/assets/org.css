@@ -176,6 +176,46 @@
   border-bottom-color: var(--sky);
 }
 
+/* Inline markup. org.nvim's export drops the markers and writes the kind as
+   a tag -- <b>, <i>, <span class="underline">, <del> -- so the tag is the
+   whole signal: the browser's own rules for the first two, and nothing at
+   all for the third, which is why `_underline_` read as plain text. Each one
+   is drawn as the buffer draws it (org.nvim's OrgUnderline and
+   OrgStrikethrough; the rest are the theme's own text in its own weight),
+   and only the parts a font cannot carry -- the rule under a word, the line
+   through it -- are coloured, so the emphasis stays in the prose's colour. */
+
+.org b,
+.org strong {
+  font-weight: 700;
+}
+
+.org i,
+.org em {
+  font-style: italic;
+}
+
+.org .underline {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  text-decoration-color: var(--overlay);
+}
+
+.org del,
+.org s {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--overlay);
+  color: var(--subtext);
+}
+
+.org sup,
+.org sub {
+  font-size: 0.72em;
+  line-height: 0;
+}
+
 .org code {
   font-family: var(--font);
   font-size: 0.88em;
