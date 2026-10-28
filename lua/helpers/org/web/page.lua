@@ -20,6 +20,7 @@ function M.asset(name)
     ['editor.css'] = 'text/css; charset=utf-8',
     ['editor.js'] = 'text/javascript; charset=utf-8',
     ['org.css'] = 'text/css; charset=utf-8',
+    ['org-actions.js'] = 'text/javascript; charset=utf-8',
     ['roam.html'] = 'text/html; charset=utf-8',
     ['roam.css'] = 'text/css; charset=utf-8',
     ['roam.js'] = 'text/javascript; charset=utf-8',
@@ -64,7 +65,9 @@ local function node_title(entry)
   end
   local parts = {}
   if entry.todo then
-    parts[#parts + 1] = ('<span class="%s %s">%s</span>'):format(entry.done and 'done' or 'todo', escape(entry.todo), escape(entry.todo))
+    parts[#parts + 1] = (
+      '<button type="button" class="state %s" data-entry="1" data-state="%s" title="change the state of this entry">%s</button>'
+    ):format(entry.done and 'done' or 'todo', escape(entry.todo), escape(entry.todo))
   end
   if entry.priority then
     parts[#parts + 1] = '<span class="priority">[#' .. escape(entry.priority) .. ']</span>'
@@ -131,6 +134,7 @@ function M.preview(opts)
   %s
   <div class="org" id="content">%s</div>
 </div>
+<script src="/assets/org-actions.js"></script>
 <script src="/assets/editor.js"></script>
 <script>
   const query = %s;
@@ -140,10 +144,15 @@ function M.preview(opts)
   const es = new EventSource('/events');
   let timer;
 
+  // the state badge and the checkboxes of the rendered node write the file
+  // through nvim (helpers/org/web/clicks)
+  const params = new URLSearchParams(query);
+  const entry = { file: file, line: params.get('line'), id: params.get('id') || undefined };
+  OrgActions.bind(document, entry);
+
   // `i` edits the node in place: the editor holds the node's own lines and
   // writes them back through nvim, which saves the file like any view
   // action. Everything else on the page stays read-only.
-  const params = new URLSearchParams(query);
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'i' || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     if (ev.target.closest('textarea, input, .editor')) return;
@@ -231,8 +240,7 @@ function M.file(opts)
     for i = 1, count do
       numbers[i] = tostring(i)
     end
-    body = ('<div class="file-body" id="scroller">%s<div class="gutter">%s</div>'
-      .. '<pre class="file-code"><code>%s</code></pre></div>'):format(
+    body = ('<div class="file-body" id="scroller">%s<div class="gutter">%s</div>' .. '<pre class="file-code"><code>%s</code></pre></div>'):format(
       line > 0 and '<div class="line-mark" id="mark" hidden></div>' or '',
       table.concat(numbers, '\n'),
       inner
@@ -303,18 +311,7 @@ function M.file(opts)
   })();
 </script>
 </body>
-</html>]]):format(
-    escape(title),
-    ROW,
-    TOP,
-    TOP,
-    escape(title),
-    lang,
-    body,
-    line,
-    ROW,
-    TOP
-  )
+</html>]]):format(escape(title), ROW, TOP, TOP, escape(title), lang, body, line, ROW, TOP)
 end
 
 return M

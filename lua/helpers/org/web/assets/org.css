@@ -465,6 +465,38 @@
 .org input[type='checkbox'] {
   margin-right: 0.4em;
   accent-color: var(--green);
+  cursor: pointer;
+  vertical-align: -0.1em;
+}
+
+.org input[type='checkbox']:disabled {
+  cursor: default;
+}
+
+/* a ticked item steps back, so a list reads as what is left */
+.org li.on,
+.org li.trans {
+  color: var(--overlay);
+}
+
+.org li.trans input[type='checkbox'] {
+  accent-color: var(--yellow);
+}
+
+/* A state badge is a button when the page can write it
+   (helpers/org/web/clicks): the same badge, now worth pressing. The reset is
+   written with `:where` so the badge's own rules keep their size and colour. */
+:where(.org, .node-title, .detail-title) button.state {
+  font: inherit;
+  border: 0;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.org button.state:hover,
+.node-title button.state:hover,
+.detail-title button.state:hover {
+  filter: brightness(1.4);
 }
 
 .org hr {
@@ -523,4 +555,63 @@
 
 #table-of-contents a.headline:hover .title {
   color: var(--lavender);
+}
+
+/* the state menu, anchored under the keyword it was opened from -- the
+   dashboard's own (#menu) and the one a rendered page opens
+   (.state-menu, lua/helpers/org/web/assets/org-actions.js) */
+#menu, .state-menu {
+  position: fixed;
+  z-index: 20;
+  background: var(--base);
+  border: 1px solid var(--surface1);
+  border-radius: 7px;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 45%);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 110px;
+}
+
+#menu button, .state-menu button {
+  text-align: left;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+#menu button, .state-menu button:hover {
+  background: var(--surface);
+}
+
+#menu button, .state-menu button.TODO { color: var(--blue); }
+#menu button, .state-menu button.NEXT { color: var(--peach); }
+#menu button, .state-menu button.PEND { color: var(--yellow); }
+#menu button, .state-menu button.TEST { color: var(--mauve); }
+#menu button, .state-menu button.WARN { color: var(--red); }
+#menu button, .state-menu button.DONE { color: var(--green); }
+
+/* the page's one-line answer, the same on the dashboard and a rendered
+   node (lua/helpers/org/web/assets/org-actions.js) */
+#toast {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--base);
+  border: 1px solid var(--surface1);
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 30;
+}
+
+#toast.on {
+  opacity: 1;
 }

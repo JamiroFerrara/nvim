@@ -325,11 +325,7 @@ local function handle(req, res)
     end
     local line = tonumber(req.query.line)
     local html = require('helpers.org.web.highlight').code(out.text, out.lang or '')
-    res.send(
-      200,
-      'text/html; charset=utf-8',
-      page.file { path = out.path, line = line, lang = out.lang, inner = html, text = out.text }
-    )
+    res.send(200, 'text/html; charset=utf-8', page.file { path = out.path, line = line, lang = out.lang, inner = html, text = out.text })
     return
   end
 

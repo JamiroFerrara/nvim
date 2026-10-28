@@ -696,8 +696,9 @@ end
 
 --- The entry's subtree as exported HTML, for the dashboard's detail pane.
 ---@param spec { file: string, line?: integer, id?: string }
+---@param options? table export options merged over the view's own (a `with_toc = false` for a page that has its own index)
 ---@return string|nil html, string|nil error
-function M.entry_html(spec)
+function M.entry_html(spec, options)
   local path = agenda_path(spec and spec.file)
   if not path then
     return nil, 'unknown file'
@@ -721,7 +722,7 @@ function M.entry_html(spec)
       lines = links.lines(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)),
       subtree_line = hl and hl.line or nil,
       body_only = true,
-      options = { with_broken_links = 'mark', checkbox_type = 'html' },
+      options = vim.tbl_extend('force', { with_broken_links = 'mark', checkbox_type = 'html' }, options or {}),
     })
   end)
   if not ok then

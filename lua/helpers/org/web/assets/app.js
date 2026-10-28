@@ -413,7 +413,14 @@ async function showDetail(entry, focusNote) {
     );
     body.replaceChildren();
     const title = el('h2', 'detail-title headline');
-    if (entry.todo) title.append(el('span', (entry.done ? 'done ' : 'todo ') + entry.todo, entry.todo));
+    if (entry.todo) {
+      const chip = el('button', 'state ' + (entry.done ? 'done ' : 'todo ') + entry.todo, entry.todo);
+      chip.type = 'button';
+      chip.dataset.entry = '1';
+      chip.dataset.state = entry.todo;
+      chip.title = 'change the state of this entry';
+      title.append(chip);
+    }
     if (entry.priority) title.append(el('span', 'priority', '[#' + entry.priority + ']'));
     title.append(el('span', 'title', entry.title));
     if (entry.cookie) title.append(el('span', 'cookie', entry.cookie));
@@ -423,6 +430,10 @@ async function showDetail(entry, focusNote) {
     const org = el('div', 'org');
     org.innerHTML = res.html || '<p class="empty">No body.</p>';
     body.append(title, org);
+    // a headline's state and a checkbox of the body write the file, the way
+    // the keyword on the entry's own title does (helpers/org/web/clicks)
+    OrgActions.bind(title, entry);
+    OrgActions.bind(org, entry);
     appendNoteBox(body, entry, focusNote);
     appendRunBox(body, entry);
   } catch (err) {
