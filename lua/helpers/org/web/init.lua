@@ -197,6 +197,26 @@ local function handle(req, res)
     return
   end
 
+  if req.method == 'POST' and path == '/api/capture' then
+    local body = payload_of(req)
+    local out, err = actions.capture {
+      file = body.file,
+      line = body.line,
+      id = body.id,
+      title = body.title,
+      body = body.body,
+    }
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/note' then
+    local body = payload_of(req)
+    local out, err = actions.note(body, body.text)
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
   if req.method == 'POST' and path == '/api/launch' then
     local body = payload_of(req)
     local out, err = actions.launch(body, body.jump and true or false)

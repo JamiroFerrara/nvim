@@ -398,6 +398,131 @@ function M.launch(spec, jump)
   return { ok = true }, nil
 end
 
+--- The date header of a captured entry or a note: `[<timestamp>] <rule>`
+--- (helpers/org/notes.lua's `entry_lines`), taken at the moment the request
+--- runs.
+---@return string
+local function header()
+  local date = require 'org.date'
+  local ts = date.effective_now(nil):clone({ active = false }):to_string()
+  return ts .. ' ' .. string.rep('-', require('helpers.org.notes').DASHES)
+end
+
+--- The description typed under a captured entry's title, as the lines that
+--- follow its header: one per line, indented like the template's own `  `,
+--- blank lines left empty. Leading and trailing blank lines are dropped, the
+--- way org.nvim trims a stored capture.
+---@param body string|nil
+---@return string[]
+local function description(body)
+  local out = {}
+  if type(body) ~= 'string' then
+    return out
+  end
+  for _, line in ipairs(vim.split((body:gsub('\r', '')), '\n', { plain = true })) do
+    line = (line:gsub('%s+$', ''))
+    out[#out + 1] = line
+  end
+  while out[1] and out[1] == '' do
+    table.remove(out, 1)
+  end
+  while out[#out] and out[#out] == '' do
+    out[#out] = nil
+  end
+  return out
+end
+
+--- Capture a new task from the browser form: the entry the editor's `^` /
+--- `<leader>oc` capture writes. The config's Task template (the same one,
+--- `capture.templates.t` of lua/terminal_plugins/org.nvim.lua) gives the
+--- shape -- a `TODO` title, the date header under it, the description below
+--- -- and the two store filters of helpers/org/capture.lua and
+--- helpers/org/autotags.lua add the tags: the destination's own and
+--- inherited set, and the words the title and description carry. org.nvim's
+--- own capture placement (`org.capture.insert`) then puts the lines at the
+--- end of the target's subtree, so the parent's `[n/m]` cookie counts the new
+--- entry and the nesting is the one the destination implies.
+---
+--- The request names the entry to capture under by `:ID:` or line -- the
+--- `c` / `<leader>aC` capture-under-entry, from the detail pane. With
+--- neither, the entry goes under the file's first level-1 headline, where a
+--- project capture lands when the cwd named the project
+--- (helpers/org/capture.lua's `pick`). No `%a` link back to an origin is
+--- written: the browser is not a file (helpers/org/capture.lua's
+--- `origin_link`).
+---@param spec { file: string, line?: integer, id?: string, title: string, body?: string }
+---@return { line: integer, title: string }|nil out, string|nil error
+function M.capture(spec)
+  local raw = spec and spec.title
+  local title = type(raw) == 'string' and vim.trim((raw:gsub('[\r\n]+', ' '))) or ''
+  if title == '' then
+    return nil, 'a capture needs a title'
+  end
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  local file = require('org.files').get_buffer(r.bufnr)
+  local parent = r.hl or (file and file.children and file.children[1])
+  if not parent then
+    return nil, 'no headline to capture under'
+  end
+  local olp = parent:outline_path()
+  olp[#olp + 1] = parent:plain_title()
+  local tpl = { key = 't', type = 'entry', target = r.path, olp = olp }
+  local ctx = { target_file = file, target_hl = parent, noninteractive = true, date = require('org.date').now() }
+  local lines = { '* TODO ' .. title, '  ' .. header() }
+  for _, line in ipairs(description(spec.body)) do
+    lines[#lines + 1] = line == '' and '' or '  ' .. line
+  end
+  local capture = require 'helpers.org.capture'
+  lines = capture.header_first(tpl, lines) or lines
+  lines = capture.capture_tags(tpl, lines, ctx) or lines
+  lines = require('helpers.org.autotags').filter(tpl, lines, ctx) or lines
+  local ok, first = pcall(require('org.capture').insert, r.bufnr, tpl, lines, ctx)
+  if not ok then
+    return nil, tostring(first)
+  end
+  if not first then
+    return nil, 'capture target is gone'
+  end
+  local saved, err = commit(r.bufnr)
+  return { line = first, title = title }, (not saved) and err or nil
+end
+
+--- Add a timestamped note to the end of an entry's body -- the
+--- `<leader>n` / `z` note of the editor, whose block shape
+--- helpers/org/notes.lua owns -- and save it. A note on an entry in `TEST`
+--- is the user's answer to the run that handed it back, so it also launches
+--- the ticket, exactly as the editor's note does; the launch is deferred to
+--- the next event-loop turn, so the page gets its answer and the launch's
+--- own writes land after the note is saved.
+---@param spec { file: string, line?: integer, id?: string }
+---@param text string|nil
+---@return { line: integer, launched: boolean }|nil out, string|nil error
+function M.note(spec, text)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local retest = r.hl.todo == 'TEST'
+  local first = require('helpers.org.notes').store(r.bufnr, r.hl, text)
+  if not first then
+    return nil, 'the note is empty'
+  end
+  local saved, err = commit(r.bufnr)
+  if retest then
+    local bufnr, lnum = r.bufnr, r.hl.line
+    vim.schedule(function()
+      pcall(require('helpers.org.ai').launch_at, bufnr, lnum)
+    end)
+  end
+  return { line = first, launched = retest }, (not saved) and err or nil
+end
+
 --- The entry's subtree as exported HTML, for the dashboard's detail pane.
 ---@param spec { file: string, line?: integer, id?: string }
 ---@return string|nil html, string|nil error

@@ -100,6 +100,27 @@ local function append_block(bufnr, hl, lines)
   return first
 end
 
+--- Store `note` at the end of `hl`'s body, under the timestamp of the moment
+--- it was taken (see `append_block` for the shape and the order). This is the
+--- write itself, without the prompt, so a caller that already has the text --
+--- the browser dashboard's note box (helpers/org/web/actions.lua) -- writes
+--- the same block the editor's `<leader>n` does. Returns the line the
+--- block's header landed on, or nil when the note is blank.
+---@param bufnr integer
+---@param hl org.Headline
+---@param note string|nil
+---@return integer|nil
+function M.store(bufnr, hl, note)
+  if not (note and vim.trim(note) ~= '') then
+    return nil
+  end
+  local date = require 'org.date'
+  local ts = date.effective_now(hl):clone({ active = false }):to_string()
+  local first = append_block(bufnr, hl, entry_lines(ts, note))
+  require('org.edit').note_stored(bufnr, first, hl.line)
+  return first
+end
+
 --- org-add-note: prompt for the note, then store it at the end of the entry
 --- body (chronological order). Registered as `org.todo.add_note`, so both the
 --- org buffer `<leader>n` and the agenda/todo view `z` use it.
@@ -125,13 +146,9 @@ function M.add(target)
   local retest = hl.todo == 'TEST'
   local utils = require 'org.utils'
   local note = utils.input_note { prompt = 'Note: ', purpose = edit.note_purpose 'note' }
-  if not note or vim.trim(note) == '' then
+  if not M.store(bufnr, hl, note) then
     return nil
   end
-  local date = require 'org.date'
-  local ts = date.effective_now(hl):clone({ active = false }):to_string()
-  local first = append_block(bufnr, hl, entry_lines(ts, note))
-  edit.note_stored(bufnr, first, hl.line)
   if retest then
     require('helpers.org.ai').launch_at(bufnr, hl.line)
   end

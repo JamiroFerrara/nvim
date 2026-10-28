@@ -210,22 +210,25 @@ end
 
 -- The in-flight view's (`f` below, key `2`) per-category sections: the
 -- entries of one classification tag -- or, for the untagged one, of none --
--- in the states that ask for something (NEXT, TEST, WARN; `/!` is not
--- done), ordered the way the ask reads: the entry a run is on first, then
--- the one waiting on validation, then the troubled one (`todo-state-up`
--- follows org's keyword sequence, where NEXT sits before TEST and WARN after
--- both), priority settling the ties. `super_groups = false` keeps each
--- category one list instead of the global map's per-file groups: every entry
--- line already carries its project as the category column, and a per-file
--- heading would break the state order across the section. `category-keep` is
--- wrong here for the same reason it is right on the board: the entries of
--- one section come from every project file, so their categories must not be
--- the sort key. `hide_empty` drops a category with nothing in flight instead
--- of drawing a bare header.
+-- whose keyword asks for something (NEXT, TEST, WARN). The match is the tag
+-- part (`match`, the tag regexp) plus `/!-TODO-PEND` -- not done, keyword
+-- neither an untouched TODO nor the parked PEND, so NEXT, TEST and WARN are
+-- what is left -- the same shape the board's sections use to leave their
+-- NEXT/TEST out (`/!-NEXT-TEST`). Inside, the order is the way the ask
+-- reads: the entry a run is on first, then the one waiting on validation,
+-- then the troubled one (`todo-state-up` follows org's keyword sequence,
+-- where NEXT sits before TEST and WARN after both), priority settling the
+-- ties. `super_groups = false` keeps each category one list instead of the
+-- global map's per-file groups: every entry line already carries its project
+-- as the category column, and a per-file heading would break the state order
+-- across the section. `category-keep` is wrong here for the same reason it
+-- is right on the board: the entries of one section come from every project
+-- file, so their categories must not be the sort key. `hide_empty` drops a
+-- category with nothing in flight instead of drawing a bare header.
 local function flight_section(match, header)
   return {
     type = 'tags_todo',
-    match = match .. '/!',
+    match = match .. '/!-TODO-PEND',
     header = header,
     hide_empty = true,
     super_groups = false,
@@ -387,7 +390,9 @@ return {
       -- `-NEXT-TEST` after it excludes those keywords. `o` is every open
       -- TODO (`type = 'todo'`, org's `alltodo`), and `f` the same list cut
       -- to the states in flight (NEXT, TEST, WARN -- the TODO backlog and
-      -- the user-parked PEND left out); `w` is the board --
+      -- the user-parked PEND left out), split into one section per
+      -- classification tag (the `flight_section` helper) with NEXT at the
+      -- top of each; `w` is the board --
       -- the "In progress" block (every NEXT and TEST entry, any tag), then
       -- the classification sections -- bug tag, feat tag, chore tag, the
       -- untagged rest -- and DONE last, in that order, so a ticket moves

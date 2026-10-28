@@ -298,12 +298,16 @@ async function showDetail(entry) {
   const header = el('header');
   header.append(el('span', 'where', '~/' + entry.rel + ':' + entry.line));
   const actions = el('span');
+  const edit = el('button', '', 'edit');
+  edit.title = 'i  edit the entry here';
+  edit.addEventListener('click', () => editEntry(entry));
   const open = el('button', '', 'open in editor');
-  open.title = 'Reveal the entry in nvim';
+  open.title = 'o  reveal the entry in nvim';
   open.addEventListener('click', () => post('/api/open', entry));
   const close = el('button', '', '✕');
+  close.title = 'q  close';
   close.addEventListener('click', () => closeDetail());
-  actions.append(open, close);
+  actions.append(edit, open, close);
   header.append(actions);
   detail.append(header);
   const body = el('div', 'body');
@@ -536,13 +540,11 @@ async function editEntry(entry, opts) {
       return;
     }
     let lines = res.text.lines.slice();
-    let caret = null;
     if (opts.child) {
       // `c` in the view: a new child headline under the entry, typed where
       // the capture would leave the cursor
       const stars = '*'.repeat((res.text.level || entry.level || 1) + 1);
       lines = lines.concat(['', stars + ' TODO ']);
-      caret = lines.length - 1;
     }
     OrgEditor.open({
       file: entry.file,
@@ -551,8 +553,8 @@ async function editEntry(entry, opts) {
       start: res.text.start,
       text: lines.join('\n'),
       where: '~/' + entry.rel + ':' + res.text.start,
-      insert: opts.child ? caret : undefined,
-      onSaved: () => load(),
+      insertAtEnd: !!opts.child,
+      onSaved: () => reload(),
       onClose: () => refreshSelection(),
     });
   } catch (err) {
@@ -947,7 +949,7 @@ async function onKey(ev) {
       setTags(entry);
       break;
     case 'p':
-      openPriorityMenu(ev.target, entry);
+      openPriorityMenu(document.querySelector('li.entry.selected') || document.body, entry);
       break;
     case 'B':
       toggleTag(entry, 'bug');

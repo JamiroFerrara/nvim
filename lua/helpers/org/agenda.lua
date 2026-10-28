@@ -821,7 +821,7 @@ end
 local CUSTOM_VIEWS = {
   -- key, custom_commands key, desc, scope (see open_custom_view)
   { '1', 'o', 'all open TODOs', 'global' },
-  { '2', 'f', 'everything in flight, every project', 'global' },
+  { '2', 'f', 'everything in flight, every project, by category', 'global' },
   { '3', 'w', 'in progress, bugs, features, chores, untagged and done', 'project' },
   { '4', 'g', 'the whole project file, by state', 'file' },
   { '5', 'y', 'wayfinder: the charted map, open leaves takeable', 'project' },
@@ -843,9 +843,10 @@ local CUSTOM_VIEWS = {
 --     block header already names the project ("Nvim - Bugs, open").
 -- A block that brings its own `super_groups` -- the board's Bugs / Features
 -- / Chores / Untagged sections and the group view's per-state ones, which
--- both split by state -- keeps them (open_custom_view below); the `o` and
--- `f` blocks set none, so they take the map above. The "In progress" block
--- sets `super_groups = false` and is not grouped at all.
+-- both split by state -- keeps them (open_custom_view below); the `o` block
+-- sets none, so it takes the map above, and the `f` block's category
+-- sections set `false`, so they are one list each. The "In progress" block
+-- sets `super_groups = false` too and is not grouped at all.
 -- The list is read and copied at open time, so the agenda's own groups --
 -- the day view keeps the globals -- are untouched.
 local function view_groups(scope)
