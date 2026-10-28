@@ -18,17 +18,20 @@ do, the section says so instead of faking it.
 |---|---|
 | Shape | one circle, `inset: 24%` of the rig; the rig opens to `min(58vmin, 500px)` |
 | Surface | crystal: a white highlight at 33%/27%, a teal under-glow at 64%/70%, a dark body; a hard 1px rim (`::after`) so it reads as glass, not as a blur |
-| Idle | pulses at 1.6 s, brightness 1 → 1.25, scale 1 → 1.06 |
-| Speaking | size up 1px of inset, pulse 1 s, colour mauve → sky |
-| Listening | pulse 0.8 s, colour sky → lavender, the body opens (inset 21%) |
-| Thinking | pulse 0.7 s, colour amber → peach: the "puff" of a command being taken |
-| Error | red → peach, a slow 2.2 s pulse, and one shake of 3 px each way |
-| Ripple | a stroke circle scaled 0.35 → 1.25 and faded on every active phase (`--jv-ripple`, 3 s idle-less: 1.6 s listening, 1.2 s thinking) |
+| Idle | pulses at 2 s, opacity 0.86 → 1, scale 1 → 1.05 |
+| Speaking | size up 1px of inset, pulse 1.2 s, colour mauve → sky |
+| Listening | pulse 1.1 s, colour sky → lavender, the body opens (inset 21%) |
+| Thinking | pulse 0.9 s, colour amber → peach: the "puff" of a command being taken |
+| Error | red → peach, a slow 1.8 s pulse, and one shake of 3 px each way |
+| Ripple | a stroke circle scaled 0.35 → 1.25 and faded on every active phase (`--jv-ripple`, 2.2 s at rest: 1.4 s listening, 1 s thinking) |
 | Filaments | a conic sweep masked to a ring at 58–74 % radius, spinning at half the ring clock — the "motion lines focusing toward" the core |
 | Flash | one bright flash (`brightness 2.4`, scale 1.18) when a run starts |
 
-The pulse is CSS `transform`/`filter` only: no canvas, no per-frame work in JS,
-and `prefers-reduced-motion` turns every animation off.
+The pulse is CSS `transform`/`opacity` only: no canvas, no per-frame work in
+JS, and `prefers-reduced-motion` turns every animation off. Nothing here
+animates `filter` or `box-shadow`, and the rings, the filament sweep and the
+core carry `will-change` so they ride the compositor instead of being repainted
+every frame.
 
 ## 2. Holographic data rings
 
@@ -37,7 +40,7 @@ rotation is legible:
 
 | Ring | Radius (viewBox 100) | Stroke | Dash | Clock | Reads |
 |---|---|---|---|---|---|
-| inner `r1` | 46 | 0.35 | 2 6 | `--jv-spin` (18 s idle, 4 s listening, 2.4 s thinking) | locked to the orb's own colour |
+| inner `r1` | 46 | 0.35 | 2 6 | `--jv-spin` (9 s idle, 3 s listening, 1.8 s thinking) | locked to the orb's own colour |
 | middle `r2` | 39 | 0.3 | 14 10 | `0.6 ×` the inner, reversed | the second colour of the phase |
 | outer `r3` | 32 | 0.22 | 30 22 | `0.32 ×` the inner | faintest, so the outer band never competes with the core |
 
@@ -48,9 +51,11 @@ in one tempo without any JS animation loop. Colour comes from `--jv-a` /
 
 ## 3. Floating panels
 
-Four glass rectangles, one figure each, `172px` wide, `backdrop-filter: blur`,
-a 1px border at 22 % of the phase colour, and a 7 s float of 5 px with
-staggered delays. Hidden while the orb is shut, faded in with the rig.
+Four glass rectangles, one figure each, `172px` wide, a translucent gradient
+fill (no `backdrop-filter`: blurring what sits behind them, while they float,
+cost a repaint every frame), a 1px border at 22 % of the phase colour, and a
+7 s float of 5 px with staggered delays. Hidden while the orb is shut, faded in
+with the rig.
 
 | Panel | Figure | Sub-line | Data |
 |---|---|---|---|
@@ -59,7 +64,9 @@ staggered delays. Hidden while the orb is shut, faded in with the rig.
 | Next up | title of the first `NEXT` | its project, or "the board is clear" | `state.data` |
 | Vault | entries on the board | files they live in | `state.data` |
 
-**Attention.** A panel turns amber (`--peach`, pulsing border shadow, 1.8 s)
+**Attention.** A panel turns amber (`--peach`, a fixed glow — it used to pulse,
+but any animation on that panel made the browser redo style and layout on every
+frame, and the pulse is not worth the whole rig's frame rate)
 when the thing it counts is waiting on a person: *In flight* while any ticket
 sits in `TEST` (a change nobody validated yet), *Next up* when nothing is
 waiting at all. There is no red state on a panel: red belongs to a failed
@@ -108,8 +115,11 @@ ticket moving to `DONE` steps the count down, two new `NEXT` entries step it up.
 | Keyboard | `Escape` only; the orb is a `<button>`, so `Tab`/`Enter` work through the page's own focus order |
 
 Polling is 350 ms while the rig is open, and stops the moment it shuts; the
-inspection at load is a single request. The panels re-read the dashboard's data
-every 4 s, independently, so a keyword changed in the list shows up in them.
+inspection at load is a single request. That poll only moves the phase, the
+caption and the level bar: it does not rebuild the panels or the graph, which
+read the dashboard's data on their own clock (every 2 s while the rig is open,
+every 4 s behind it, and once as it opens), so a keyword changed in the list
+shows up in them without a full recompute three times a second.
 
 ## What the medium rules out
 

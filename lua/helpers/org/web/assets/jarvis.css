@@ -370,9 +370,9 @@
 
 /* --- open: the rig takes the middle of the page, the orb at half its height */
 
-/* the dim behind the rig. No blur: a viewport-wide backdrop filter re-blurs
-   the page under every frame the orb animates, which is what made the rig
-   crawl. The gradient alone hides the page well enough and costs one paint */
+/* the dim behind the rig. A gradient and no blur: a full-viewport backdrop
+   filter is a per-frame GPU cost stacked on top of every animation the rig
+   runs, and a darker gradient hides the page just as well */
 #jarvis .jv-backdrop {
   position: fixed;
   inset: 0;
