@@ -74,21 +74,92 @@
 .org h6 {
   font-family: var(--prose);
   line-height: 1.3;
-  margin: 1.6em 0 0.5em;
-  font-weight: 700;
+  margin: 1.9em 0 0.6em;
+  font-weight: 650;
 }
 
-.org h1 { font-size: 1.7em; color: var(--lavender); }
-.org h2 { font-size: 1.45em; color: var(--blue); }
-.org h3 { font-size: 1.25em; color: var(--green); }
-.org h4 { font-size: 1.1em; color: var(--yellow); }
-.org h5 { font-size: 1em; color: var(--mauve); }
-.org h6 { font-size: 0.95em; color: var(--teal); }
+/* A headline is one row of parts -- the section number, the state, the title,
+   the statistics cookie, the tags -- laid out by helpers/org/web/headings.lua.
+   The level is what the size and the number's colour say; the title itself
+   stays in the text colour, so a state or a tag is the only thing that
+   colours, the way it does in the buffer. */
+.headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5em;
+}
 
-.org .section-number {
-  color: var(--overlay);
+.headline .title {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--text);
+}
+
+/* the badge's own trailing margin is the row's gap here */
+.headline .todo,
+.headline .done {
+  margin-right: 0;
+}
+
+.headline .section-number {
+  color: var(--surface1);
+  font-family: var(--font);
+  font-size: 0.66em;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  margin-right: 0.15em;
+  letter-spacing: 0.02em;
+}
+
+.headline .cookie {
+  font-family: var(--font);
+  font-size: 0.64em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--subtext);
+  background: color-mix(in srgb, var(--surface) 45%, transparent);
+  border-radius: 999px;
+  padding: 0.1em 0.55em;
+  white-space: nowrap;
+}
+
+.headline .tag {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin-left: auto;
+  font-size: 0.66em;
+  font-family: var(--font);
+}
+
+.headline .tag span {
+  color: var(--overlay);
+  background: color-mix(in srgb, var(--mantle) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--surface) 65%, transparent);
+  border-radius: 999px;
+  padding: 0.05em 0.55em;
+}
+
+.org h1 { font-size: 1.7em; }
+.org h2 { font-size: 1.42em; }
+.org h3 { font-size: 1.2em; }
+.org h4 { font-size: 1.08em; }
+.org h5 { font-size: 1em; }
+.org h6 { font-size: 0.95em; }
+
+.org h1 .section-number { color: var(--lavender); }
+.org h2 .section-number { color: var(--blue); }
+.org h3 .section-number { color: var(--green); }
+.org h4 .section-number { color: var(--yellow); }
+.org h5 .section-number { color: var(--mauve); }
+.org h6 .section-number { color: var(--teal); }
+
+/* the top two levels carry a hairline, so a long body reads as sections
+   rather than as one column of text */
+.org .outline-1 > .headline,
+.org .outline-2 > .headline {
+  padding-bottom: 0.45em;
+  border-bottom: 1px solid var(--surface);
 }
 
 .org p {

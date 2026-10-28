@@ -274,6 +274,11 @@ local function session_dir(key)
   return agent_dir() .. '/' .. (key:find '/' and key or ('tickets/' .. key))
 end
 
+-- where a run keeps its transcript, for the views that follow one live
+-- (helpers/org/web/live.lua)
+M.agent_dir = agent_dir
+M.session_dir = session_dir
+
 ---@class OrgProject
 ---@field dir string the directory the project is keyed on
 ---@field key string session key of the project's orchestrator (a path under the agent dir)

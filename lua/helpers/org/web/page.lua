@@ -43,7 +43,10 @@ local function escape(text)
   return (tostring(text or ''):gsub('&', '&amp;'):gsub('<', '&lt;'):gsub('>', '&gt;'):gsub('"', '&quot;'))
 end
 
---- The node's own heading: keyword, priority, title, tags.
+--- The node's own heading: keyword, priority, title, cookie, tags -- the same
+--- parts, in the same classes, as a headline of the exported body
+--- (helpers/org/web/headings.lua), so the page's title and the headings under
+--- it are drawn by one set of rules.
 ---@param entry table|nil
 ---@return string
 local function node_title(entry)
@@ -55,11 +58,11 @@ local function node_title(entry)
     parts[#parts + 1] = ('<span class="%s %s">%s</span>'):format(entry.done and 'done' or 'todo', escape(entry.todo), escape(entry.todo))
   end
   if entry.priority then
-    parts[#parts + 1] = '<span class="priority">[#' .. escape(entry.priority) .. ']</span> '
+    parts[#parts + 1] = '<span class="priority">[#' .. escape(entry.priority) .. ']</span>'
   end
-  parts[#parts + 1] = escape(entry.title)
+  parts[#parts + 1] = '<span class="title">' .. escape(entry.title) .. '</span>'
   if entry.cookie then
-    parts[#parts + 1] = ' <code>' .. escape(entry.cookie) .. '</code>'
+    parts[#parts + 1] = '<span class="cookie">' .. escape(entry.cookie) .. '</span>'
   end
   if entry.tags and #entry.tags > 0 then
     local tags = {}
@@ -68,7 +71,7 @@ local function node_title(entry)
     end
     parts[#parts + 1] = '<span class="tag">' .. table.concat(tags) .. '</span>'
   end
-  return '<h1 class="node-title">' .. table.concat(parts) .. '</h1>'
+  return '<h1 class="node-title headline">' .. table.concat(parts) .. '</h1>'
 end
 
 --- The preview page: one node's subtree, exported by org.nvim, reloading
@@ -110,7 +113,7 @@ function M.preview(opts)
   .bar .file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar .keys { color: #45475a; }
   .empty { color: #6c7086; font-style: italic; }
-  .node-title { font-family: 'Inter', system-ui, sans-serif; font-size: 1.6em; line-height: 1.3; margin: 0 0 1.4em; color: #cdd6f4; }
+  .node-title { font-family: var(--prose); font-size: 1.55em; line-height: 1.3; font-weight: 650; margin: 0 0 1.5em; padding-bottom: 0.45em; border-bottom: 1px solid #313244; }
 </style>
 </head>
 <body>
@@ -181,14 +184,7 @@ function M.preview(opts)
   });
 </script>
 </body>
-</html>]]):format(
-    escape(where),
-    escape(where),
-    node_title(opts.entry),
-    content,
-    vim.json.encode(query),
-    vim.json.encode(opts.file)
-  )
+</html>]]):format(escape(where), escape(where), node_title(opts.entry), content, vim.json.encode(query), vim.json.encode(opts.file))
 end
 
 return M

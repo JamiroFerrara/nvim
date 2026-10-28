@@ -99,6 +99,34 @@ local function handle(req, res)
     return
   end
 
+  if req.method == 'GET' and path == '/api/live' then
+    local live = require 'helpers.org.web.live'
+    local r = live.runs()
+    local out = { generated = os.date '%Y-%m-%d %H:%M:%S', tickets = {}, sessions = {}, activity = {} }
+    for id in pairs(r.tickets) do
+      out.tickets[#out.tickets + 1] = id
+    end
+    for key in pairs(r.sessions) do
+      out.sessions[#out.sessions + 1] = key
+    end
+    for _, key in ipairs(vim.list_extend(vim.list_slice(out.sessions), out.tickets)) do
+      out.activity[key] = live.activity(key)
+    end
+    json(res, out)
+    return
+  end
+
+  if req.method == 'GET' and path == '/api/live/stream' then
+    local key = req.query.key or ''
+    if not key:match '%S' then
+      res.send(400, 'text/plain; charset=utf-8', 'no session key')
+      return
+    end
+    res.sse()
+    require('helpers.org.web.live').watch(key, res)
+    return
+  end
+
   if req.method == 'GET' and path == '/api/data' then
     local out = data.payload(req.query.file)
     out.keywords = keyword_lists()
@@ -235,13 +263,17 @@ local function handle(req, res)
       res.send(404, 'text/plain; charset=utf-8', 'no such org file')
       return
     end
-    res.send(200, 'text/html; charset=utf-8', page.preview {
-      file = file,
-      line = tonumber(req.query.line),
-      html = html,
-      error = err,
-      entry = data.find(file, tonumber(req.query.line), req.query.id),
-    })
+    res.send(
+      200,
+      'text/html; charset=utf-8',
+      page.preview {
+        file = file,
+        line = tonumber(req.query.line),
+        html = html,
+        error = err,
+        entry = data.find(file, tonumber(req.query.line), req.query.id),
+      }
+    )
     return
   end
 
@@ -398,6 +430,7 @@ function M.stop()
   end
   pcall(vim.api.nvim_del_augroup_by_name, 'OrgWebViews')
   require('helpers.org.watch').unsubscribe(broadcast)
+  require('helpers.org.web.live').stop()
   if state.server then
     state.server.stop()
   end

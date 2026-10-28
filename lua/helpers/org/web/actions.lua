@@ -73,22 +73,41 @@ local function headline_at(bufnr, line, id)
   return file:headline_at(line)
 end
 
---- Set the TODO keyword of one entry. Returns the state it now reads, the
---- reason when nothing changed, and a warning when the change landed in the
---- buffer but could not be written (the editor's own conflict to resolve).
+--- The file, buffer and headline a request names.
 ---@param spec { file: string, line?: integer, id?: string }
----@param state string
----@return string|nil state, string|nil error, string|nil warning
-function M.set_state(spec, state)
+---@return { path: string, bufnr: integer, hl: org.Headline|nil }|nil
+function M.resolve(spec)
   local path = agenda_path(spec and spec.file)
   if not path then
-    return nil, 'unknown file'
+    return nil
   end
   local bufnr = buffer_for(path)
-  local hl = headline_at(bufnr, tonumber(spec.line), spec.id)
-  if not hl then
-    return nil, 'entry not found'
-  end
+  return { path = path, bufnr = bufnr, hl = headline_at(bufnr, tonumber(spec.line), spec.id) }
+end
+
+local resolve = M.resolve
+
+--- Write the edit back the way the view does, then drop the payload cache so
+--- the next page load walks the files again. Returns the save's verdict and
+--- its reason, which the page shows as a warning.
+---@param bufnr integer
+---@return boolean saved, string|nil error
+function M.commit(bufnr)
+  local saved, err = require('helpers.org.write').save(bufnr, { no_prompt = true })
+  require('helpers.org.web.data').invalidate()
+  return saved, (not saved) and err or nil
+end
+
+local commit = M.commit
+
+--- The keyword of one headline becomes `state` ('' clears it), the way the
+--- editor's own state change does, and the file is written. The caller has
+--- already resolved the buffer and the headline.
+---@param bufnr integer
+---@param hl org.Headline
+---@param state string
+---@return string|nil state, string|nil error, string|nil warning
+local function change_state(bufnr, hl, state)
   local ok, result = pcall(require('org.todo').change_state, { bufnr = bufnr, lnum = hl.line }, state or '')
   if not ok then
     return nil, tostring(result)
@@ -98,9 +117,25 @@ function M.set_state(spec, state)
   end
   -- no_prompt: a request cannot answer the W12 question, so a write the
   -- module cannot prove safe is refused and reported instead of hanging
-  local saved, save_err = require('helpers.org.write').save(bufnr, { no_prompt = true })
-  require('helpers.org.web.data').invalidate()
+  local saved, save_err = commit(bufnr)
   return result.new or '', nil, (not saved) and save_err or nil
+end
+
+--- Set the TODO keyword of one entry. Returns the state it now reads, the
+--- reason when nothing changed, and a warning when the change landed in the
+--- buffer but could not be written (the editor's own conflict to resolve).
+---@param spec { file: string, line?: integer, id?: string }
+---@param state string
+---@return string|nil state, string|nil error, string|nil warning
+function M.set_state(spec, state)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  return change_state(r.bufnr, r.hl, state)
 end
 
 --- Show one entry in a window of this nvim.
@@ -119,29 +154,6 @@ function M.open(spec)
     vim.cmd 'normal! zv'
   end
   return true
-end
-
---- The file, buffer and headline a request names.
----@param spec { file: string, line?: integer, id?: string }
----@return { path: string, bufnr: integer, hl: org.Headline|nil }|nil
-local function resolve(spec)
-  local path = agenda_path(spec and spec.file)
-  if not path then
-    return nil
-  end
-  local bufnr = buffer_for(path)
-  return { path = path, bufnr = bufnr, hl = headline_at(bufnr, tonumber(spec.line), spec.id) }
-end
-
---- Write the edit back the way the view does, then drop the payload cache so
---- the next page load walks the files again. Returns the save's verdict and
---- its reason, which the page shows as a warning.
----@param bufnr integer
----@return boolean saved, string|nil error
-local function commit(bufnr)
-  local saved, err = require('helpers.org.write').save(bufnr, { no_prompt = true })
-  require('helpers.org.web.data').invalidate()
-  return saved, (not saved) and err or nil
 end
 
 --- The entry's own lines -- headline through the end of its subtree -- for

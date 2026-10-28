@@ -82,7 +82,7 @@ local function ensure_queries()
     return
   end
   runtime_loaded = true
-  if not vim.o.runtimepath:find('nvim%-treesitter') then
+  if not vim.o.runtimepath:find 'nvim%-treesitter' then
     pcall(require, 'nvim-treesitter')
   end
 end
@@ -373,9 +373,11 @@ end
 function M.snippet(lang, inner)
   lang = (lang or ''):gsub('^%s+', ''):gsub('%s+$', '')
   local name = lang ~= '' and escape(lang) or 'code'
-  return ('<figure class="snippet"><div class="snippet-bar"><span class="snippet-lang">%s</span>'
+  return (
+    '<figure class="snippet"><div class="snippet-bar"><span class="snippet-lang">%s</span>'
     .. '<button class="snippet-copy" type="button" title="Copy this snippet">copy</button></div>'
-    .. '<pre class="src src-%s"><code>%s</code></pre></figure>'):format(name, name, inner)
+    .. '<pre class="src src-%s"><code>%s</code></pre></figure>'
+  ):format(name, name, inner)
 end
 
 --- Replace every source block of an exported org document with the
@@ -389,16 +391,18 @@ function M.html(html)
   if type(html) ~= 'string' or html == '' then
     return html
   end
-  return (html:gsub('<pre class="src src%-([%w%+%#%._%-]+)">%s*<code>(.-)</code>%s*</pre>', function(lang, inner)
-    -- the exporter has already coloured the block with htmlize: take its
-    -- text back out of its spans and let treesitter colour it instead
-    local code = unescape((inner:gsub('<[^>]*>', '')))
-    local key = lang:lower()
-    if key == 'markdown' or key == 'md' then
-      return require('helpers.org.web.markdown').render(code)
-    end
-    return M.snippet(lang, M.code(code, lang) or inner)
-  end))
+  return (
+    html:gsub('<pre class="src src%-([%w%+%#%._%-]+)">%s*<code>(.-)</code>%s*</pre>', function(lang, inner)
+      -- the exporter has already coloured the block with htmlize: take its
+      -- text back out of its spans and let treesitter colour it instead
+      local code = unescape((inner:gsub('<[^>]*>', '')))
+      local key = lang:lower()
+      if key == 'markdown' or key == 'md' then
+        return require('helpers.org.web.markdown').render(code)
+      end
+      return M.snippet(lang, M.code(code, lang) or inner)
+    end)
+  )
 end
 
 --- Clear the highlight cache (the colorscheme may have changed).

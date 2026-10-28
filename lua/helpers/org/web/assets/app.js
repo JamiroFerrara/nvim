@@ -13,6 +13,8 @@ const state = {
   pending: '', // a key waiting for its second (g, d, <Space>…)
   folded: new Set(), // entry keys folded away
   refile: null, // the entry `r` picked, waiting for a destination
+  live: { tickets: new Set(), sessions: new Set(), activity: {} }, // runs in flight
+  runStream: null, // the open event stream of the run the detail pane shows
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -55,7 +57,9 @@ async function load() {
   state.loading = true;
   try {
     state.data = await api('/api/data?file=' + encodeURIComponent(state.selection));
+    setLive(state.data.live);
     render();
+    if (state.live.tickets.size || state.live.sessions.size) watchLive();
     $('#live').classList.add('on');
     setTimeout(() => $('#live').classList.remove('on'), 900);
   } catch (err) {
@@ -107,6 +111,7 @@ function entryRow(entry) {
   }
 
   const title = el('span', 'title');
+  if (runKey(entry)) title.append(el('span', 'live-dot', '●'));
   title.append(document.createTextNode(entry.title));
   if (entry.cookie) title.append(el('span', 'cookie', ' ' + entry.cookie));
   title.title = entry.rel + ':' + entry.line;
@@ -137,6 +142,13 @@ function entryRow(entry) {
   li.append(meta);
   li.append(el('span', 'project', state.selection === 'all' ? entry.project || '' : ''));
 
+  const key = runKey(entry);
+  if (key) {
+    li.classList.add('running');
+    li.append(el('span', 'live-line', state.live.activity[key] || ''));
+  }
+
+  li._entry = entry;
   li.addEventListener('click', () => selectEntry(entry));
   return li;
 }
@@ -229,6 +241,83 @@ function renderTabs() {
 }
 
 let visibleEntries = [];
+
+// ---- runs in flight ------------------------------------------------------
+//
+// A ticket a run is on is marked in the pane the launcher opened
+// (`@omp_ticket`), and the run writes every step to its session transcript
+// (helpers/org/web/live.lua). The list shows that the run is there and the
+// last thing it did; the detail pane streams the rest.
+
+// The session key of an entry whose run is in flight, or null. A batch's
+// orchestrator pane carries the session key, so a ticket launched in one
+// still matches through its own :OMP_SESSION:.
+function runKey(entry) {
+  if (!entry) return null;
+  const key = entry.session;
+  if (key && state.live.sessions.has(key)) return key;
+  if (entry.id && state.live.tickets.has(entry.id)) return entry.id;
+  return null;
+}
+
+function setLive(live) {
+  live = live || {};
+  state.live.tickets = new Set(live.tickets || []);
+  state.live.sessions = new Set(live.sessions || []);
+  state.live.activity = live.activity || {};
+}
+
+// Patch the drawn rows instead of redrawing them: a redraw would drop the
+// selection and the scroll position every couple of seconds.
+function applyLive() {
+  for (const li of document.querySelectorAll('li.entry')) {
+    const entry = li._entry;
+    const key = runKey(entry);
+    li.classList.toggle('running', !!key);
+    const title = li.querySelector('.title');
+    let dot = title && title.querySelector('.live-dot');
+    if (key && title && !dot) {
+      dot = el('span', 'live-dot', '●');
+      title.prepend(dot);
+    } else if (!key && dot) {
+      dot.remove();
+    }
+    let line = li.querySelector('.live-line');
+    if (key) {
+      if (!line) {
+        line = el('span', 'live-line');
+        li.append(line);
+      }
+      line.textContent = state.live.activity[key] || '';
+    } else if (line) {
+      line.remove();
+    }
+  }
+}
+
+// While something runs, ask again every few seconds: a run's steps change no
+// org file, so the vault's own `change` events do not cover them.
+let liveTimer = null;
+async function pollLive() {
+  const any = state.live.tickets.size > 0 || state.live.sessions.size > 0;
+  if (!any) {
+    clearInterval(liveTimer);
+    liveTimer = null;
+    return;
+  }
+  if (document.hidden) return;
+  try {
+    setLive(await api('/api/live'));
+    applyLive();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function watchLive() {
+  if (liveTimer) return;
+  liveTimer = setInterval(pollLive, 2500);
+}
 
 // An entry holds the entries nested under it: the next row of its own
 // section that sits deeper. Folding one hides that run of rows, the way
@@ -323,11 +412,11 @@ async function showDetail(entry, focusNote) {
         (entry.id ? '&id=' + encodeURIComponent(entry.id) : ''),
     );
     body.replaceChildren();
-    const title = el('h2', 'detail-title');
+    const title = el('h2', 'detail-title headline');
     if (entry.todo) title.append(el('span', (entry.done ? 'done ' : 'todo ') + entry.todo, entry.todo));
-    if (entry.priority) title.append(el('span', 'priority', '[#' + entry.priority + '] '));
-    title.append(document.createTextNode(entry.title));
-    if (entry.cookie) title.append(el('span', 'cookie', ' ' + entry.cookie));
+    if (entry.priority) title.append(el('span', 'priority', '[#' + entry.priority + ']'));
+    title.append(el('span', 'title', entry.title));
+    if (entry.cookie) title.append(el('span', 'cookie', entry.cookie));
     const tags = el('span', 'tag');
     for (const tag of entry.tags || []) tags.append(el('span', '', tag));
     if ((entry.tags || []).length) title.append(tags);
@@ -335,6 +424,7 @@ async function showDetail(entry, focusNote) {
     org.innerHTML = res.html || '<p class="empty">No body.</p>';
     body.append(title, org);
     appendNoteBox(body, entry, focusNote);
+    appendRunBox(body, entry);
   } catch (err) {
     body.replaceChildren(el('p', 'empty', 'Could not render the entry.'));
   }
@@ -343,6 +433,7 @@ async function showDetail(entry, focusNote) {
 function closeDetail() {
   state.selected = null;
   state.selectedEntry = null;
+  stopRunStream();
   $('#detail').hidden = true;
   document.body.classList.remove('detail-open');
   for (const li of document.querySelectorAll('li.entry.selected')) li.classList.remove('selected');
@@ -415,6 +506,7 @@ function destinations() {
 }
 
 function openCapture() {
+  if (!state.data) return;
   document.querySelectorAll('#capture').forEach((node) => node.remove());
   const options = destinations();
   if (!options.length) {
@@ -468,6 +560,9 @@ function openCapture() {
     if (ev.key === 'Escape') {
       ev.preventDefault();
       panel.remove();
+    } else if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
+      ev.preventDefault();
+      form.requestSubmit();
     }
   });
   form.addEventListener('submit', async (ev) => {
@@ -622,14 +717,61 @@ async function toggleTag(entry, tag) {
   }
 }
 
+// One line asked for under the list -- the view's prompt, without a browser
+// dialog: typing stays inside the page and the keys come back when it closes.
+function askLine(question, value) {
+  closePrompt();
+  return new Promise((resolve) => {
+    const box = el('div');
+    box.id = 'prompt';
+    box.append(el('label', '', question));
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = value || '';
+    input.spellcheck = false;
+    box.append(input);
+    document.body.append(box);
+    input.focus();
+    input.select();
+    const finish = (answer) => {
+      box.remove();
+      resolve(answer);
+    };
+    input.addEventListener('keydown', (ev) => {
+      ev.stopPropagation();
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        finish(input.value);
+      } else if (ev.key === 'Escape') {
+        ev.preventDefault();
+        finish(null);
+      }
+    });
+    box.append(
+      (() => {
+        const go = el('button', '', 'set');
+        go.addEventListener('click', () => finish(input.value));
+        return go;
+      })(),
+    );
+  });
+}
+
+function closePrompt() {
+  document.querySelectorAll('#prompt').forEach((box) => box.remove());
+}
+
 async function setTags(entry) {
   if (!entry) return;
   const current = (entry.tags || []).join(' ');
-  const typed = window.prompt(`Tags of "${entry.title}"`, current);
+  const typed = await askLine(`tags of "${entry.title}"`, current);
   if (typed === null) return;
   const tags = typed.split(/[\s,]+/).filter(Boolean);
   const res = await post('/api/tags', entry, { tags });
-  if (res && !res.error) await reload();
+  if (res && !res.error) {
+    showToast(`tags: ${(res.tags || []).join(' ') || 'none'}`);
+    await reload();
+  }
 }
 
 async function removeEntry(entry) {
@@ -899,6 +1041,7 @@ async function onKey(ev) {
       return;
     }
     closeMenus();
+    closePrompt();
     const help = $('#help');
     if (help) {
       help.remove();

@@ -414,13 +414,10 @@ li.entry .project {
   font-family: var(--prose);
   font-size: 1.15em;
   line-height: 1.4;
-  margin: 10px 0 12px;
+  margin: 10px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--surface);
   color: var(--text);
-}
-
-#detail .detail-title .tag span {
-  color: var(--overlay);
-  font-size: 0.75em;
 }
 
 /* the state menu, anchored under the keyword it was opened from */
@@ -690,7 +687,7 @@ li.entry .fold.empty {
 #capture .hint,
 .note-box .hint {
   font-size: 10px;
-  color: var(--surface1);
+  color: var(--overlay);
 }
 
 button.primary {
@@ -732,4 +729,49 @@ button.primary:disabled {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+#prompt {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 26;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(720px, 92vw);
+  padding: 8px 12px;
+  border: 1px solid var(--surface1);
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  background: var(--base);
+  box-shadow: 0 -8px 26px rgb(0 0 0 / 45%);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+
+#prompt label {
+  color: var(--overlay);
+  white-space: nowrap;
+}
+
+#prompt input {
+  flex: 1;
+  padding: 3px 6px;
+  border: 1px solid var(--surface1);
+  border-radius: 4px;
+  background: var(--mantle);
+  color: var(--text);
+  font-family: inherit;
+  font-size: inherit;
+  outline: none;
+}
+
+#prompt button {
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
 }

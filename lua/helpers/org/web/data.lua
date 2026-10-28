@@ -92,6 +92,7 @@ local function entry_of(hl, ctx)
     cookie = cookie,
     tags = own_tags,
     id = hl.properties and hl.properties.ID or nil,
+    session = hl.properties and hl.properties.OMP_SESSION or nil,
     deadline = hl:deadline() and hl:deadline():to_string() or nil,
     scheduled = hl:scheduled() and hl:scheduled():to_string() or nil,
     closed = hl:closed() and hl:closed():to_string() or nil,
@@ -548,6 +549,21 @@ function M.payload(file)
       flight = count.flight,
       pending = count.pending,
     }
+  end
+  -- what a run is on right now: the panes the launcher marked, and the last
+  -- thing each running run's transcript holds (helpers/org/web/live.lua)
+  local live = require 'helpers.org.web.live'
+  local running = live.runs()
+  out.live = {
+    tickets = vim.tbl_keys(running.tickets),
+    sessions = vim.tbl_keys(running.sessions),
+    activity = {},
+  }
+  for _, entry in ipairs(scoped) do
+    local key = entry.session
+    if key and (running.sessions[key] or (entry.id and running.tickets[entry.id])) then
+      out.live.activity[key] = live.activity(key)
+    end
   end
   return out
 end
