@@ -305,6 +305,7 @@ end
 ---@field launch integer how many times this ticket has been launched (1 on the first)
 ---@field state string|nil the keyword the launcher leaves the headline in
 ---@field claimed boolean whether this launch wrote that keyword (NEXT) or found it
+---@field note string|nil the user's note this launch answers, on one line (helpers/org/notes.lua)
 ---@field file string absolute org file path
 ---@field title string
 
@@ -673,6 +674,18 @@ local function snapshot(root, subject)
   return true
 end
 
+--- `text` on one line: every run of whitespace -- the newlines of a note the
+--- user typed into the entry included -- becomes one space, the ends trimmed.
+--- Everything that carries arbitrary text into a launch message goes through
+--- it: the message is a single line, because the pane runs it through
+--- `nvim "+terminal …"` and `pane_command`'s script would break on a newline
+--- inside a `shellescape`d argv item.
+---@param text string|nil
+---@return string
+local function one_line(text)
+  return vim.trim((text or ''):gsub('%s+', ' '))
+end
+
 --- The checkpoint's commit subject, in the shape every commit of a ticket run
 --- follows (`<icon> <type>(<scope>): <summary>`, the omp-org-ticket skill):
 --- the ticket's title on one line, cut at a word boundary when it would push
@@ -680,8 +693,8 @@ end
 ---@param title string
 ---@return string
 local function checkpoint_subject(title)
-  local prefix = ' chore(omp): checkpoint before '
-  local summary = vim.trim((title or ''):gsub('%s+', ' '))
+  local prefix = ' chore(omp): checkpoint before '
+  local summary = one_line(title)
   local room = 72 - vim.fn.strchars(prefix)
   if vim.fn.strchars(summary) > room then
     summary = vim.fn.strcharpart(summary, 0, room - 1):gsub('%s+%S*$', '') .. '…'
@@ -740,19 +753,28 @@ end
 --- number is the other half of the same fact: `#2` on a ticket whose body
 --- already holds this skill's own round is a relaunch, and the skill says what
 --- a relaunch means.
+---
+--- A ticket launched out of a note (`ticket.note`, helpers/org/notes.lua)
+--- carries the note's text in the message as well: the body is a log of
+--- every turn, and a run left to guess which block is the new one reads the
+--- wrong one. The note is one line by then (`one_line`).
 ---@param ticket OrgTicket
 ---@return string
 local function prompt(ticket)
   local state = ticket.state and ('`' .. ticket.state .. '`') or 'none'
-  return table.concat({
+  local parts = {
     'Org ticket launched by nvim <leader>ai.',
     'File: ' .. ticket.file .. '.',
     'ID: ' .. ticket.id .. ' (permanent: the knowledge base links this ticket by it; never remove it).',
     'Title: ' .. ticket.title .. '.',
     'Launch: #' .. ticket.launch .. '.',
     'State: ' .. state .. (ticket.claimed and ' (the launcher claimed it).' or ' (left as the last run left it).'),
-    'Follow the omp-org-ticket rules appended to your system prompt.',
-  }, ' ')
+  }
+  if ticket.note then
+    parts[#parts + 1] = 'Note the user wrote on this ticket, the one this launch answers: "' .. ticket.note .. '".'
+  end
+  parts[#parts + 1] = 'Follow the omp-org-ticket rules appended to your system prompt.'
+  return table.concat(parts, ' ')
 end
 
 --- The omp argv: the rules file then the ticket message. The skill file is
@@ -817,6 +839,14 @@ local function batch_prompt(tickets, project)
     list[#list + 1] = ('%d. "%s" (:ID: %s, launch #%d, state %s).'):format(i, ticket.title, ticket.id, ticket.launch, state)
   end
   parts[#parts + 1] = table.concat(list, ' ')
+  -- a note is the user's turn on that one ticket (helpers/org/notes.lua),
+  -- carried here because the batch's rules read the ticket from the message,
+  -- not from a body they were pointed at
+  for i, ticket in ipairs(ordered) do
+    if ticket.note then
+      parts[#parts + 1] = ('Note the user wrote on ticket %d, the one this launch answers: "%s".'):format(i, ticket.note)
+    end
+  end
   parts[#parts + 1] = 'Follow the omp-orchestrator rules appended to your system prompt.'
   return table.concat(parts, ' ')
 end
@@ -1348,11 +1378,15 @@ end
 ---
 --- `claim` is handed to ticket_at: the caller has read the state of what it
 --- launches and knows it was answered, so the launch stamps `NEXT` over it.
+--- `note` rides along to the ticket's launch message: it is the user's own
+--- turn on that entry (M.launch_at, the one caller that hands one), already
+--- on one line, and it is why the run starts knowing what it is answering.
 --- Returns how many tickets the launch found.
 ---@param targets { bufnr: integer, lnum: integer }[]
 ---@param claim? boolean
+---@param note? string the note the launch answers, on one line
 ---@return integer
-local function launch_targets(targets, claim)
+local function launch_targets(targets, claim, note)
   table.sort(targets, function(a, b)
     if a.bufnr == b.bufnr then
       return a.lnum > b.lnum
@@ -1369,6 +1403,7 @@ local function launch_targets(targets, claim)
   for _, target in ipairs(targets) do
     local ticket = ticket_at(target.bufnr, target.lnum, true, claim, batch and batch.key)
     if ticket then
+      ticket.note = note
       checkpoint(ticket)
       tickets[#tickets + 1] = ticket
     end
@@ -1433,10 +1468,17 @@ end
 --- hand-back, so the launch claims the entry back to `NEXT` (`claim`) instead
 --- of leaving `TEST` standing, and the run that reads the note starts from a
 --- ticket the board shows as taken.
+---
+--- `note` is that note's text, and it goes into the launch message whole: the
+--- entry body is a log of every turn taken on it, so a run handed only the
+--- headline has to guess which block is the turn it was started for. It is
+--- flattened to one line here (`one_line`) -- the message is one line, and the
+--- pane would break on an embedded newline.
 ---@param bufnr integer
 ---@param lnum integer
-function M.launch_at(bufnr, lnum)
-  notify_launched(launch_targets({ { bufnr = bufnr, lnum = lnum } }, true))
+---@param note? string the note the launch answers
+function M.launch_at(bufnr, lnum, note)
+  notify_launched(launch_targets({ { bufnr = bufnr, lnum = lnum } }, true, note and one_line(note) or nil))
   M.sync()
 end
 

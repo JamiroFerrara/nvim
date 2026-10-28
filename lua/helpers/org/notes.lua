@@ -108,9 +108,11 @@ end
 --- been handed back for validation, so the note is the user's answer to it,
 --- and storing it also launches the ticket (helpers/org/ai.lua's launch,
 --- `M.launch_at`) -- the launcher claims the entry back to NEXT (the note is
---- the answer the hand-back was waiting for) and omp starts with the note in
---- the body. Any other state stores the note and stops there. TEST is read
---- off the headline as it was found, before the note lands below it.
+--- the answer the hand-back was waiting for) and omp starts with the note
+--- itself in its message, so the run opens knowing what it was started for
+--- instead of guessing which block of a growing body is the new turn. Any
+--- other state stores the note and stops there. TEST is read off the headline
+--- as it was found, before the note lands below it.
 ---@param target? table
 ---@return boolean|nil
 function M.add(target)
@@ -130,7 +132,7 @@ function M.add(target)
   local first = append_block(bufnr, hl, entry_lines(ts, note))
   edit.note_stored(bufnr, first, hl.line)
   if retest then
-    require('helpers.org.ai').launch_at(bufnr, hl.line)
+    require('helpers.org.ai').launch_at(bufnr, hl.line, note)
   end
   return true
 end
