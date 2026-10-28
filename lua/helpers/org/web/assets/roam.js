@@ -388,6 +388,16 @@ function drawGraph(focusId) {
   for (const node of nodes) node.r = 4 + Math.min(9, Math.sqrt(degree.get(node.id) || 0) * 2.2);
 
   layout(nodes, edges, { w: width, h: height });
+  // the layout settles the notes where they belong; the graph then starts
+  // them from the middle and lets them fly out to that place
+  for (const [i, node] of nodes.entries()) {
+    node.tx = node.x;
+    node.ty = node.y;
+    const a = i * 2.399963229728653;
+    const r = 30 + 4 * Math.sqrt(i + 1);
+    node.x = Math.cos(a) * r;
+    node.y = Math.sin(a) * r;
+  }
 
   const svg = svgEl('svg', { id: 'graph' });
   const viewport = svgEl('g');
@@ -435,14 +445,63 @@ function drawGraph(focusId) {
     lines,
     boxes,
     viewBox: { x: 0, y: 0, w: width, h: height },
-    labels: true,
   };
   state.view = view;
 
-  place(view);
   fit(view);
+  place(view);
   wire(view, pane, tip);
   applyFilter(view);
+  animate(view);
+}
+
+// Drawing repeatedly is cheap at these sizes and the movement is what makes
+// the graph readable: a note that moves away from its neighbours is a note
+// whose links just went quiet.
+const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+function animate(view) {
+  if (reducedMotion) {
+    for (const node of view.nodes) {
+      node.x = node.tx;
+      node.y = node.ty;
+    }
+    place(view);
+    return;
+  }
+  const start = performance.now();
+  for (const node of view.nodes) {
+    node.sx = node.x;
+    node.sy = node.y;
+  }
+  const settle = (now) => {
+    if (!view.svg.isConnected) return; // the pane moved on
+    const t = Math.min(1, (now - start) / 900);
+    const eased = 1 - Math.pow(1 - t, 3);
+    for (const node of view.nodes) {
+      if (node.dragged) continue;
+      node.x = node.sx + (node.tx - node.sx) * eased;
+      node.y = node.sy + (node.ty - node.sy) * eased;
+    }
+    place(view);
+    view.raf = requestAnimationFrame(t < 1 ? settle : (next) => drift(view, next));
+  };
+  view.raf = requestAnimationFrame(settle);
+}
+
+// Settled, the notes keep a slow breath so the picture reads as alive and a
+// click never lands on something that looked dead.
+function drift(view, now) {
+  if (!view.svg.isConnected) return;
+  const t = now / 1000;
+  for (let i = 0; i < view.nodes.length; i++) {
+    const node = view.nodes[i];
+    if (node.dragged) continue;
+    node.x = node.tx + Math.sin(t * 0.7 + i * 1.7) * 5;
+    node.y = node.ty + Math.cos(t * 0.55 + i * 2.3) * 5;
+  }
+  place(view);
+  view.raf = requestAnimationFrame((next) => drift(view, next));
 }
 
 function place(view) {
@@ -459,16 +518,15 @@ function place(view) {
 }
 
 function fit(view) {
-  const nodes = view.nodes;
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
-  for (const node of nodes) {
-    minX = Math.min(minX, node.x - node.r);
-    maxX = Math.max(maxX, node.x + node.r);
-    minY = Math.min(minY, node.y - node.r);
-    maxY = Math.max(maxY, node.y + node.r);
+  for (const node of view.nodes) {
+    minX = Math.min(minX, node.tx - node.r);
+    maxX = Math.max(maxX, node.tx + node.r);
+    minY = Math.min(minY, node.ty - node.r);
+    maxY = Math.max(maxY, node.ty + node.r);
   }
   const pad = Math.max(30, (maxX - minX) * 0.08);
   const w = Math.max(40, maxX - minX + pad * 2);
@@ -514,7 +572,8 @@ function wire(view, pane, tip) {
       const id = [...view.boxes.entries()].find(([, box]) => box.group === target)?.[0];
       const box = id && view.boxes.get(id);
       if (box) {
-        drag = { box, start: pointOf(ev), moved: false, from: { x: box.node.x, y: box.node.y } };
+        box.node.dragged = true;
+        drag = { box, start: pointOf(ev), moved: false, from: { x: box.node.tx, y: box.node.ty } };
         svg.setPointerCapture(ev.pointerId);
       }
       return;
@@ -530,8 +589,14 @@ function wire(view, pane, tip) {
       const dx = now.x - drag.start.x;
       const dy = now.y - drag.start.y;
       if (Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
-      drag.box.node.x = drag.from.x + dx;
-      drag.box.node.y = drag.from.y + dy;
+      // a note stays inside the picture: dragged past the edge it would
+      // vanish, and the graph is meant to be looked at
+      const box = view.viewBox;
+      const node = drag.box.node;
+      node.tx = Math.min(box.x + box.w - node.r - 6, Math.max(box.x + node.r + 6, drag.from.x + dx));
+      node.ty = Math.min(box.y + box.h - node.r - 6, Math.max(box.y + node.r + 6, drag.from.y + dy));
+      node.x = node.tx;
+      node.y = node.ty;
       place(view);
       return;
     }
@@ -563,8 +628,16 @@ function wire(view, pane, tip) {
     }
   });
 
+  svg.addEventListener('pointerleave', () => {
+    light(view, null);
+    tip.classList.remove('on');
+  });
+
   const release = (ev) => {
+    light(view, null);
+    tip.classList.remove('on');
     if (drag) {
+      drag.box.node.dragged = false;
       if (!drag.moved) go('n=' + drag.box.node.id);
       drag = null;
     }
@@ -638,7 +711,18 @@ function render() {
 async function load() {
   try {
     const data = await api('/api/roam');
+    // the vault saves constantly, and most of it is not a note: redraw the
+    // graph only when the notes or their links actually changed, so a
+    // sibling's save does not set the picture moving again
+    const same = state.data && JSON.stringify(data) === JSON.stringify(state.data);
     state.data = data;
+    if (same && route()?.kind === 'graph') {
+      renderTabs(route());
+      renderRail(route());
+      $('#live').classList.add('on');
+      setTimeout(() => $('#live').classList.remove('on'), 900);
+      return;
+    }
     render();
     $('#live').classList.add('on');
     setTimeout(() => $('#live').classList.remove('on'), 900);
