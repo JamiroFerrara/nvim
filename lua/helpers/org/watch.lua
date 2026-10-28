@@ -20,7 +20,9 @@
 -- callback (a reload of every changed org buffer -- in place when no window
 -- shows it, helpers/org/write.lua -- plus an agenda redo) should run once per
 -- quiet period. The callback is scheduled, so it never runs inside the libuv
--- callback.
+-- callback, and it is handed the paths that changed in the burst: a subscriber
+-- that reads files rather than buffers (helpers/org/alerts.lua) has no other
+-- way to tell which of the tree's files it should look at.
 local M = {}
 
 local uv = vim.uv or vim.loop
@@ -29,6 +31,10 @@ local handles = {}
 local timer
 local callbacks = {}
 local started = false
+
+--- The paths changed since the last dispatch, as a set.
+---@type table<string, boolean>
+local pending = {}
 
 --- Coalesce a burst of events into one scheduled callback.
 local function changed()
@@ -41,8 +47,10 @@ local function changed()
     timer:close()
     timer = nil
     vim.schedule(function()
+      local paths = vim.tbl_keys(pending)
+      pending = {}
       for _, callback in ipairs(vim.deepcopy(callbacks)) do
-        local ok, err = pcall(callback)
+        local ok, err = pcall(callback, paths)
         if not ok then
           vim.notify('org watch: ' .. tostring(err), vim.log.levels.WARN)
         end
@@ -67,6 +75,7 @@ local function watch(dir)
     if filename:sub(1, 1) == '.' or not filename:match '%.org$' then
       return
     end
+    pending[vim.fs.normalize(dir .. '/' .. filename)] = true
     changed()
   end)
   if ok then
@@ -99,9 +108,10 @@ local function tree(root)
 end
 
 --- Register `fn` to run (scheduled, debounced) after any org file in the
---- tree changes on disk. The tree is only walked once; every subscriber
---- shares it, so two modules can watch the same vault.
----@param fn fun()
+--- tree changes on disk, with the paths that changed in the burst. The tree is
+--- only walked once; every subscriber shares it, so two modules can watch the
+--- same vault.
+---@param fn fun(paths: string[])
 function M.subscribe(fn)
   for _, existing in ipairs(callbacks) do
     if existing == fn then
@@ -111,18 +121,18 @@ function M.subscribe(fn)
   callbacks[#callbacks + 1] = fn
 end
 
----@param fn fun()
+---@param fn fun(paths: string[])
 function M.unsubscribe(fn)
   callbacks = vim.tbl_filter(function(cb)
     return cb ~= fn
   end, callbacks)
 end
 
---- Watch the org tree rooted at `root` and run `fn` (scheduled, debounced)
---- after any org file in it changes on disk. Every call adds a subscriber;
---- the first one walks the tree, the rest only join.
+--- Watch the org tree rooted at `root` and run `fn(paths)` (scheduled,
+--- debounced) after any org file in it changes on disk. Every call adds a
+--- subscriber; the first one walks the tree, the rest only join.
 ---@param root string path, `~` and relative accepted
----@param fn fun()
+---@param fn fun(paths: string[])
 function M.start(root, fn)
   M.subscribe(fn)
   if started then
