@@ -308,7 +308,7 @@ end
 ---@field launch integer how many times this ticket has been launched (1 on the first)
 ---@field state string|nil the keyword the launcher leaves the headline in
 ---@field claimed boolean whether this launch wrote that keyword (NEXT) or found it
----@field note string|nil the user's note this launch answers, on one line (helpers/org/notes.lua)
+---@field note string|nil the user's newest turn, read out of the body (`user_turn`), on one line
 ---@field file string absolute org file path
 ---@field title string
 
@@ -421,6 +421,63 @@ local function target_at_cursor(store_capture)
   notify('org ai: not an org or agenda buffer', vim.log.levels.WARN)
 end
 
+--- `text` on one line: every run of whitespace -- the newlines of a note the
+--- user typed into the entry included -- becomes one space, the ends trimmed.
+--- Everything that carries arbitrary text into a launch message goes through
+--- it: the message is a single line, because the pane runs it through
+--- `nvim "+terminal …"` and `pane_command`'s script would break on a newline
+--- inside a `shellescape`d argv item.
+---@param text string|nil
+---@return string
+local function one_line(text)
+  return vim.trim((text or ''):gsub('%s+', ' '))
+end
+
+--- The block header of an entry body: an inactive timestamp and a dash rule,
+--- which both the note writer (helpers/org/notes.lua) and the omp write-back
+--- put over every turn. The text before the timestamp tells them apart: the
+--- agent's carries the 🤖 icon, the user's is empty.
+local HEADER = '^%s*(.-)%[%d%d%d%d%-%d%d%-%d%d[^%]]*%]%s*%-%-%-%-%-'
+
+--- The user's newest turn in `hl`'s body, when the body ends on one: the last
+--- block of the entry is a note the user wrote (a plain header, no 🤖) and an
+--- agent's block (🤖) came before it. The body is a chronological log -- the
+--- capture that created the entry, then every turn in order
+--- (helpers/org/notes.lua) -- so that block is the last thing the user said,
+--- and the launch message carries it (`prompt`, `batch_prompt`): a run handed
+--- only the headline has to guess which block it was started for, and a log
+--- that mixes hand-backs with fresh notes makes that a guess.
+---
+--- nil when the newest block is the agent's own (nothing new was said) and
+--- when the body never held an agent block (a ticket no run has worked yet,
+--- whose only block is the capture that describes it).
+---@param file org.File
+---@param hl org.Headline
+---@return string|nil note
+local function user_turn(file, hl)
+  local lines = file.lines
+  local last, worked = nil, false
+  for i = hl.line + 1, hl.body_end do
+    local lead = lines[i] and lines[i]:match(HEADER)
+    if lead then
+      if lead:find('🤖', 1, true) then
+        worked, last = true, nil
+      else
+        last = i
+      end
+    end
+  end
+  if not (last and worked) then
+    return nil
+  end
+  local text = {}
+  for i = last + 1, hl.body_end do
+    text[#text + 1] = lines[i] or ''
+  end
+  local note = one_line(table.concat(text, ' '))
+  return note ~= '' and note or nil
+end
+
 --- The ticket for the headline at `lnum` of `bufnr`, in an orgagenda or an
 --- org buffer. With `mutate` set (the launch) a missing :ID: is created, the
 --- state is claimed (NEXT) when the ticket is CLAIMABLE, the buffer saved;
@@ -457,6 +514,10 @@ local function ticket_at(bufnr, lnum, mutate, claim, link)
   local launch = tonumber(hl:get_property(LAUNCH_PROP, false) or '') or 0
   local state = hl.todo
   local claimed = false
+  -- what the user said last, read off the body itself: it is the turn this
+  -- launch answers, whoever fired it (notes.lua's note on a TEST entry, the
+  -- key pressed after the user parked the entry and wrote, a level climbing)
+  local note = user_turn(file, hl)
   if mutate then
     -- An agent's write-back lands on disk while nvim holds the file; writing
     -- the drawer and the state into a buffer that never saw it would drop it
@@ -551,6 +612,7 @@ local function ticket_at(bufnr, lnum, mutate, claim, link)
     launch = launch,
     state = state,
     claimed = claimed,
+    note = note,
     file = vim.fs.normalize(path),
     title = hl:plain_title(),
   }
@@ -697,18 +759,6 @@ local function snapshot(root, subject)
   return true
 end
 
---- `text` on one line: every run of whitespace -- the newlines of a note the
---- user typed into the entry included -- becomes one space, the ends trimmed.
---- Everything that carries arbitrary text into a launch message goes through
---- it: the message is a single line, because the pane runs it through
---- `nvim "+terminal …"` and `pane_command`'s script would break on a newline
---- inside a `shellescape`d argv item.
----@param text string|nil
----@return string
-local function one_line(text)
-  return vim.trim((text or ''):gsub('%s+', ' '))
-end
-
 --- The checkpoint's commit subject, in the shape every commit of a ticket run
 --- follows (`<icon> <type>(<scope>): <summary>`, the omp-org-ticket skill):
 --- the ticket's title on one line, cut at a word boundary when it would push
@@ -777,10 +827,11 @@ end
 --- the same fact: `#2` on a ticket whose body already holds this skill's own
 --- round is a relaunch, and the skill says what a relaunch means.
 ---
---- A ticket launched out of a note (`ticket.note`, helpers/org/notes.lua)
---- carries the note's text in the message as well: the body is a log of
---- every turn, and a run left to guess which block is the new one reads the
---- wrong one. The note is one line by then (`one_line`).
+--- A ticket whose body ends on the user's turn (`ticket.note`, `user_turn`)
+--- carries that turn's text in the message as well: the body is a log of
+--- every turn -- the capture, then notes and hand-backs in the order they
+--- happened -- and a run left to guess which block is the new one answers an
+--- older one. It is one line by then (`one_line`).
 ---@param ticket OrgTicket
 ---@return string
 local function prompt(ticket)
@@ -862,9 +913,9 @@ local function batch_prompt(tickets, project)
     list[#list + 1] = ('%d. "%s" (:ID: %s, launch #%d, state %s).'):format(i, ticket.title, ticket.id, ticket.launch, state)
   end
   parts[#parts + 1] = table.concat(list, ' ')
-  -- a note is the user's turn on that one ticket (helpers/org/notes.lua),
-  -- carried here because the batch's rules read the ticket from the message,
-  -- not from a body they were pointed at
+  -- a note is the user's newest turn on that one ticket (`user_turn`, read
+  -- off the entry's own body), carried here because the batch's rules work
+  -- from the message rather than from a body they were pointed at
   for i, ticket in ipairs(ordered) do
     if ticket.note then
       parts[#parts + 1] = ('Note the user wrote on ticket %d, the one this launch answers: "%s".'):format(i, ticket.note)
@@ -1401,15 +1452,11 @@ end
 ---
 --- `claim` is handed to ticket_at: the caller has read the state of what it
 --- launches and knows it was answered, so the launch stamps `NEXT` over it.
---- `note` rides along to the ticket's launch message: it is the user's own
---- turn on that entry (M.launch_at, the one caller that hands one), already
---- on one line, and it is why the run starts knowing what it is answering.
 --- Returns how many tickets the launch found.
 ---@param targets { bufnr: integer, lnum: integer }[]
 ---@param claim? boolean
----@param note? string the note the launch answers, on one line
 ---@return integer
-local function launch_targets(targets, claim, note)
+local function launch_targets(targets, claim)
   table.sort(targets, function(a, b)
     if a.bufnr == b.bufnr then
       return a.lnum > b.lnum
@@ -1426,7 +1473,6 @@ local function launch_targets(targets, claim, note)
   for _, target in ipairs(targets) do
     local ticket = ticket_at(target.bufnr, target.lnum, true, claim, batch and batch.key)
     if ticket then
-      ticket.note = note
       checkpoint(ticket)
       tickets[#tickets + 1] = ticket
     end
@@ -1492,16 +1538,13 @@ end
 --- of leaving `TEST` standing, and the run that reads the note starts from a
 --- ticket the board shows as taken.
 ---
---- `note` is that note's text, and it goes into the launch message whole: the
---- entry body is a log of every turn taken on it, so a run handed only the
---- headline has to guess which block is the turn it was started for. It is
---- flattened to one line here (`one_line`) -- the message is one line, and the
---- pane would break on an embedded newline.
+--- The note itself reaches the run on its own: `ticket_at` reads the user's
+--- newest turn out of the body (`user_turn`), so the message carries it --
+--- here, and in a launch that never went through this function.
 ---@param bufnr integer
 ---@param lnum integer
----@param note? string the note the launch answers
-function M.launch_at(bufnr, lnum, note)
-  notify_launched(launch_targets({ { bufnr = bufnr, lnum = lnum } }, true, note and one_line(note) or nil))
+function M.launch_at(bufnr, lnum)
+  notify_launched(launch_targets({ { bufnr = bufnr, lnum = lnum } }, true))
   M.sync()
 end
 
