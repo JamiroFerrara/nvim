@@ -75,14 +75,14 @@ local function setup_toggle_done()
 end
 
 --- `T`: the entry at point goes back to TODO, the state the launcher claims
---- (helpers/org/ai.lua's CLAIMABLE), so a ticket a run left TEST or WARN --
---- or one the user parked PEND -- is takeable by `<leader>ai` again. `D` only
---- toggles DONE and TODO, and `N` only cycles the keyword, so neither reaches
---- TODO from an open state. change_state runs the full org semantics (CLOSED
---- timestamp, state logging, the DONE guard -- a change *to* TODO is never
---- blocked). The one key reaches both surfaces: the agenda action below, and
---- org.actions (`set_todo`, registered in the config before setup(), which
---- the `mappings.org` key resolves in a buffer).
+--- (helpers/org/ai.lua's CLAIMABLE), so a ticket a run left TEST or WARN is
+--- takeable by `<leader>ai` again -- the states the launcher leaves standing.
+--- `D` only toggles DONE and TODO, and `N` only cycles the keyword, so
+--- neither reaches TODO from an open state. change_state runs the full org
+--- semantics (CLOSED timestamp, state logging, the DONE guard -- a change
+--- *to* TODO is never blocked). The one key reaches both surfaces: the
+--- agenda action below, and org.actions (`set_todo`, registered in the config
+--- before setup(), which the `mappings.org` key resolves in a buffer).
 ---@param target? org.Target the entry (default: at the cursor)
 ---@return table|nil, boolean -- as org.todo.change_state
 function M.set_todo(target)

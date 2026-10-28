@@ -906,9 +906,9 @@ return {
         todo_next = { '<C-S-Right>', 'N' },
         -- `T` sends the entry at point back to TODO -- the state the
         -- launcher claims (helpers/org/ai.lua's CLAIMABLE) -- so a ticket a
-        -- run left TEST or WARN, or one the user parked PEND, is takeable by
-        -- <leader>ai again. `D` only toggles DONE and TODO and `N` only
-        -- cycles the keyword, so neither reaches TODO from an open state.
+        -- run left TEST or WARN is takeable by <leader>ai again. `D` only
+        -- toggles DONE and TODO and `N` only cycles the keyword, so neither
+        -- reaches TODO from an open state.
         -- The action is helpers/org/agenda.lua's `M.set_todo`, registered as
         -- the `set_todo` action in the config function below; `mappings.org`
         -- binds the same key in an org buffer. It takes over the default `T`
@@ -1280,10 +1280,9 @@ return {
     }
     -- `T` hands the entry at point back to the backlog: TODO is the state
     -- the launcher claims (helpers/org/ai.lua's CLAIMABLE), so a ticket a run
-    -- left TEST or WARN, or one the user parked PEND, is takeable by
-    -- <leader>ai again. Helpers/org/agenda.lua holds the function and the
-    -- agenda action the view needs; the registry entry is what makes the
-    -- `mappings.org` key work in a buffer.
+    -- left TEST or WARN is takeable by <leader>ai again. Helpers/org/agenda.lua
+    -- holds the function and the agenda action the view needs; the registry
+    -- entry is what makes the `mappings.org` key work in a buffer.
     require('org.actions').list.set_todo = {
       'helpers.org.agenda',
       'set_todo',

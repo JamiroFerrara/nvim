@@ -71,14 +71,15 @@
 --
 -- The launcher owns the start of the run: it puts an :ID: on the headline
 -- (reusing one already there), claims it (`NEXT`) when the ticket is the
--- launcher's to claim -- an untouched one (`TODO`, or no keyword at all) and
--- one parked on the user (`PEND`: pressing the key there is the user coming
--- back to it) -- counts the launch in the drawer, saves the file, and only
--- then starts omp. A state a run wrote as its outcome (`TEST` awaiting the
--- user's validation, `WARN`, `DONE`) stands: relaunching is not a reason to
--- erase it, and such a state goes back to `NEXT` only when the launch is the
--- user's own answer to the hand-back (the note on a TEST entry,
--- M.launch_at's `claim`). The launch number rides along
+-- launcher's to claim -- an untouched one (`TODO`, or no keyword at all), one
+-- parked on the user (`PEND`: pressing the key there is the user coming back
+-- to it) and one they already closed (`DONE`: the work is finished, so a
+-- launch on it is a fresh run on the same headline) -- counts the launch in
+-- the drawer, saves the file, and only then starts omp. A state a run wrote
+-- as its own outcome (`TEST` awaiting the user's validation, `WARN`) stands:
+-- relaunching is not a reason to erase it, and such a state goes back to
+-- `NEXT` only when the launch is the user's own answer to the hand-back (the
+-- note on a TEST entry, M.launch_at's `claim`). The launch number rides along
 -- (`:OMP_LAUNCH:`), and the message omp starts with
 -- says which launch this is, so a run that finds its own unanswered round in
 -- the ticket can tell a relaunch from an answer instead of reading silence as
@@ -216,14 +217,16 @@ local SESSION_PROP = 'OMP_SESSION'
 local LAUNCH_PROP = 'OMP_LAUNCH'
 
 --- The keywords a launch of the user's own overwrites with `NEXT`: the
---- untouched ticket (`TODO`, and an unkeyworded headline) and one parked on
---- the user (`PEND`) -- pressing `<leader>ai` on a pending entry is the user
---- coming back to it, so the run the launch starts is what the entry holds.
---- `TEST` (a change handed back for their validation), `WARN` (a run that
---- failed) and `DONE` are a run's outcome or the user's word: those go back
---- to `NEXT` only on the caller's record that it was answered (ticket_at's
---- `claim`, the note on a `TEST` entry).
-local CLAIMABLE = { TODO = true, PEND = true }
+--- untouched ticket (`TODO`, and an unkeyworded headline), one parked on the
+--- user (`PEND`) -- pressing `<leader>ai` on a pending entry is the user
+--- coming back to it, so the run the launch starts is what the entry holds --
+--- and one already closed (`DONE`): its work is finished and validated, so a
+--- launch on it is a new run on the same headline, and the board says so
+--- instead of leaving a closed ticket running. `TEST` (a change handed back
+--- for their validation) and `WARN` (a run that failed) are a run's own
+--- outcome: those go back to `NEXT` only on the caller's record that it was
+--- answered (ticket_at's `claim`, the note on a `TEST` entry).
+local CLAIMABLE = { TODO = true, PEND = true, DONE = true }
 
 --- The keywords the climb starts below the level above: only what no run has
 --- touched. The climb is the run's own act, not the user's keypress, so a
@@ -489,18 +492,38 @@ local function ticket_at(bufnr, lnum, mutate, claim, link)
     require('org.properties').entry_put(bufnr, hl.line, LAUNCH_PROP, tostring(launch))
 
     -- Claim the ticket: `NEXT` means "a run is on this", which is what a
-    -- launch holds for an untouched ticket (`TODO`) and for one parked on the
+    -- launch holds for an untouched ticket (`TODO`), for one parked on the
     -- user (`PEND`) -- pressing the key on a pending entry is the user coming
-    -- back to it (CLAIMABLE). The states a run's outcome lives in (`TEST`,
-    -- `WARN`, `DONE`) are left standing: the run that follows reads the state
-    -- and the launch number, and the omp-org-ticket skill decides what a
-    -- relaunch means. Unless the caller says the state it found was answered
-    -- (`claim`, M.launch_at's note): then the entry is a run's again whatever
-    -- it held. `force` skips blockers so the claim is deterministic whatever
-    -- the map looks like.
+    -- back to it -- and for one already closed (`DONE`), where the launch is
+    -- a fresh run on a finished headline (CLAIMABLE). The states a run's own
+    -- outcome lives in (`TEST`, `WARN`) are left standing: the run that
+    -- follows reads the state and the launch number, and the omp-org-ticket
+    -- skill decides what a relaunch means. Unless the caller says the state
+    -- it found was answered (`claim`, M.launch_at's note): then the entry is
+    -- a run's again whatever it held. `force` skips blockers so the claim is
+    -- deterministic whatever the map looks like.
     if state == nil or claim or CLAIMABLE[state] then
-      require('org.todo').change_state({ bufnr = bufnr, lnum = hl.line }, 'NEXT', { force = true })
+      -- Leaving a done state takes its `CLOSED:` stamp with it: org records
+      -- it when the entry closes, so it describes a ticket nobody works.
+      -- org.todo only drops it when org's own logging is on, and this vault
+      -- logs nothing, so the launcher clears it here -- otherwise the
+      -- reopened headline reads `NEXT` over the date it was closed.
+      local was_done = state ~= nil and file.settings.todo:is_done(state)
+      local result = require('org.todo').change_state({ bufnr = bufnr, lnum = hl.line }, 'NEXT', { force = true })
       state, claimed = 'NEXT', true
+      if was_done and result and result.lnum then
+        local reopened = file:headline_on(result.lnum)
+        -- Only the single planning line org writes is edited: a stamp spread
+        -- over lines of its own would be left behind by that edit, so it
+        -- stays and the entry is not made worse than it was.
+        local lines, l, count = file.lines, result.lnum + 1, 0
+        while lines[l] and lines[l]:match '^%s*(SCHEDULED|DEADLINE|CLOSED):' do
+          count, l = count + 1, l + 1
+        end
+        if count <= 1 and reopened and reopened.planning and reopened.planning.closed then
+          require('org.edit').set_planning(bufnr, result.lnum, 'closed', nil)
+        end
+      end
     end
   end
 
@@ -746,13 +769,13 @@ end
 --- launcher's to remove. One line, so it survives shell quoting in the pane.
 ---
 --- The state line says what the launcher did, not what it wishes: a launch
---- claims the ticket (`NEXT`) when it is untouched or parked on the user
---- (`PEND` -- the keypress there is the user coming back), and leaves what a
---- run wrote as its outcome (`TEST` awaiting validation, `WARN`, `DONE`), so
---- the run has to read that rather than assume it was reset. The launch
---- number is the other half of the same fact: `#2` on a ticket whose body
---- already holds this skill's own round is a relaunch, and the skill says what
---- a relaunch means.
+--- claims the ticket (`NEXT`) when it is untouched, parked on the user
+--- (`PEND` -- the keypress there is the user coming back) or closed
+--- (`DONE` -- a new run on a finished headline), and leaves what a run itself
+--- wrote (`TEST` awaiting validation, `WARN`), so the run has to read that
+--- rather than assume it was reset. The launch number is the other half of
+--- the same fact: `#2` on a ticket whose body already holds this skill's own
+--- round is a relaunch, and the skill says what a relaunch means.
 ---
 --- A ticket launched out of a note (`ticket.note`, helpers/org/notes.lua)
 --- carries the note's text in the message as well: the body is a log of
