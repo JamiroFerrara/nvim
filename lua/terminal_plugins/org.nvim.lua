@@ -208,6 +208,31 @@ local function board_section(match, header)
   }
 end
 
+-- The in-flight view's (`f` below, key `2`) per-category sections: the
+-- entries of one classification tag -- or, for the untagged one, of none --
+-- in the states that ask for something (NEXT, TEST, WARN; `/!` is not
+-- done), ordered the way the ask reads: the entry a run is on first, then
+-- the one waiting on validation, then the troubled one (`todo-state-up`
+-- follows org's keyword sequence, where NEXT sits before TEST and WARN after
+-- both), priority settling the ties. `super_groups = false` keeps each
+-- category one list instead of the global map's per-file groups: every entry
+-- line already carries its project as the category column, and a per-file
+-- heading would break the state order across the section. `category-keep` is
+-- wrong here for the same reason it is right on the board: the entries of
+-- one section come from every project file, so their categories must not be
+-- the sort key. `hide_empty` drops a category with nothing in flight instead
+-- of drawing a bare header.
+local function flight_section(match, header)
+  return {
+    type = 'tags_todo',
+    match = match .. '/!',
+    header = header,
+    hide_empty = true,
+    super_groups = false,
+    sorting = { 'todo-state-up', 'priority-down', 'urgency-down' },
+  }
+end
+
 -- A wayfinder kind's section (the `y` view's per-kind blocks, key `5`): the
 -- open tickets carrying that kind's label, wherever they sit in the tree,
 -- listed flat -- `flat` is what the tree helper needs (helpers/org/tree.lua):
@@ -393,19 +418,21 @@ return {
         -- the one waiting on validation, then the problematic WARN -- with
         -- the untouched TODO backlog and the user-parked PEND left out, so
         -- a `2` press answers "what is going on right now" for every
-        -- project at once. It brings no `super_groups`, so it takes the
-        -- global map the view's scope gives it (helpers/org/agenda.lua
-        -- view_groups): the named groups first, then one section per file
-        -- headed by the file's title, the same structure `o` draws.
+        -- project at once. Split by category, the way the board below is
+        -- (flight_section above): bug first, then feature, chore, and the
+        -- untagged rest -- the captures nobody has sorted yet -- each
+        -- section ordered with NEXT at the top of its list. The blocks set
+        -- no `super_groups`, so they take the global map the view's scope
+        -- gives them (helpers/org/agenda.lua view_groups): a section is
+        -- still divided into one group per file, headed by the file's
+        -- title, so each entry keeps saying which project it belongs to.
         f = {
-          description = 'Everything in flight, every project',
+          description = 'Everything in flight, every project, by category',
           types = {
-            {
-              type = 'todo',
-              match = 'NEXT|TEST|WARN',
-              header = 'Everything in flight',
-              hide_empty = true,
-            },
+            flight_section('bug', 'Bugs in flight'),
+            flight_section('feat', 'Features in flight'),
+            flight_section('chore', 'Chores in flight'),
+            flight_section('-bug-feat-chore', 'Untagged in flight'),
           },
         },
         -- Key `4`'s view: the `o` list of the cwd project's whole file --
