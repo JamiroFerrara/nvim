@@ -143,13 +143,30 @@ function render() {
   renderViews();
 }
 
+// The rail's two numbers: what a run is on (NEXT, TEST, WARN) and what is
+// still waiting to be taken, each in its own color. A zero stays in place so
+// the columns line up, dimmed so it reads as nothing.
+function counts(btn, count) {
+  const box = el('span', 'counts');
+  for (const [key, title] of [
+    ['flight', 'in flight'],
+    ['pending', 'waiting to be taken'],
+  ]) {
+    const n = count[key] || 0;
+    const chip = el('span', 'count ' + key + (n ? '' : ' zero'), String(n));
+    chip.title = `${n} ${title}`;
+    box.append(chip);
+  }
+  btn.append(box);
+}
+
 function renderSidebar() {
   const nav = $('#projects');
   nav.replaceChildren();
   const all = el('button', state.selection === 'all' ? 'active' : '');
   all.append(el('span', 'name', 'All projects'));
   const totals = state.data.totals;
-  all.append(el('span', 'count', String(totals.open)));
+  counts(all, totals);
   all.addEventListener('click', () => {
     state.selection = 'all';
     load();
@@ -159,7 +176,7 @@ function renderSidebar() {
     const btn = el('button', state.selection === project.path ? 'active' : '');
     btn.title = '~/' + project.rel;
     btn.append(el('span', 'name', project.name));
-    btn.append(el('span', 'count', String(project.open)));
+    counts(btn, project);
     btn.addEventListener('click', () => {
       state.selection = project.path;
       load();

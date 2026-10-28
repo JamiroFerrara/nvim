@@ -108,10 +108,31 @@ button {
   color: var(--lavender);
 }
 
+#projects .counts {
+  display: flex;
+  gap: 7px;
+  flex: none;
+}
+
 #projects .count {
   font-size: 11px;
   color: var(--overlay);
   font-variant-numeric: tabular-nums;
+  min-width: 1.1em;
+  text-align: right;
+}
+
+#projects .count.flight {
+  color: var(--peach);
+}
+
+#projects .count.pending {
+  color: var(--yellow);
+}
+
+#projects .count.zero {
+  color: var(--overlay);
+  opacity: 0.5;
 }
 
 #projects .name {

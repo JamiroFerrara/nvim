@@ -344,10 +344,18 @@ local function by_project(entries, projects)
   return sections
 end
 
+--- An open entry a run is on, has handed back for validation, or left in
+--- trouble: the `f` list's NEXT, TEST and WARN. Every other open entry is
+--- still waiting to be picked up, which is what the project rail's two
+--- numbers count.
+---@param entry table
+---@return boolean
+local function in_flight(entry)
+  return not entry.done and (entry.todo == 'NEXT' or entry.todo == 'TEST' or entry.todo == 'WARN')
+end
+
 local function flight(entries)
-  local items = pick(entries, function(e)
-    return is_open(e) and (e.todo == 'NEXT' or e.todo == 'TEST' or e.todo == 'WARN')
-  end)
+  local items = pick(entries, in_flight)
   table.sort(items, by_state_rank)
   return { { title = 'Everything in flight', icon = '▶', items = indent(items) } }
 end
@@ -439,14 +447,25 @@ function M.payload(file)
     end)
   end
   local counts = {}
-  local total, done = 0, 0
+  local total, done, moving, waiting = 0, 0, 0, 0
   for _, entry in ipairs(entries) do
-    counts[entry.file] = counts[entry.file] or { open = 0, done = 0 }
+    local count = counts[entry.file]
+    if not count then
+      count = { open = 0, done = 0, flight = 0, pending = 0 }
+      counts[entry.file] = count
+    end
     if entry.done then
-      counts[entry.file].done = counts[entry.file].done + 1
+      count.done = count.done + 1
       done = done + 1
     else
-      counts[entry.file].open = counts[entry.file].open + 1
+      count.open = count.open + 1
+      if in_flight(entry) then
+        count.flight = count.flight + 1
+        moving = moving + 1
+      else
+        count.pending = count.pending + 1
+        waiting = waiting + 1
+      end
     end
     total = total + 1
   end
@@ -481,17 +500,19 @@ function M.payload(file)
     generated = os.date '%Y-%m-%d %H:%M:%S',
     selection = file or 'all',
     projects = {},
-    totals = { open = open_total, done = done, all = total },
+    totals = { open = open_total, done = done, all = total, flight = moving, pending = waiting },
     views = views,
   }
   for _, project in ipairs(projects) do
-    local count = counts[project.path] or { open = 0, done = 0 }
+    local count = counts[project.path] or { open = 0, done = 0, flight = 0, pending = 0 }
     out.projects[#out.projects + 1] = {
       path = project.path,
       rel = project.rel,
       name = project.name,
       open = count.open,
       done = count.done,
+      flight = count.flight,
+      pending = count.pending,
     }
   end
   return out
