@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>org — roam</title>
+    <link rel="stylesheet" href="/assets/org.css" />
+    <link rel="stylesheet" href="/assets/roam.css" />
+  </head>
+  <body>
+    <aside id="rail">
+      <h1>
+        <a href="/" title="Back to the TODO dashboard">org</a>
+        <span class="mode">roam</span>
+        <span id="live" title="following the vault">●</span>
+      </h1>
+      <input id="search" type="search" placeholder="Search notes  /" autocomplete="off" spellcheck="false" />
+      <nav id="notes"></nav>
+      <footer id="stats"></footer>
+    </aside>
+    <main>
+      <header id="top">
+        <div class="tabs">
+          <button id="tab-graph" type="button" title="g">◉ Graph</button>
+          <button id="tab-local" type="button" hidden>◎ Local graph</button>
+        </div>
+        <span class="spacer"></span>
+        <a class="ghost" href="/" title="TODO dashboard">☰ todos</a>
+      </header>
+      <div id="pane"></div>
+    </main>
+    <script src="/assets/roam.js"></script>
+  </body>
+</html>

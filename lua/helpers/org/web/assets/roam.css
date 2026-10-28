@@ -1,0 +1,501 @@
+/* The roam mode: the note rail on the left, the selected note or the link
+   graph on the right. Same palette as the dashboard (org.css's variables). */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--crust);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* ---- the rail ---------------------------------------------------------- */
+
+#rail {
+  background: var(--mantle);
+  border-right: 1px solid var(--surface);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px 10px 0;
+}
+
+#rail h1 {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lavender);
+  margin: 0 0 12px 6px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+#rail h1 a {
+  color: var(--lavender);
+  text-decoration: none;
+}
+
+#rail h1 .mode {
+  color: var(--overlay);
+  letter-spacing: 0.1em;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+#live {
+  font-size: 8px;
+  color: var(--overlay);
+  transition: color 0.3s;
+}
+
+#live.on {
+  color: var(--green);
+}
+
+#search {
+  font: inherit;
+  color: var(--text);
+  background: var(--base);
+  border: 1px solid var(--surface);
+  border-radius: 6px;
+  padding: 6px 9px;
+  outline: none;
+  margin-bottom: 10px;
+}
+
+#search:focus {
+  border-color: var(--blue);
+}
+
+#notes {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-bottom: 12px;
+}
+
+#notes .group {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--surface1);
+  margin: 14px 8px 4px;
+}
+
+#notes button {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  padding: 4px 8px;
+  border-radius: 5px;
+  color: var(--subtext);
+  border-left: 2px solid transparent;
+}
+
+#notes button:hover {
+  background: var(--base);
+  color: var(--text);
+}
+
+#notes button.active {
+  background: var(--base);
+  color: var(--lavender);
+  border-left-color: var(--lavender);
+}
+
+#notes .title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#notes .hint {
+  display: block;
+  font-size: 10px;
+  color: var(--overlay);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#stats {
+  border-top: 1px solid var(--surface);
+  padding: 9px 8px;
+  color: var(--overlay);
+  font-size: 11px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ---- the top bar ------------------------------------------------------- */
+
+main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--crust);
+}
+
+#top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--surface);
+  flex: none;
+}
+
+#top .tabs {
+  display: flex;
+  gap: 4px;
+}
+
+#top .spacer {
+  flex: 1;
+}
+
+#top button {
+  padding: 5px 11px;
+  border-radius: 6px;
+  color: var(--overlay);
+  border-bottom: 2px solid transparent;
+}
+
+#top button:hover {
+  color: var(--text);
+  background: var(--base);
+}
+
+#top button.active {
+  color: var(--lavender);
+  background: color-mix(in srgb, var(--surface) 40%, transparent);
+}
+
+#top .ghost {
+  padding: 5px 10px;
+  border-radius: 6px;
+  color: var(--overlay);
+  text-decoration: none;
+}
+
+#top .ghost:hover {
+  color: var(--text);
+  background: var(--base);
+}
+
+#pane {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ---- one note ---------------------------------------------------------- */
+
+#pane.scroll {
+  overflow-y: auto;
+}
+
+article.note {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 30px 34px 120px;
+}
+
+article.note > header {
+  border-bottom: 1px solid var(--surface);
+  padding-bottom: 14px;
+  margin-bottom: 22px;
+}
+
+article.note h1 {
+  font-family: var(--prose);
+  font-size: 1.7em;
+  line-height: 1.25;
+  font-weight: 650;
+  margin: 0 0 8px;
+}
+
+article.note .crumbs,
+article.note .meta {
+  color: var(--overlay);
+  font-size: 11px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+}
+
+article.note .meta {
+  margin-top: 7px;
+}
+
+article.note .meta .path {
+  overflow-wrap: anywhere;
+}
+
+article.note .tag {
+  color: var(--teal);
+}
+
+article.note .tag::before {
+  content: ':';
+}
+
+article.note .tag::after {
+  content: ':';
+}
+
+article.note .actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+article.note .actions button {
+  padding: 3px 9px;
+  border: 1px solid var(--surface);
+  border-radius: 5px;
+  color: var(--subtext);
+  background: var(--base);
+  font-size: 11px;
+}
+
+article.note .actions button:hover {
+  color: var(--lavender);
+  border-color: var(--surface1);
+}
+
+/* links inside the rendered body read as links, not as the raw [[]] markup:
+   the export already wrote the description as the text, so the underline is
+   the only cue the browser needs to add */
+article.note .body a,
+article.note .roam-link {
+  color: var(--blue);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--blue) 35%, transparent);
+}
+
+article.note .body a:hover {
+  color: var(--sky);
+  border-bottom-color: var(--sky);
+}
+
+article.note .file-ref {
+  color: var(--subtext);
+  border-bottom: 1px dotted var(--surface1);
+}
+
+article.note .broken-link {
+  color: var(--red);
+  border-bottom: 1px dotted var(--red);
+}
+
+article.note .backlinks {
+  margin-top: 40px;
+  border-top: 1px solid var(--surface);
+  padding-top: 16px;
+}
+
+article.note .backlinks h2 {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--overlay);
+  margin: 0 0 8px;
+}
+
+article.note .backlinks ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+article.note .backlinks a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+article.note .backlinks a:hover {
+  text-decoration: underline;
+}
+
+article.note .backlinks .rel {
+  color: var(--surface1);
+  font-size: 10px;
+  margin-left: 8px;
+}
+
+/* ---- the graph --------------------------------------------------------- */
+
+#graph {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+#graph.panning {
+  cursor: grabbing;
+}
+
+#graph line {
+  stroke: var(--surface1);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+#graph line.lit {
+  stroke: var(--blue);
+  stroke-width: 1.6;
+  opacity: 0.95;
+}
+
+#graph circle {
+  fill: var(--surface1);
+  stroke: var(--crust);
+  stroke-width: 1.5;
+  cursor: pointer;
+}
+
+#graph g.node:hover circle {
+  fill: var(--blue);
+}
+
+#graph g.node.here circle {
+  fill: var(--lavender);
+  stroke: var(--lavender);
+}
+
+#graph g.node.lit circle {
+  fill: var(--sky);
+}
+
+#graph g.node.muted {
+  opacity: 0.16;
+}
+
+#graph g.node .label {
+  font-family: var(--font);
+  font-size: 9px;
+  fill: var(--subtext);
+  paint-order: stroke;
+  stroke: var(--crust);
+  stroke-width: 2.5px;
+  pointer-events: none;
+  display: none;
+}
+
+#graph g.node .label.on {
+  display: block;
+}
+
+#hud {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  color: var(--overlay);
+  font-size: 11px;
+  display: flex;
+  gap: 14px;
+  pointer-events: none;
+}
+
+#tip {
+  position: absolute;
+  pointer-events: none;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: var(--mantle);
+  border: 1px solid var(--surface1);
+  color: var(--text);
+  font-size: 11px;
+  max-width: 320px;
+  transform: translate(12px, -50%);
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 5;
+}
+
+#tip.on {
+  opacity: 1;
+}
+
+p.empty {
+  padding: 26px 30px;
+  color: var(--overlay);
+  font-style: italic;
+}
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%) translateY(8px);
+  padding: 8px 14px;
+  border-radius: 7px;
+  background: var(--mantle);
+  border: 1px solid var(--surface1);
+  color: var(--text);
+  opacity: 0;
+  transition: opacity 0.18s, transform 0.18s;
+  pointer-events: none;
+  z-index: 30;
+}
+
+#toast.on {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* scrollbars, the dashboard's */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface1) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface1);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background-clip: content-box;
+}
