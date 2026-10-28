@@ -88,10 +88,11 @@ button {
 
 #projects button {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+  min-width: 0;
   text-align: left;
   padding: 5px 8px;
   border-radius: 5px;
@@ -136,9 +137,10 @@ button {
 }
 
 #projects .name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
 }
 
 #totals {
