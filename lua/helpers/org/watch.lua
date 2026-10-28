@@ -27,7 +27,7 @@ local uv = vim.uv or vim.loop
 
 local handles = {}
 local timer
-local callback
+local callbacks = {}
 local started = false
 
 --- Coalesce a burst of events into one scheduled callback.
@@ -41,8 +41,11 @@ local function changed()
     timer:close()
     timer = nil
     vim.schedule(function()
-      if callback then
-        callback()
+      for _, callback in ipairs(vim.deepcopy(callbacks)) do
+        local ok, err = pcall(callback)
+        if not ok then
+          vim.notify('org watch: ' .. tostring(err), vim.log.levels.WARN)
+        end
       end
     end)
   end)
@@ -95,13 +98,33 @@ local function tree(root)
   return out
 end
 
+--- Register `fn` to run (scheduled, debounced) after any org file in the
+--- tree changes on disk. The tree is only walked once; every subscriber
+--- shares it, so two modules can watch the same vault.
+---@param fn fun()
+function M.subscribe(fn)
+  for _, existing in ipairs(callbacks) do
+    if existing == fn then
+      return
+    end
+  end
+  callbacks[#callbacks + 1] = fn
+end
+
+---@param fn fun()
+function M.unsubscribe(fn)
+  callbacks = vim.tbl_filter(function(cb)
+    return cb ~= fn
+  end, callbacks)
+end
+
 --- Watch the org tree rooted at `root` and run `fn` (scheduled, debounced)
---- after any org file in it changes on disk. The first call wins; later
---- calls only update the callback.
+--- after any org file in it changes on disk. Every call adds a subscriber;
+--- the first one walks the tree, the rest only join.
 ---@param root string path, `~` and relative accepted
 ---@param fn fun()
 function M.start(root, fn)
-  callback = fn
+  M.subscribe(fn)
   if started then
     return
   end
@@ -111,9 +134,9 @@ function M.start(root, fn)
   end
 end
 
---- Stop watching and drop the callback.
+--- Stop watching and drop every subscriber.
 function M.stop()
-  callback = nil
+  callbacks = {}
   if timer then
     timer:stop()
     timer:close()

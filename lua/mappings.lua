@@ -246,6 +246,8 @@ return {
       desc = 'Org agenda',
     },
     ['<leader>oc'] = { function() require('org').capture('t') end, desc = 'Org capture (project)' },
+    ['<leader>ob'] = { function() require('helpers.org.web').dashboard() end, desc = 'Org dashboard (browser)' },
+    ['<leader>op'] = { function() require('helpers.org.web').preview() end, desc = 'Org node preview (browser)' },
     ['<leader>ot'] = {
       function()
         require('helpers.org.agenda').toggle_view('todo', function()

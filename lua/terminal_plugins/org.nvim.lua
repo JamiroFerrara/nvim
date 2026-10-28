@@ -98,6 +98,14 @@
 --                   file completes node titles and aliases, and creates the
 --                   node when the typed text is not one -- obsidian.nvim's
 --                   `[[` completion, for the org vault
+--   render.lua      the browser views (`helpers/org/web/`): `O` in an org
+--                   buffer renders the node at the cursor in the browser
+--                   (the subtree through org.nvim's HTML export, following
+--                   the buffer as it changes), and `<leader>ob` opens the
+--                   TODO dashboard -- the board, in-flight, all-open,
+--                   by-state, priority and wayfinder lists, sectioned and
+--                   sorted like the views above -- as a page whose clicks
+--                   come back into nvim (a state change, opening an entry)
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
@@ -1327,5 +1335,6 @@ return {
     require('helpers.org.retro').setup()
     require('helpers.org.kb').setup()
     require('helpers.org.actions').setup()
+    require('helpers.org.render').setup()
   end,
 }
