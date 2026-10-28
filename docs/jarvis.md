@@ -1,0 +1,142 @@
+# J.A.R.V.I.S. — the orb on the org dashboard
+
+The dashboard's voice orb, specified. It is UI in the browser only: the page
+draws it (`lua/helpers/org/web/assets/jarvis.css`, `jarvis.js`), and everything
+behind it — a voice, a microphone, the `omp` run the words start — lives in
+nvim (`lua/helpers/org/voice.lua`, routes `/api/voice`).
+
+The rule the whole design follows: **nothing on screen is invented.** Every
+number, colour and ripple is a state the server reported or a figure read from
+the board. Where the brief below asks for something a browser cannot honestly
+do, the section says so instead of faking it.
+
+---
+
+## 1. Central core (orb) — the brain
+
+| | |
+|---|---|
+| Shape | one circle, `inset: 24%` of the rig; the rig opens to `min(58vmin, 500px)` |
+| Surface | crystal: a white highlight at 33%/27%, a teal under-glow at 64%/70%, a dark body; a hard 1px rim (`::after`) so it reads as glass, not as a blur |
+| Idle | pulses at 1.6 s, brightness 1 → 1.25, scale 1 → 1.06 |
+| Speaking | size up 1px of inset, pulse 1 s, colour mauve → sky |
+| Listening | pulse 0.8 s, colour sky → lavender, the body opens (inset 21%) |
+| Thinking | pulse 0.7 s, colour amber → peach: the "puff" of a command being taken |
+| Error | red → peach, a slow 2.2 s pulse, and one shake of 3 px each way |
+| Ripple | a stroke circle scaled 0.35 → 1.25 and faded on every active phase (`--jv-ripple`, 3 s idle-less: 1.6 s listening, 1.2 s thinking) |
+| Filaments | a conic sweep masked to a ring at 58–74 % radius, spinning at half the ring clock — the "motion lines focusing toward" the core |
+| Flash | one bright flash (`brightness 2.4`, scale 1.18) when a run starts |
+
+The pulse is CSS `transform`/`filter` only: no canvas, no per-frame work in JS,
+and `prefers-reduced-motion` turns every animation off.
+
+## 2. Holographic data rings
+
+Three concentric SVG rings around the orb, each on its own clock, all dashed so
+rotation is legible:
+
+| Ring | Radius (viewBox 100) | Stroke | Dash | Clock | Reads |
+|---|---|---|---|---|---|
+| inner `r1` | 46 | 0.35 | 2 6 | `--jv-spin` (18 s idle, 4 s listening, 2.4 s thinking) | locked to the orb's own colour |
+| middle `r2` | 39 | 0.3 | 14 10 | `0.6 ×` the inner, reversed | the second colour of the phase |
+| outer `r3` | 32 | 0.22 | 30 22 | `0.32 ×` the inner | faintest, so the outer band never competes with the core |
+
+Speed is the processing indicator: the phase variables `--jv-spin` and
+`--jv-ripple` are the only thing that changes, so rings, ripple and pulse stay
+in one tempo without any JS animation loop. Colour comes from `--jv-a` /
+`--jv-b`, set by the phase class, so the whole rig shifts palette in one place.
+
+## 3. Floating panels
+
+Four glass rectangles, one figure each, `172px` wide, `backdrop-filter: blur`,
+a 1px border at 22 % of the phase colour, and a 7 s float of 5 px with
+staggered delays. Hidden while the orb is shut, faded in with the rig.
+
+| Panel | Figure | Sub-line | Data |
+|---|---|---|---|
+| In flight | entries in `NEXT` + `TEST` | `n working · n to check` | `state.data` |
+| Runs live | tickets with a run on them | batch sessions, or "no batch running" | `state.live` |
+| Next up | title of the first `NEXT` | its project, or "the board is clear" | `state.data` |
+| Vault | entries on the board | files they live in | `state.data` |
+
+**Attention.** A panel turns amber (`--peach`, pulsing border shadow, 1.8 s)
+when the thing it counts is waiting on a person: *In flight* while any ticket
+sits in `TEST` (a change nobody validated yet), *Next up* when nothing is
+waiting at all. There is no red state on a panel: red belongs to a failed
+conversation, and painting a panel red for a server error would misattribute
+it to the board.
+
+## 4. Voice and sound feedback
+
+| | |
+|---|---|
+| Voice | local, chosen at click time: piper, `espeak-ng`, `spd-say`, or Windows' own `System.Speech` voice through `powershell.exe` under WSL |
+| Timing | the ack is spoken *before* the microphone opens ("Listening on Board"), so the click registers out loud before anything is expected of the user |
+| Sync | the orb is mauve while speaking, sky while listening, amber while the words are being handed over; the caption prints the same words |
+| Confirmation | two-note chime (880 Hz then 1318 Hz, sine, WebAudio) and one flash of the rig when the heard words leave for a run |
+| Errors | a 96 Hz sawtooth buzz, 0.4 s, and the reason on the caption |
+| Waveform | **not drawn.** The microphone is read by nvim (ffmpeg or the Windows recognizer), never by the page, so any waveform here would be animation standing in for data that was never captured. The listening state is shown by the ring tempo, the expanding ripple and the caption instead |
+
+Voice style (calm, British, "intelligent") is whatever voice the machine has
+installed; the module does not ship one. `OMP_VOICE_RATE` is honoured by the
+Windows backend, which is the only one that exposes a rate control.
+
+## 5. Real-time visualisation
+
+Below the orb, a 40-column bar graph of the in-flight count, sampled every 2 s
+for as long as the page is open, newest bar at full opacity, the rest at 35 %,
+on a hairline floor. It is the vault's own count over the session — it starts
+empty with the page, which is why it is short at first and grows toward the
+right. Colour follows `--jv-a`, so a graph drawn while the orb thinks is amber.
+
+The same figures are in the panels; the graph exists to show *movement* — a
+ticket moving to `DONE` steps the count down, two new `NEXT` entries step it up.
+
+---
+
+## Interaction model
+
+| Gesture | Result |
+|---|---|
+| Click the shut orb (bottom right, 84 px) | the rig opens in the middle of the page, the ack is spoken, the microphone opens |
+| Click the orb while listening | the listen is cancelled (`{cancel: true}`) |
+| Click the orb while speaking or thinking | a toast: "still working — one moment" |
+| Click the orb while idle (rig open) | another conversation |
+| Click the backdrop, or `Escape` | the rig shuts; a listen already running keeps running and still ends in a run |
+| Hover | the stage scales 1.04 |
+| Keyboard | `Escape` only; the orb is a `<button>`, so `Tab`/`Enter` work through the page's own focus order |
+
+Polling is 350 ms while the rig is open, and stops the moment it shuts; the
+inspection at load is a single request. The panels re-read the dashboard's data
+every 4 s, independently, so a keyword changed in the list shows up in them.
+
+## What the medium rules out
+
+- **A sphere or 3D depth.** The orb is a circle with layered radial gradients
+  and a rim; no WebGL, so it holds its frame rate on a laptop while the vault
+  is being walked in the background.
+- **AR/UI touch on the rings.** The rings are decorative; the only interactive
+  element is the orb.
+- **Weather radar, health diagnostics, energy levels.** There is no such data
+  here, so there are no panels for it. The four panels show the four things the
+  dashboard actually knows.
+- **A live microphone waveform.** See §4.
+
+---
+
+## The conversation behind it
+
+1. `POST /api/voice` with `{view}` — the dashboard's current view title.
+2. nvim (`helpers/org/voice.lua`) speaks `Listening on <view>`, then listens:
+   ffmpeg on PulseAudio → whisper.cpp, or Windows' dictation recognizer.
+3. The transcript is spoken back, so the user hears what the run was given.
+4. The words go to a fresh `omp` pane (`helpers/org/ai.lua`'s `open_prompt`),
+   carrying one line of context — that they were said on the dashboard, the
+   view's name, and where the vault is. From there the run decides what to do
+   inside the org system; the orb's part ends.
+5. The page polls `GET /api/voice` for the phase, the words heard and any
+   error, and draws them.
+
+Overrides, when detection guesses wrong: `OMP_VOICE_TTS`, `OMP_VOICE_STT`,
+`OMP_VOICE_WHISPER_MODEL`, `OMP_VOICE_LANG`, `OMP_VOICE_PIPER_MODEL`,
+`OMP_VOICE_LISTEN_SECONDS`.

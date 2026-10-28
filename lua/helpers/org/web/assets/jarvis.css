@@ -1,0 +1,489 @@
+/* J.A.R.V.I.S. -- the orb on the org dashboard.
+   The five parts of the interface, drawn here: the core orb, three data rings
+   around it, the glass panels that carry live figures, the ripple and colour
+   response to voice, and the graphs that follow the vault's numbers. The
+   client that moves them is jarvis.js; what sits behind the black box -- a
+   voice, a microphone, the run the words start -- is helpers/org/voice.lua,
+   reached through /api/voice.
+
+   Colours come from the dashboard's own palette (org.css), so the orb reads as
+   part of the page instead of a widget pasted on it. Every animation is
+   decoration over state the server reports: nothing here invents a number. */
+
+#jarvis {
+  --jv-a: var(--sky);
+  --jv-b: var(--teal);
+  --jv-spin: 18s;
+  --jv-pulse: 1.6s;
+  --jv-ripple: 3s;
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 40;
+  font-family: var(--font);
+  color: var(--text);
+}
+
+/* the rig: a corner face while it is shut, the middle of the page while it is
+   open. Everything the rig draws -- the stage, the panels, the graph, the
+   caption -- is positioned inside this box, so the whole arrangement scales
+   with it instead of re-anchoring to the window. */
+#jarvis .jv-rig {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  transition:
+    width 0.45s cubic-bezier(0.2, 0.9, 0.2, 1),
+    height 0.45s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+/* the collapsed face: the orb alone, a button */
+#jarvis .jv-stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  padding: 0;
+  transition: transform 0.3s;
+}
+
+#jarvis .jv-stage:hover {
+  transform: scale(1.04);
+}
+
+#jarvis .jv-stage:focus-visible {
+  outline: 1px solid var(--jv-a);
+  outline-offset: 6px;
+  border-radius: 50%;
+}
+
+/* the core: a crystal, not a disc -- the light comes from inside it */
+#jarvis .jv-core {
+  position: absolute;
+  inset: 24%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 33% 27%, rgba(255, 255, 255, 0.45), transparent 34%),
+    radial-gradient(circle at 64% 70%, color-mix(in srgb, var(--jv-b) 75%, transparent), transparent 58%),
+    radial-gradient(circle at 50% 52%, color-mix(in srgb, var(--jv-a) 82%, transparent) 12%, rgba(17, 17, 27, 0.55) 72%);
+  box-shadow:
+    0 0 18px 2px color-mix(in srgb, var(--jv-a) 55%, transparent),
+    0 0 60px 8px color-mix(in srgb, var(--jv-a) 18%, transparent),
+    inset 0 0 22px rgba(255, 255, 255, 0.25);
+  animation: jv-pulse var(--jv-pulse) ease-in-out infinite;
+  transition: inset 0.3s;
+}
+
+/* the rim: the hard edge that makes the orb read as a crystal and not a
+   smudge of light */
+#jarvis .jv-core::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--jv-a) 70%, transparent);
+  box-shadow: inset 0 0 14px color-mix(in srgb, var(--jv-a) 45%, transparent);
+}
+
+@keyframes jv-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.06);
+    filter: brightness(1.25);
+  }
+}
+
+/* concentric rings: inner reads the quiet numbers, middle the board, outer the
+   alerts. Each spins on its own clock, and the dashed strokes are what make
+   the rotation legible. */
+#jarvis .jv-rings {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.9;
+  transition: inset 0.45s;
+}
+
+#jarvis .jv-rings svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+#jarvis .jv-ring {
+  fill: none;
+  stroke-linecap: round;
+  transform-origin: 50% 50%;
+}
+
+#jarvis .jv-ring.r1 {
+  stroke: color-mix(in srgb, var(--jv-a) 50%, transparent);
+  stroke-width: 0.35;
+  stroke-dasharray: 2 6;
+  animation: jv-spin var(--jv-spin) linear infinite;
+}
+
+#jarvis .jv-ring.r2 {
+  stroke: color-mix(in srgb, var(--jv-b) 42%, transparent);
+  stroke-width: 0.3;
+  stroke-dasharray: 14 10;
+  animation: jv-spin calc(var(--jv-spin) * 0.6) linear infinite reverse;
+}
+
+#jarvis .jv-ring.r3 {
+  stroke: color-mix(in srgb, var(--jv-a) 26%, transparent);
+  stroke-width: 0.22;
+  stroke-dasharray: 30 22;
+  animation: jv-spin calc(var(--jv-spin) * 0.32) linear infinite;
+}
+
+@keyframes jv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* the ripple that leaves the core while it is working: drawn on a fourth ring
+   and scaled outward, so data reads as flowing out of the orb */
+#jarvis .jv-ripple {
+  fill: none;
+  stroke: var(--jv-a);
+  stroke-width: 0.35;
+  opacity: 0;
+  transform-origin: 50% 50%;
+}
+
+#jarvis .jv-ripple.on {
+  animation: jv-ripple var(--jv-ripple) ease-out infinite;
+}
+
+@keyframes jv-ripple {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.35);
+  }
+  70% {
+    opacity: 0.08;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+/* the filament band: a slow conic sweep on the rim, the "motion lines focusing
+   toward" the orb */
+#jarvis .jv-filaments {
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--jv-a) 30%, transparent) 40deg,
+    transparent 90deg,
+    color-mix(in srgb, var(--jv-b) 26%, transparent) 220deg,
+    transparent 300deg
+  );
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 62%, transparent 74%);
+  mask: radial-gradient(circle, transparent 58%, #000 62%, transparent 74%);
+  animation: jv-spin calc(var(--jv-spin) * 0.5) linear infinite;
+  pointer-events: none;
+}
+
+/* the glass panels: transparent, floating, one figure each */
+#jarvis .jv-panels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+
+#jarvis .jv-panel {
+  position: absolute;
+  width: 172px;
+  padding: 9px 11px 10px;
+  border: 1px solid color-mix(in srgb, var(--jv-a) 22%, transparent);
+  border-radius: 3px;
+  background: linear-gradient(160deg, rgba(30, 30, 46, 0.72), rgba(24, 24, 37, 0.5));
+  box-shadow:
+    0 0 22px -12px color-mix(in srgb, var(--jv-a) 70%, transparent),
+    inset 0 0 20px -14px var(--jv-a);
+  backdrop-filter: blur(6px);
+  animation: jv-float 7s ease-in-out infinite;
+}
+
+#jarvis .jv-panel:nth-child(2) {
+  animation-delay: -2.3s;
+}
+
+#jarvis .jv-panel:nth-child(3) {
+  animation-delay: -4.1s;
+}
+
+#jarvis .jv-panel:nth-child(4) {
+  animation-delay: -1.2s;
+}
+
+@keyframes jv-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+#jarvis .jv-panel .k {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--jv-a) 80%, var(--text));
+  opacity: 0.8;
+}
+
+#jarvis .jv-panel .v {
+  display: block;
+  margin-top: 2px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#jarvis .jv-panel .s {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--subtext);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* a panel that wants attention: a waiting alert, a failed run */
+#jarvis .jv-panel.alert {
+  border-color: color-mix(in srgb, var(--peach) 55%, transparent);
+  animation:
+    jv-float 7s ease-in-out infinite,
+    jv-alert 1.8s ease-in-out infinite;
+}
+
+#jarvis .jv-panel.alert .k {
+  color: var(--peach);
+}
+
+@keyframes jv-alert {
+  50% {
+    box-shadow: 0 0 26px -8px var(--peach);
+  }
+}
+
+/* the graph: the vault's own counts over the session, one column per sample */
+#jarvis .jv-graph {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  width: 40%;
+  height: 34px;
+  opacity: 0;
+  transition: opacity 0.35s;
+  pointer-events: none;
+}
+
+#jarvis .jv-graph canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* the caption: what it is doing, and the words it heard */
+#jarvis .jv-caption {
+  position: absolute;
+  left: 50%;
+  bottom: -26px;
+  transform: translateX(-50%);
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--jv-a) 70%, var(--subtext));
+  opacity: 0.75;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+#jarvis.open .jv-caption {
+  opacity: 1;
+  font-size: 11px;
+}
+
+/* --- open: the rig takes the middle of the page, the orb at half its height */
+
+#jarvis .jv-backdrop {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 55%, rgba(17, 17, 27, 0.72), rgba(17, 17, 27, 0.94));
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s;
+  z-index: -1;
+}
+
+#jarvis.open .jv-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#jarvis.open {
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+#jarvis.open .jv-rig {
+  width: min(58vmin, 500px);
+  height: min(58vmin, 500px);
+}
+
+#jarvis.open .jv-rings {
+  inset: -14%;
+}
+
+#jarvis.open .jv-panels {
+  opacity: 1;
+}
+
+#jarvis.open .jv-graph {
+  opacity: 1;
+}
+
+#jarvis.open .jv-panel.p1 {
+  left: -190px;
+  top: 4%;
+}
+
+#jarvis.open .jv-panel.p2 {
+  right: -190px;
+  top: 4%;
+}
+
+#jarvis.open .jv-panel.p3 {
+  left: -190px;
+  bottom: 16%;
+}
+
+#jarvis.open .jv-panel.p4 {
+  right: -190px;
+  bottom: 16%;
+}
+
+/* --- the phases: colour and speed of everything above. The idle orb breathes
+   cyan; listening opens to sky; thinking runs amber; an error holds red. */
+
+#jarvis.phase-speaking {
+  --jv-a: var(--mauve);
+  --jv-b: var(--sky);
+  --jv-spin: 6s;
+  --jv-pulse: 1s;
+}
+
+#jarvis.phase-listening {
+  --jv-a: var(--sky);
+  --jv-b: var(--lavender);
+  --jv-spin: 4s;
+  --jv-pulse: 0.8s;
+  --jv-ripple: 1.6s;
+}
+
+#jarvis.phase-listening .jv-core {
+  inset: 21%;
+}
+
+#jarvis.phase-thinking {
+  --jv-a: var(--yellow);
+  --jv-b: var(--peach);
+  --jv-spin: 2.4s;
+  --jv-pulse: 0.7s;
+  --jv-ripple: 1.2s;
+}
+
+#jarvis.phase-error {
+  --jv-a: var(--red);
+  --jv-b: var(--peach);
+  --jv-spin: 9s;
+  --jv-pulse: 2.2s;
+}
+
+#jarvis.phase-error .jv-core {
+  animation:
+    jv-pulse 2.2s ease-in-out infinite,
+    jv-shake 0.4s ease-in-out 2;
+}
+
+@keyframes jv-shake {
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+/* a run started: one bright flash of the whole rig, then back to idle */
+#jarvis.flash .jv-core {
+  animation: jv-flash 0.7s ease-out 1;
+}
+
+@keyframes jv-flash {
+  0% {
+    filter: brightness(2.4) saturate(1.4);
+    transform: scale(1.18);
+  }
+  100% {
+    filter: brightness(1);
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #jarvis .jv-core,
+  #jarvis .jv-ring,
+  #jarvis .jv-filaments,
+  #jarvis .jv-panel,
+  #jarvis .jv-ripple.on {
+    animation: none;
+  }
+}
+
+/* a narrow window: the panels stack under the orb instead of beside it */
+@media (max-width: 860px) {
+  #jarvis.open .jv-panel.p1,
+  #jarvis.open .jv-panel.p3 {
+    left: -8px;
+  }
+  #jarvis.open .jv-panel.p2,
+  #jarvis.open .jv-panel.p4 {
+    right: -8px;
+  }
+  #jarvis.open .jv-panel {
+    width: 148px;
+  }
+}
