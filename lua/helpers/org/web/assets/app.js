@@ -280,17 +280,18 @@ function renderViews() {
   }
 }
 
-function selectEntry(entry) {
+function selectEntry(entry, focusNote) {
   state.selected = { file: entry.file, line: entry.line, id: entry.id };
+  state.selectedEntry = entry;
   for (const li of document.querySelectorAll('li.entry.selected')) li.classList.remove('selected');
   const row = document.querySelector(
     `li.entry[data-file="${CSS.escape(entry.file)}"][data-line="${entry.line}"]`,
   );
   if (row) row.classList.add('selected');
-  showDetail(entry);
+  showDetail(entry, focusNote);
 }
 
-async function showDetail(entry) {
+async function showDetail(entry, focusNote) {
   const detail = $('#detail');
   detail.hidden = false;
   document.body.classList.add('detail-open');
@@ -333,6 +334,7 @@ async function showDetail(entry) {
     const org = el('div', 'org');
     org.innerHTML = res.html || '<p class="empty">No body.</p>';
     body.append(title, org);
+    appendNoteBox(body, entry, focusNote);
   } catch (err) {
     body.replaceChildren(el('p', 'empty', 'Could not render the entry.'));
   }
@@ -340,10 +342,152 @@ async function showDetail(entry) {
 
 function closeDetail() {
   state.selected = null;
+  state.selectedEntry = null;
   $('#detail').hidden = true;
   document.body.classList.remove('detail-open');
   for (const li of document.querySelectorAll('li.entry.selected')) li.classList.remove('selected');
 }
+
+// The note box of the detail pane: what `<leader>n` in the editor writes --
+// a timestamped block at the end of the entry's body, as
+// helpers/org/notes.lua stores it. A note on an entry in TEST is the answer
+// the run was waiting for, so nvim launches the ticket too.
+function appendNoteBox(body, entry, focus) {
+  const box = el('div', 'note-box');
+  const text = document.createElement('textarea');
+  text.rows = 3;
+  text.placeholder = 'Add a note';
+  const row = el('div', 'note-row');
+  const button = el('button', 'primary', 'add note');
+  button.type = 'button';
+  const hint = el('span', 'hint', 'ctrl+enter');
+  row.append(button, hint);
+  box.append(text, row);
+
+  async function add() {
+    const value = text.value;
+    if (!value.trim()) {
+      text.focus();
+      return;
+    }
+    button.disabled = true;
+    const res = await post('/api/note', entry, { text: value });
+    button.disabled = false;
+    if (!res || res.error) return;
+    showToast(res.launched ? 'note added, the ticket was launched' : 'note added');
+    text.value = '';
+    await load();
+    refreshSelection();
+  }
+
+  button.addEventListener('click', add);
+  text.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
+      ev.preventDefault();
+      add();
+    } else if (ev.key === 'Escape') {
+      ev.preventDefault();
+      text.blur();
+    }
+  });
+  body.append(box);
+  if (focus) text.focus();
+}
+
+// ---- capture ------------------------------------------------------------
+
+// The destinations the capture form offers: the entry the view has selected
+// (the editor's `c`, a child of that entry), then every project of the rail
+// (`^`, which lands the entry under the project's own headline).
+function destinations() {
+  const out = [];
+  const selected = state.selectedEntry;
+  if (selected) {
+    out.push({
+      label: 'under “' + selected.title + '”',
+      entry: { file: selected.file, line: selected.line, id: selected.id },
+    });
+  }
+  for (const project of state.data.projects) {
+    out.push({ label: 'under ' + project.name, entry: { file: project.path } });
+  }
+  return out;
+}
+
+function openCapture() {
+  document.querySelectorAll('#capture').forEach((node) => node.remove());
+  const options = destinations();
+  if (!options.length) {
+    showToast('Nothing to capture into');
+    return;
+  }
+  const panel = el('div');
+  panel.id = 'capture';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', 'capture');
+
+  const form = document.createElement('form');
+  const head = el('header');
+  head.append(el('span', '', 'capture'));
+  const close = el('button', '', '✕');
+  close.type = 'button';
+  head.append(close);
+  form.append(head);
+
+  const title = document.createElement('input');
+  title.className = 'title';
+  title.placeholder = 'title';
+  title.autocomplete = 'off';
+  title.spellcheck = false;
+  const body = document.createElement('textarea');
+  body.className = 'body';
+  body.rows = 5;
+  body.placeholder = 'description (optional)';
+  form.append(title, body);
+
+  const foot = el('footer');
+  const select = document.createElement('select');
+  select.className = 'dest';
+  options.forEach((option, i) => {
+    const node = document.createElement('option');
+    node.value = String(i);
+    node.textContent = option.label;
+    select.append(node);
+  });
+  const submit = el('button', 'primary', 'capture');
+  submit.type = 'submit';
+  const hint = el('span', 'hint', 'ctrl+enter');
+  foot.append(select, hint, submit);
+  form.append(foot);
+  panel.append(form);
+  document.body.append(panel);
+  title.focus();
+
+  close.addEventListener('click', () => panel.remove());
+  panel.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+      ev.preventDefault();
+      panel.remove();
+    }
+  });
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const name = title.value.trim();
+    if (!name) {
+      title.focus();
+      return;
+    }
+    const option = options[Number(select.value)] || options[0];
+    submit.disabled = true;
+    const res = await post('/api/capture', option.entry, { title: name, body: body.value });
+    submit.disabled = false;
+    if (!res || res.error) return;
+    panel.remove();
+    showToast('captured ' + name);
+    await load();
+  });
+}
+
 
 function refreshSelection() {
   if (!state.selected) return;
