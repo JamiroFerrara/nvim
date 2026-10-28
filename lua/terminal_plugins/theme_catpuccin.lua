@@ -28,6 +28,10 @@ return { -- You can easily change to a different colorscheme.
           -- read apart from the plain notes' gray Comment.
           OrgAgentTimestamp = { fg = colors.mauve },
           OrgAgentRule = { fg = colors.mauve },
+          -- the band behind an org verbatim block (helpers/org/blocks.lua):
+          -- a step darker than the page, so a `#+begin_src` snippet reads as
+          -- a recessed block the way a markdown fence does
+          OrgBlockBg = { bg = colors.mantle },
           -- org.nvim's agenda group headers (the super_agenda sections:
           -- "Work", "Important", a project's title): a lavender label on a
           -- surface0 badge, so a section reads apart from the view's own

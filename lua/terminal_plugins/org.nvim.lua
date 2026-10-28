@@ -1306,6 +1306,7 @@ return {
     require('helpers.org.tree').setup()
     require('helpers.org.reveal').setup()
     require('helpers.org.callouts').setup()
+    require('helpers.org.blocks').setup()
     require('helpers.org.decorations').setup()
     require('helpers.org.wrap').setup()
     -- the group view's `changed-down` sorting strategy: it reads the same
