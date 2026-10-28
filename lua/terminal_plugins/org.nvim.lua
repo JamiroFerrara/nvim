@@ -111,6 +111,15 @@
 --                   by-state, priority and wayfinder lists, sectioned and
 --                   sorted like the views above -- as a page whose clicks
 --                   come back into nvim (a state change, opening an entry)
+--   voice.lua       the animated face floating in the corner of every nvim:
+--                   clicked (or `<leader>aV`) it speaks the view it is in,
+--                   listens, reads back what it heard and starts a run from
+--                   those words -- the ticket under the cursor when there is
+--                   one (`ai.say`), a plain omp pane otherwise
+--                   (`ai.open_prompt`). Speech and dictation are local, from
+--                   whatever the machine has: piper / espeak-ng / spd-say and
+--                   whisper.cpp, or Windows' own voice through
+--                   powershell.exe when nvim runs under WSL
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
@@ -1373,6 +1382,7 @@ return {
     require('helpers.org.refile').setup()
     require('helpers.org.ics').setup()
     require('helpers.org.ai').setup()
+    require('helpers.org.voice').setup()
     require('helpers.org.retro').setup()
     require('helpers.org.kb').setup()
     require('helpers.org.actions').setup()

@@ -82,8 +82,29 @@ local function under(bufnr, hl)
   local file = require('org.files').get_buffer(bufnr)
   local out = {}
   for _, h in ipairs(file and file.headlines or {}) do
-    if h.line > hl.line and h.line <= hl.end_line then
+    -- a COMMENT tree is no heading of the export, so it is no heading here
+    if h.line > hl.line and h.line <= hl.end_line and not h.commented then
       out[#out + 1] = h
+    end
+  end
+  return out
+end
+
+--- The lines inside a `#+begin_comment` block of the buffer, which the
+--- export draws not at all: a `- [ ]` written there is no box of the page.
+---@param lines string[]
+---@return table<integer, boolean>
+local function comments(lines)
+  local out, open = {}, nil
+  for i, line in ipairs(lines) do
+    if open then
+      out[i] = true
+      if line:lower():match '^%s*#%+end_comment%s*$' then
+        open = nil
+      end
+    elseif line:lower():match '^%s*#%+begin_comment%s*$' then
+      open = i
+      out[i] = true
     end
   end
   return out
@@ -195,7 +216,7 @@ function M.heading_state(spec, index, text, state)
   end
   local list = under(r.bufnr, r.hl)
   local hl = list[tonumber(index) or 0]
-  if hl and text and not alike(text, hl.title) then
+  if text and not (hl and alike(text, hl.title)) then
     local found
     for _, h in ipairs(list) do
       if alike(text, h.title) then
@@ -239,14 +260,15 @@ function M.box(spec, index, text, on)
     return nil, 'entry not found'
   end
   local lines = vim.api.nvim_buf_get_lines(r.bufnr, 0, -1, false)
+  local commented = comments(lines)
   local entries = { r.hl }
   vim.list_extend(entries, under(r.bufnr, r.hl))
   local boxes = {}
   for _, h in ipairs(entries) do
     local _, all = require('org.lists').parse_region(lines, h.line + 1, h.body_end or h.line)
     for _, it in ipairs(all) do
-      if it.checkbox then
-        it.text = (lines[it.lnum] or ''):match('%[[ xX%-]%]%s*(.*)$') or ''
+      if it.checkbox and not commented[it.lnum] then
+        it.text = (lines[it.lnum] or ''):match '%[[ xX%-]%]%s*(.*)$' or ''
         boxes[#boxes + 1] = it
       end
     end
@@ -254,14 +276,17 @@ function M.box(spec, index, text, on)
   if #boxes == 0 then
     return nil, 'no checkbox in this entry'
   end
-  local function pick(it)
-    return (it.checkbox == ' ') and 'off' or (it.checkbox == 'X') and 'on' or 'trans'
+  local item
+  local function pick()
+    local line = vim.api.nvim_buf_get_lines(r.bufnr, item.lnum - 1, item.lnum, false)[1] or ''
+    local mark = line:match '%[([ xX%-])%]'
+    return (mark == 'X') and 'on' or (mark == '-') and 'trans' or 'off'
   end
   local function wanted()
     return on and 'X' or ' '
   end
-  local item = boxes[tonumber(index) or 0]
-  if item and not alike(text, item.text) then
+  item = boxes[tonumber(index) or 0]
+  if not (item and alike(text, item.text)) then
     local found
     for _, it in ipairs(boxes) do
       if alike(text, it.text) then
@@ -288,13 +313,14 @@ function M.box(spec, index, text, on)
     if not ok then
       return nil, tostring(err)
     end
-    item.checkbox = wanted()
     local saved, save_err = commit(r.bufnr)
     if not saved then
       return nil, save_err or 'the file could not be written'
     end
   end
-  return { box = pick(item), line = item.lnum }
+  -- what the file now says, which is not always what was asked: org keeps a
+  -- box unchecked while a box under it is unchecked (org-list-struct-fix-box)
+  return { box = pick(), line = item.lnum }
 end
 
 --- Show one entry in a window of this nvim.

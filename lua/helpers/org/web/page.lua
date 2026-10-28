@@ -65,9 +65,12 @@ local function node_title(entry)
   end
   local parts = {}
   if entry.todo then
-    parts[#parts + 1] = (
-      '<button type="button" class="state %s" data-entry="1" data-state="%s" title="change the state of this entry">%s</button>'
-    ):format(entry.done and 'done' or 'todo', escape(entry.todo), escape(entry.todo))
+    parts[#parts + 1] = ('<button type="button" class="state %s %s" data-entry="1" data-state="%s" title="change the state of this entry">%s</button>'):format(
+      entry.done and 'done' or 'todo',
+      escape(entry.todo),
+      escape(entry.todo),
+      escape(entry.todo)
+    )
   end
   if entry.priority then
     parts[#parts + 1] = '<span class="priority">[#' .. escape(entry.priority) .. ']</span>'

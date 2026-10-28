@@ -486,7 +486,7 @@
 /* A state badge is a button when the page can write it
    (helpers/org/web/clicks): the same badge, now worth pressing. The reset is
    written with `:where` so the badge's own rules keep their size and colour. */
-:where(.org, .node-title, .detail-title) button.state {
+:where(.org button.state, .node-title button.state, .detail-title button.state) {
   font: inherit;
   border: 0;
   cursor: pointer;
