@@ -881,7 +881,7 @@ async function onKey(ev) {
 
   if (typing) {
     // in the filter box only Escape is the list's
-    if (key === 'Escape') {
+    if (key === 'Escape' && target === $('#search')) {
       ev.preventDefault();
       $('#search').value = '';
       state.query = '';
