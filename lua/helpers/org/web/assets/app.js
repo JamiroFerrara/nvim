@@ -505,11 +505,40 @@ function stopRunStream() {
   }
 }
 
+// A question the run put to you, drawn whole: the chip the run gave it, the
+// question, and the answers it offered with their tradeoffs. The answer it
+// leans on (`recommended`, an index) is marked. This is the same round the
+// picker in the omp pane shows, and the run waits on it until you answer
+// there, so it is the one step of a transcript that is a turn of yours.
+function askCard(ev) {
+  const card = el('div', 'run-ask');
+  if (ev.t) card.append(el('p', 'run-ask-intent', ev.t));
+  for (const q of ev.q || []) {
+    const item = el('div', 'run-ask-item');
+    if (q.h) item.append(el('span', 'run-ask-header', q.h));
+    item.append(el('p', 'run-ask-text', q.q || ''));
+    if (q.m) item.append(el('span', 'run-ask-any', 'pick any'));
+    const list = el('ol', 'run-ask-options');
+    (q.o || []).forEach((opt, i) => {
+      const row = el('li', 'run-ask-option' + (q.r === i ? ' recommended' : ''));
+      row.append(el('span', 'run-ask-label', opt.l || ''));
+      if (opt.d) row.append(el('span', 'run-ask-desc', opt.d));
+      list.append(row);
+    });
+    item.append(list);
+    card.append(item);
+  }
+  return card;
+}
+
 // One event of the run, drawn as what it is: the agent speaking, a step of
-// thought, a tool it reached for, what the tool answered.
+// thought, a tool it reached for, what the tool answered, a question it put
+// to you and your answer to it.
 function runEvent(ev) {
   if (ev.k === 'say') return el('p', 'run-say', ev.t);
   if (ev.k === 'think') return el('p', 'run-think', ev.t);
+  if (ev.k === 'ask') return askCard(ev);
+  if (ev.k === 'answer') return el('p', 'run-answer' + (ev.e ? ' failed' : ''), (ev.e ? '✗ ' : '✔ ') + ev.t);
   if (ev.k === 'user') {
     const box = el('details', 'run-user');
     box.append(el('summary', '', 'the message the run was started with'));
@@ -559,17 +588,29 @@ function appendRunBox(body, entry) {
   const bottom = (wasStuck) => {
     if (wasStuck) log.scrollTop = log.scrollHeight;
   };
+  // whether the run is standing on a question of its own: the last ask of
+  // the log has no answer after it, and the picker in its pane is waiting
+  let running = false;
+  let asking = false;
+  const paint = () => {
+    box.classList.toggle('running', running);
+    box.classList.toggle('asking', asking);
+    stateText.textContent = asking ? 'asking you' : running ? 'live' : 'stopped';
+  };
   const draw = (events, wasStuck) => {
     for (const ev of events || []) {
       const node = runEvent(ev);
       if (node) log.append(node);
+      if (ev.k === 'ask') asking = true;
+      else if (ev.k === 'answer') asking = false;
     }
     trim();
     bottom(wasStuck);
+    paint();
   };
-  const setState = (running) => {
-    box.classList.toggle('running', !!running);
-    stateText.textContent = running ? 'live' : 'stopped';
+  const setState = (isRunning) => {
+    running = !!isRunning;
+    paint();
   };
 
   const source = new EventSource('/api/live/stream?key=' + encodeURIComponent(key));
@@ -578,6 +619,7 @@ function appendRunBox(body, entry) {
     const snap = JSON.parse(msg.data);
     const wasStuck = true;
     log.replaceChildren();
+    asking = false;
     if (snap.title) title.textContent = snap.title;
     if (!snap.file) {
       log.append(el('p', 'empty', 'This run has not written anything yet.'));
@@ -589,6 +631,7 @@ function appendRunBox(body, entry) {
     const snap = JSON.parse(msg.data);
     const wasStuck = stick();
     log.replaceChildren();
+    asking = false;
     if (snap.title) title.textContent = snap.title;
     draw(snap.events, wasStuck);
     setState(snap.running);

@@ -208,6 +208,53 @@ local function detail(args)
   return clip(table.concat(parts, ' '), 180)
 end
 
+--- One question of an `ask` round, as the page draws it: the chip the run put
+--- over it, the question, its candidate answers with their tradeoffs, and
+--- which one the run leans on (`recommended`, an index into the answers).
+---@param question table
+---@return table
+local function question_of(question)
+  local options = {}
+  for _, option in ipairs(type(question.options) == 'table' and question.options or {}) do
+    if type(option) == 'table' then
+      options[#options + 1] = { l = clip(option.label, 200), d = clip(option.description, 400) }
+    else
+      options[#options + 1] = { l = clip(option, 200) }
+    end
+  end
+  return {
+    h = question.header and clip(question.header, 80) or nil,
+    q = clip(question.question, 800),
+    o = options,
+    m = question.multi and true or false,
+    r = tonumber(question.recommended),
+  }
+end
+
+--- The answers a round came back with, out of the tool result's details: the
+--- labels picked in each question, and anything typed in a question of
+--- several answers (`customInput`). nil when the details carry none -- an
+--- error, or a result written before they did.
+---@param details table|nil
+---@return string|nil
+local function picks(details)
+  details = type(details) == 'table' and details or {}
+  local out = {}
+  for _, result in ipairs(type(details.results) == 'table' and details.results or {}) do
+    if type(result) == 'table' then
+      for _, label in ipairs(type(result.selectedOptions) == 'table' and result.selectedOptions or {}) do
+        if type(label) == 'string' and label:match '%S' then
+          out[#out + 1] = clip(label, 200)
+        end
+      end
+      if type(result.customInput) == 'string' and result.customInput:match '%S' then
+        out[#out + 1] = clip(result.customInput, 200)
+      end
+    end
+  end
+  return #out > 0 and table.concat(out, ' · ') or nil
+end
+
 --- The parts of a message record's content, as the events the page draws.
 ---@param record table
 ---@param out table[]
@@ -224,9 +271,43 @@ local function message_events(record, out)
       elseif kind == 'thinking' and (part.text or part.thinking) then
         out[#out + 1] = { k = 'think', t = clip(part.text or part.thinking, 1200), at = at }
       elseif kind == 'toolCall' then
-        out[#out + 1] = { k = 'tool', n = part.name or 'tool', t = detail(part.arguments), at = at }
+        local args = type(part.arguments) == 'table' and part.arguments or {}
+        if part.name == 'ask' and type(args.questions) == 'table' and #args.questions > 0 then
+          -- the round's questions are the point of the step: an event of
+          -- their own, so the page can put them up whole (question, answers,
+          -- the run's lean) instead of one clipped tool line
+          local round = {}
+          for _, question in ipairs(args.questions) do
+            if type(question) == 'table' then
+              round[#round + 1] = question_of(question)
+            end
+          end
+          out[#out + 1] = { k = 'ask', n = 'ask', t = clip(args.i, 160), q = round, at = at }
+        else
+          out[#out + 1] = { k = 'tool', n = part.name or 'tool', t = detail(part.arguments), at = at }
+        end
       end
     end
+    return
+  end
+  if role == 'toolResult' and message.toolName == 'ask' then
+    -- the round's answers: the labels picked, and the text of an error
+    -- question. A round still open has no result at all, which is what makes
+    -- the last unanswered ask the run's standing question (`M.activity`).
+    local chose = picks(message.details)
+    local text = {}
+    for _, part in ipairs(content) do
+      if part.type == 'text' then
+        text[#text + 1] = part.text or ''
+      end
+    end
+    out[#out + 1] = {
+      k = 'answer',
+      n = 'ask',
+      e = message.isError and true or false,
+      t = chose or clip(table.concat(text, '\n'), 600),
+      at = at,
+    }
     return
   end
   if role == 'toolResult' then
@@ -338,6 +419,12 @@ function M.activity(key)
     local event = snap.events[i]
     if event.k == 'say' then
       return clip(event.t, 140)
+    elseif event.k == 'ask' then
+      -- the round is open: its last question is what the run waits on
+      local question = event.q and event.q[#event.q]
+      return '❓ ' .. clip(question and question.q or event.t, 140)
+    elseif event.k == 'answer' then
+      return '✔ ' .. clip(event.t, 140)
     elseif event.k == 'tool' then
       return '→ ' .. (event.n or 'tool') .. (event.t ~= '' and (' ' .. event.t) or '')
     elseif event.k == 'think' then

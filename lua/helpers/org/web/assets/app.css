@@ -911,3 +911,111 @@ li.entry .live-line {
   max-height: 14em;
   overflow-y: auto;
 }
+
+/* A question the run put to you, one card per round: the chip it gave the
+   question, the question, and its answers as the picker in the pane offers
+   them -- the run's own lean marked. */
+.run-ask {
+  border: 1px solid var(--surface);
+  border-left: 3px solid var(--yellow);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: var(--mantle);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.run-ask p {
+  margin: 0;
+}
+
+.run-ask-intent {
+  color: var(--overlay);
+  font-size: 10.5px;
+}
+
+.run-ask-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+}
+
+.run-ask-header {
+  border: 1px solid var(--surface1);
+  border-radius: 999px;
+  padding: 0 7px;
+  color: var(--subtext);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.run-ask-text {
+  flex-basis: 100%;
+  color: var(--text);
+}
+
+.run-ask-any {
+  color: var(--overlay);
+  font-size: 10px;
+}
+
+.run-ask-options {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.run-ask-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--surface);
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+.run-ask-option.recommended {
+  border-color: var(--yellow);
+}
+
+.run-ask-label {
+  color: var(--subtext);
+}
+
+.run-ask-option.recommended .run-ask-label::after {
+  content: ' ✦ recommended';
+  color: var(--yellow);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.run-ask-desc {
+  color: var(--overlay);
+  font-size: 10.5px;
+}
+
+.run-answer {
+  color: var(--green);
+}
+
+.run-answer.failed {
+  color: var(--red);
+}
+
+/* The run is standing on a question: the header says who it waits on. */
+.run-box.asking .run-head .live-dot {
+  color: var(--yellow);
+  animation: run-pulse 1.2s ease-in-out infinite;
+}
+
+.run-box.asking .run-state {
+  color: var(--yellow);
+}
