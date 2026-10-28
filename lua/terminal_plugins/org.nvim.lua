@@ -885,6 +885,20 @@ return {
         -- the Emacs diary), unbound here.
         toggle_done = 'D',
         toggle_diary = false,
+        -- `u` undoes the last change a view action made to an entry's file:
+        -- org-agenda-undo, the Emacs keys <C-_>, <C-/> and <C-x>u kept
+        -- beside it. nvim's own undo does nothing in the view's nofile
+        -- buffer, and the default `u` (unmark) is covered by <M-m>
+        -- (toggle the mark at point) and `U` (unmark all), so the key is
+        -- free here. The action records what each write action changed
+        -- (TODO state, tags, priority, a checkbox toggle, a kill) and
+        -- reverts it in the entry's own buffer, which
+        -- helpers/org/agenda.lua's setup_undo saves, the way the edit's
+        -- write-back did. The wrappers live in helpers/org/agenda.lua
+        -- (`M.undo`, setup_toggle_done/setup_set_todo) and
+        -- helpers/org/tree.lua (the checkbox toggle).
+        unmark = false,
+        undo = { 'u', '<C-_>', '<C-/>', '<C-x>u' },
         -- `N` cycles the TO-DO keyword of the entry at point (TODO -> NEXT
         -- -> PEND -> TEST -> WARN -> DONE -> none), like <C-S-Right>; the
         -- same keys reach the TODO view, which renders into an orgagenda

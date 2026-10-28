@@ -1085,15 +1085,22 @@ local function toggle_box(buf, box)
     utils.warn 'org: the checkbox has moved; press gr to rebuild the view'
     return
   end
-  local ok, err = pcall(vim.api.nvim_buf_call, bufnr, function()
-    vim.api.nvim_win_set_cursor(0, { item.lnum, 0 })
-    require('org.lists').toggle_checkbox()
+  -- the toggle and the cookies it recomputes are one change to the entry's
+  -- file, so `u` in the view (`view.undo`, its action in
+  -- helpers/org/agenda.lua's setup_undo) reverts both in one press
+  local ok, err = pcall(function()
+    require('org.agenda.view').with_remote_undo(bufnr, function()
+      vim.api.nvim_buf_call(bufnr, function()
+        vim.api.nvim_win_set_cursor(0, { item.lnum, 0 })
+        require('org.lists').toggle_checkbox()
+      end)
+      require('helpers.org.cookies').ensure(bufnr)
+    end)
   end)
   if not ok then
     utils.warn('org: ' .. tostring(err))
     return
   end
-  require('helpers.org.cookies').ensure(bufnr)
   if require('org.config').opts.agenda.save_after_edit then
     utils.save_buffer_or_warn(bufnr)
   end

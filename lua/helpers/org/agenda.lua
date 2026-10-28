@@ -3,6 +3,8 @@
 -- cursor it leaves on the line it acted on), the `T` set_todo that hands the
 -- entry at point back to the backlog (`M.set_todo`, registered in the config
 -- as the `set_todo` action, so the key reaches an org buffer too), the
+-- `u` undo of the view's write actions (org-agenda-undo, saved back to the
+-- entry's file), the
 -- one-key tag/priority
 -- toggles (helpers/org/tagging.lua), the fold state
 -- left behind by entering an entry, the editable scratch view `<CR>` opens
@@ -100,6 +102,31 @@ local function setup_set_todo()
     view.actions.set_todo = view.on_item(function(target)
       return M.set_todo(target)
     end, 'lines')
+  end)
+end
+
+-- `u` in a view is org-agenda-undo (`mappings.agenda.undo` in the plugin
+-- spec binds it): the view's actions record what they changed in the entry's
+-- file -- `view.on_item` hands every action through `with_remote_undo` --
+-- and the action reverts it. The plugin never saves the buffer an undo
+-- reverts, though: Emacs leaves it modified and this config runs
+-- `agenda.save_after_edit = true`, so an undone state would sit in the
+-- buffer while the file on disk kept the change, and the next reload would
+-- bring it back. The wrapper saves the buffer the undo touched, the way the
+-- edit's own write-back did.
+local function setup_undo()
+  require('org.lazy').on_load('org.agenda.view', 'undo', function(view)
+    local undo = view.undo
+    view.undo = function(...)
+      local entry = view.undo_list and view.undo_list[1]
+      local undone = undo(...)
+      if undone and entry and require('org.config').opts.agenda.save_after_edit then
+        if vim.api.nvim_buf_is_valid(entry.bufnr) then
+          require('org.utils').save_buffer_or_warn(entry.bufnr)
+        end
+      end
+      return undone
+    end
   end)
 end
 
@@ -1644,6 +1671,7 @@ function M.setup()
   setup_file_caches()
   setup_toggle_done()
   setup_set_todo()
+  setup_undo()
   setup_redo_stay()
   setup_one_key()
   setup_entry_folds()
