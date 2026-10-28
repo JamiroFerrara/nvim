@@ -13,6 +13,11 @@
 -- and TextChanged events broadcast on the event stream, and the browser
 -- refetches. The server listens on the loopback address only, the way
 -- markdown-preview.nvim's does.
+--
+-- The dashboard carries the voice orb (`/api/voice`, drawn by
+-- assets/jarvis.js): the click starts a conversation in helpers/org/voice.lua
+-- -- speak, listen, then an `omp` pane seeded with the words -- and the page
+-- polls the phase it draws from the same route.
 local M = {}
 
 local actions = require 'helpers.org.web.actions'

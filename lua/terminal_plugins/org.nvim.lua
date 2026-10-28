@@ -111,15 +111,15 @@
 --                   by-state, priority and wayfinder lists, sectioned and
 --                   sorted like the views above -- as a page whose clicks
 --                   come back into nvim (a state change, opening an entry)
---   voice.lua       the animated face floating in the corner of every nvim:
---                   clicked (or `<leader>aV`) it speaks the view it is in,
---                   listens, reads back what it heard and starts a run from
---                   those words -- the ticket under the cursor when there is
---                   one (`ai.say`), a plain omp pane otherwise
---                   (`ai.open_prompt`). Speech and dictation are local, from
---                   whatever the machine has: piper / espeak-ng / spd-say and
---                   whisper.cpp, or Windows' own voice through
---                   powershell.exe when nvim runs under WSL
+--   voice.lua       the engine behind the orb on the dashboard
+--                   (helpers/org/web/assets/jarvis.js): a click there is
+--                   `POST /api/voice`, which speaks a line about the view,
+--                   listens, reads back what it heard and hands the words to
+--                   a fresh `omp` pane (`ai.open_prompt`) -- that run decides
+--                   what to do with them inside the org system. Speech and
+--                   dictation are local, from whatever the machine has:
+--                   piper / espeak-ng / spd-say and whisper.cpp, or Windows'
+--                   own voice through powershell.exe when nvim runs under WSL
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
