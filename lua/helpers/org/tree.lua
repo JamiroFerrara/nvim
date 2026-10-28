@@ -74,8 +74,9 @@
 --     follows: one row of air between the subtrees, the tree's vertical
 --     line running through it. Nothing after the last child of a run, and
 --     nothing under a folded node;
---   * `<Tab>` is fold-only in the view: it cycles the node at point
---     (folded -> children -> subtree -> folded), like org's own <Tab>. On a
+--   * `<Tab>` is fold-only in the view: it toggles the node at point
+--     (folded <-> children), one press each way -- org's own cycle took two
+--     to close what one opened, and `l` keeps the way on to `subtree`. On a
 --     line without a subtree it falls back to the group header's own fold
 --     (org-super-agenda's `toggle_group`, which this key would otherwise
 --     shadow) -- never to org.nvim's `goto`, which opened the entry's source
@@ -117,6 +118,10 @@ local views = setmetatable({}, { __mode = 'k' })
 local group_of = {}
 
 local MODE_NEXT = { folded = 'children', children = 'subtree', subtree = 'folded' }
+-- `<Tab>` on one node toggles it: the press that opens a node (children)
+-- closes it again, where MODE_NEXT -- the states `<S-Tab>` still walks --
+-- costs two. `l` keeps the way on to `subtree`.
+local MODE_TOGGLE = { folded = 'children', children = 'folded', subtree = 'folded' }
 local HINT = 'OrgTreeFolded'
 
 --- The identity a node's fold state is kept under: file, line, and the
@@ -968,7 +973,7 @@ end
 
 local function cycle_node(buf, nd)
   local key = nd.key
-  states[key] = MODE_NEXT[states[key] or nd.state or 'folded']
+  states[key] = MODE_TOGGLE[states[key] or nd.state or 'folded']
   refocus(buf, key)
 end
 
@@ -1305,11 +1310,11 @@ local function setup_groups()
 end
 
 local function setup_keys()
-  -- A TODO view folds like an org buffer: <Tab> cycles the node at point
-  -- (folded -> children -> subtree -> folded) and does nothing anywhere
-  -- else. It must NOT fall back to org.nvim's <Tab> = goto: that opens the
-  -- entry's source file (in a split), which is what <S-CR> / `o` / <CR>
-  -- are for. org.nvim sets its own buffer mappings in window.lua *after*
+  -- A TODO view folds like an org buffer: <Tab> toggles the node at point
+  -- (folded -> children -> folded, `l` on to subtree) and does nothing
+  -- anywhere else. It must NOT fall back to org.nvim's <Tab> = goto: that
+  -- opens the entry's source file (in a split), which is what <S-CR> / `o` /
+  -- <CR> are for. org.nvim sets its own buffer mappings in window.lua *after*
   -- the FileType event (its `shared.setup_mappings` runs inside
   -- agenda.open), so ours must land after the open to win.
   require('org.lazy').on_load('org.agenda', 'tree_keys', function(agenda)

@@ -1024,7 +1024,9 @@ return {
       },
       org = {
         -- <CR> on a checkbox item toggles it, elsewhere cycles visibility
-        -- (helpers/org/mappings.lua); <Tab> keeps cycling
+        -- (helpers/org/mappings.lua); <Tab> toggles the entry's fold
+        -- (helpers/org/cycle.lua: one press each way, where org's own cycle
+        -- took two to close)
         cycle = '<Tab>',
         -- <leader>n adds a timestamped note under the headline at point
         -- (org-add-note). The Emacs key <C-c><C-z> keeps working.
@@ -1230,6 +1232,14 @@ return {
       'helpers.org.cycle',
       'global_cycle',
       desc = "Fold to the buffer's #+STARTUP visibility (else cycle globally)",
+    }
+    -- <Tab> toggles the entry at point (folded <-> children) instead of
+    -- walking org's three states, which took two presses to close what one
+    -- opened (helpers/org/cycle.lua).
+    require('org.actions').list.cycle = {
+      'helpers.org.cycle',
+      'cycle',
+      desc = 'Toggle the fold of the entry at point',
     }
     -- `<prefix>D` rolls every finished ticket off the board: the action is
     -- replaced so it sweeps without org.nvim's per-entry confirmation, and so
