@@ -363,23 +363,41 @@ local function unescape(text)
   end))
 end
 
+--- A source block drawn as a snippet: a title bar with the language and a
+--- button that copies the code, over the coloured block. The button finds
+--- the text in the <pre> it sits above (app.js, page.lua), so the markup
+--- carries one copy of it.
+---@param lang string
+---@param inner string the block's inner HTML, already escaped/coloured
+---@return string
+function M.snippet(lang, inner)
+  lang = (lang or ''):gsub('^%s+', ''):gsub('%s+$', '')
+  local name = lang ~= '' and escape(lang) or 'code'
+  return ('<figure class="snippet"><div class="snippet-bar"><span class="snippet-lang">%s</span>'
+    .. '<button class="snippet-copy" type="button" title="Copy this snippet">copy</button></div>'
+    .. '<pre class="src src-%s"><code>%s</code></pre></figure>'):format(name, name, inner)
+end
+
 --- Replace every source block of an exported org document with the
---- treesitter rendering of its code. A block whose language has no parser
---- keeps the exporter's own markup, untouched.
+--- treesitter rendering of its code, inside the snippet frame. A markdown
+--- block is laid out as the markdown it holds (helpers/org/web/markdown),
+--- its fenced blocks becoming snippets of their own; a block whose language
+--- has no parser keeps the exporter's own colouring.
 ---@param html string|nil
 ---@return string|nil
 function M.html(html)
   if type(html) ~= 'string' or html == '' then
     return html
   end
-  return (html:gsub('<pre class="src src%-([%w%+%#%._%-]+)">%s*<code>(.-)</code>', function(lang, inner)
+  return (html:gsub('<pre class="src src%-([%w%+%#%._%-]+)">%s*<code>(.-)</code>%s*</pre>', function(lang, inner)
     -- the exporter has already coloured the block with htmlize: take its
     -- text back out of its spans and let treesitter colour it instead
-    local highlighted = M.code(unescape((inner:gsub('<[^>]*>', ''))), lang)
-    if not highlighted then
-      return nil
+    local code = unescape((inner:gsub('<[^>]*>', '')))
+    local key = lang:lower()
+    if key == 'markdown' or key == 'md' then
+      return require('helpers.org.web.markdown').render(code)
     end
-    return ('<pre class="src src-%s"><code>%s</code>'):format(lang, highlighted)
+    return M.snippet(lang, M.code(code, lang) or inner)
   end))
 end
 

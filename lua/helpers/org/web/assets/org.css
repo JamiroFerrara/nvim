@@ -144,6 +144,67 @@
   margin: 0;
 }
 
+/* A snippet: the language in a bar over the code, a copy button beside it,
+   and a frame of its own, so a block reads as a piece of code rather than as
+   another paragraph of the entry. */
+.org figure.snippet {
+  margin: 1.1em 0;
+  background: var(--crust);
+  border: 1px solid var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.org .snippet-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0.3em 0.5em 0.3em 1em;
+  background: var(--mantle);
+  border-bottom: 1px solid var(--surface);
+  font-family: var(--font);
+  font-size: 0.72em;
+  line-height: 1.8;
+  color: var(--overlay);
+}
+
+.org .snippet-bar .snippet-copy {
+  opacity: 0;
+  color: var(--overlay);
+  font: inherit;
+  font-size: 0.95em;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.1em 0.6em;
+  cursor: pointer;
+  transition: opacity 0.12s, color 0.12s, background 0.12s;
+}
+
+.org figure.snippet:hover .snippet-copy,
+.org .snippet-copy:focus-visible {
+  opacity: 1;
+}
+
+.org .snippet-bar .snippet-copy:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.org .snippet-bar .snippet-copy.copied {
+  color: var(--green);
+  opacity: 1;
+}
+
+.org figure.snippet > pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: 0.9em 1.1em;
+}
+
 .org blockquote {
   margin: 1em 0;
   padding: 0.4em 1em;

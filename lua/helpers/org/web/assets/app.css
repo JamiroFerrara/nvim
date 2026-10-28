@@ -570,3 +570,166 @@ li.entry .fold.empty {
   font-size: 11px;
   color: var(--overlay);
 }
+
+/* ---- capture ---------------------------------------------------------- */
+
+#capture-open {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 6px 9px;
+  border: 1px solid var(--surface);
+  border-radius: 6px;
+  color: var(--subtext);
+  background: var(--base);
+}
+
+#capture-open:hover {
+  color: var(--lavender);
+  border-color: var(--surface1);
+}
+
+#capture-open .key {
+  font-size: 10px;
+  color: var(--overlay);
+}
+
+/* the capture form: the same fields the capture buffer asks for in nvim,
+   title then description, and where the entry goes */
+#capture {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  place-items: start center;
+  padding-top: 12vh;
+  background: rgb(0 0 0 / 45%);
+}
+
+#capture form {
+  width: min(560px, 92vw);
+  background: var(--mantle);
+  border: 1px solid var(--surface1);
+  border-radius: 9px;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 55%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 12px;
+}
+
+#capture header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--overlay);
+}
+
+#capture header button {
+  color: var(--overlay);
+  font-size: 13px;
+}
+
+#capture header button:hover {
+  color: var(--text);
+}
+
+#capture input.title,
+#capture textarea.body,
+.note-box textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--base);
+  border: 1px solid var(--surface);
+  border-radius: 6px;
+  padding: 8px 10px;
+  outline: none;
+  width: 100%;
+  resize: vertical;
+}
+
+#capture input.title {
+  font-family: var(--prose);
+  font-size: 1.1em;
+}
+
+#capture textarea.body {
+  font-family: var(--prose);
+  line-height: 1.5;
+}
+
+#capture input.title:focus,
+#capture textarea.body:focus,
+.note-box textarea:focus {
+  border-color: var(--blue);
+}
+
+#capture footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#capture select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--subtext);
+  background: var(--base);
+  border: 1px solid var(--surface);
+  border-radius: 6px;
+  padding: 5px 8px;
+  max-width: 60%;
+}
+
+#capture .hint,
+.note-box .hint {
+  font-size: 10px;
+  color: var(--surface1);
+}
+
+button.primary {
+  margin-left: auto;
+  color: var(--crust);
+  background: var(--lavender);
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+button.primary:hover {
+  background: var(--mauve);
+}
+
+button.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* the note box at the end of the detail pane: the block <leader>n writes */
+.note-box {
+  margin-top: 26px;
+  padding-top: 16px;
+  border-top: 1px solid var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-box textarea {
+  font-family: var(--prose);
+  line-height: 1.5;
+}
+
+.note-box .note-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

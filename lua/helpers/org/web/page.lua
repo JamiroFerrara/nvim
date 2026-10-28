@@ -146,6 +146,22 @@ function M.preview(opts)
     });
   });
 
+  // A snippet's copy button takes the code it sits over -- what the page
+  // shows, colours dropped -- and says so for a moment.
+  document.addEventListener('click', async (ev) => {
+    const button = ev.target.closest('.snippet-copy');
+    if (!button) return;
+    const code = button.closest('.snippet')?.querySelector('pre code');
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code.textContent);
+      button.textContent = 'copied';
+    } catch (e) {
+      button.textContent = 'no clipboard';
+    }
+    setTimeout(() => { button.textContent = 'copy'; }, 1600);
+  });
+
   async function refresh() {
     try {
       const res = await fetch('/api/entry?' + query);

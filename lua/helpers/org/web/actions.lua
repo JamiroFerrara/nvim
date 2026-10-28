@@ -548,12 +548,14 @@ function M.entry_html(spec)
   if not ok then
     return nil, tostring(html)
   end
-  -- the exporter colours source blocks with Emacs' htmlize and writes a
-  -- turn's header as raw text; the browser shows the blocks the way the
-  -- buffer does (helpers/org/web/highlight) and the header as the date it
-  -- carries (helpers/org/web/turns)
+  -- the exporter colours source blocks with Emacs' htmlize, writes a turn's
+  -- header as raw text and a headline as one flat run; the browser shows the
+  -- blocks the way the buffer does (helpers/org/web/highlight), the header as
+  -- the date it carries (helpers/org/web/turns) and the headline's parts on
+  -- one line (helpers/org/web/headings)
   html = require('helpers.org.web.highlight').html(html)
-  return require('helpers.org.web.turns').headers(html), nil
+  html = require('helpers.org.web.turns').headers(html)
+  return require('helpers.org.web.headings').html(html), nil
 end
 
 return M

@@ -668,9 +668,8 @@ function launchEntry(entry, jump) {
 
 // ---- the entry editor ---------------------------------------------------
 
-async function editEntry(entry, opts) {
+async function editEntry(entry) {
   if (!entry) return;
-  opts = opts || {};
   try {
     const res = await api(
       '/api/text?file=' +
@@ -683,13 +682,7 @@ async function editEntry(entry, opts) {
       showToast(res.error || 'could not read the entry');
       return;
     }
-    let lines = res.text.lines.slice();
-    if (opts.child) {
-      // `c` in the view: a new child headline under the entry, typed where
-      // the capture would leave the cursor
-      const stars = '*'.repeat((res.text.level || entry.level || 1) + 1);
-      lines = lines.concat(['', stars + ' TODO ']);
-    }
+    const lines = res.text.lines.slice();
     OrgEditor.open({
       file: entry.file,
       id: entry.id,
@@ -697,7 +690,6 @@ async function editEntry(entry, opts) {
       start: res.text.start,
       text: lines.join('\n'),
       where: '~/' + entry.rel + ':' + res.text.start,
-      insertAtEnd: !!opts.child,
       onSaved: () => reload(),
       onClose: () => refreshSelection(),
     });
@@ -757,7 +749,8 @@ const HELP = [
   ['l / h', 'unfold / fold the entry at point'],
   ['<CR>, L', 'open the entry (the detail pane)'],
   ['i', 'edit the entry here, in a modal editor'],
-  ['c', 'capture a child of the entry here'],
+  ['c', 'capture a task under the entry or a project'],
+  ['n', 'add a note to the entry here'],
   ['o', 'open the entry in nvim'],
   ['D / T / N', 'toggle done / back to TODO / next keyword'],
   ['u', 'undo the last write to the file'],
@@ -793,6 +786,7 @@ const prefixLabel = {
   ' ': '<Space>',
   ' o': '<Space>o',
   ' a': '<Space>a',
+  ' n': '<Space>n',
   g: 'g',
   d: 'd',
 };
@@ -940,6 +934,11 @@ async function onKey(ev) {
       setPending(' a');
       return;
     }
+    if (key === 'n') {
+      ev.preventDefault();
+      setPending(' n');
+      return;
+    }
     resetKeys();
     return;
   }
@@ -947,6 +946,11 @@ async function onKey(ev) {
     const view = VIEW_KEYS[key];
     resetKeys();
     if (view) setView(view);
+    return;
+  }
+  if (state.pending === ' n') {
+    resetKeys();
+    if (key === 'n') selectEntry(currentEntry(), true);
     return;
   }
   if (state.pending === ' a') {
@@ -983,6 +987,12 @@ async function onKey(ev) {
     ev.preventDefault();
     state.count = (state.count || 0) * 10 + Number(key);
     showPending();
+    return;
+  }
+
+  if (key === 'c') {
+    ev.preventDefault();
+    openCapture();
     return;
   }
 
@@ -1071,8 +1081,8 @@ async function onKey(ev) {
     case 'i':
       editEntry(entry);
       break;
-    case 'c':
-      editEntry(entry, { child: true });
+    case 'n':
+      selectEntry(entry, true);
       break;
     case 'o':
       post('/api/open', entry);
@@ -1122,6 +1132,48 @@ async function onKey(ev) {
 }
 
 document.addEventListener('keydown', onKey);
+
+// ---- snippets -----------------------------------------------------------
+
+// A snippet's copy button takes the code it sits over -- what the page shows,
+// colours dropped -- and says so for a moment.
+document.addEventListener('click', async (ev) => {
+  const button = ev.target.closest('.snippet-copy');
+  if (!button) return;
+  const code = button.closest('.snippet')?.querySelector('pre code');
+  if (!code) return;
+  try {
+    await copyText(code.textContent);
+    button.classList.add('copied');
+    button.textContent = 'copied';
+  } catch (err) {
+    button.textContent = 'no clipboard';
+  }
+  setTimeout(() => {
+    button.classList.remove('copied');
+    button.textContent = 'copy';
+  }, 1600);
+});
+
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const box = el('textarea');
+  box.value = text;
+  box.setAttribute('readonly', '');
+  box.style.position = 'fixed';
+  box.style.opacity = '0';
+  document.body.append(box);
+  box.select();
+  document.execCommand('copy');
+  box.remove();
+}
+
+// ---- capture ------------------------------------------------------------
+
+$('#capture-open').addEventListener('click', () => openCapture());
 
 // ---- filter -------------------------------------------------------------
 
