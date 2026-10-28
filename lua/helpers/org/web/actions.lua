@@ -146,7 +146,9 @@ function M.entry_html(spec)
   if not ok then
     return nil, tostring(html)
   end
-  return html, nil
+  -- the exporter colours source blocks with Emacs' htmlize; the browser
+  -- shows them the way the buffer does instead (helpers/org/web/highlight)
+  return require('helpers.org.web.highlight').html(html), nil
 end
 
 return M

@@ -24,6 +24,40 @@
   --prose: 'Iosevka', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/* Scrollbars, everywhere: the page, the project rail, the detail pane, a code
+   block wider than its box. Thin, dark, the theme's own colours -- a native
+   bright scrollbar next to the catppuccin surfaces reads as another window. */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface1) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface1);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--overlay);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .org {
   color: var(--text);
   font-family: var(--prose);
