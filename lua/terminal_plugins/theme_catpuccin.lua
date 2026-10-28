@@ -28,10 +28,15 @@ return { -- You can easily change to a different colorscheme.
           -- read apart from the plain notes' gray Comment.
           OrgAgentTimestamp = { fg = colors.mauve },
           OrgAgentRule = { fg = colors.mauve },
-          -- the band behind an org verbatim block (helpers/org/blocks.lua):
-          -- a step darker than the page, so a `#+begin_src` snippet reads as
-          -- a recessed block the way a markdown fence does
+          -- the band behind an org code snippet (helpers/org/blocks.lua): a
+          -- step darker than the page, so the snippet reads as a recessed
+          -- block the way a markdown fence does. The rules that cap it carry
+          -- the same background -- a virtual text overlay replaces the cells
+          -- under it, background included -- and the language label on the
+          -- opening rule keeps the page's text color.
           OrgBlockBg = { bg = colors.mantle },
+          OrgBlockRule = { fg = colors.overlay0, bg = colors.mantle },
+          OrgBlockRuleLabel = { fg = colors.text, bg = colors.mantle },
           -- org.nvim's agenda group headers (the super_agenda sections:
           -- "Work", "Important", a project's title): a lavender label on a
           -- surface0 badge, so a section reads apart from the view's own
