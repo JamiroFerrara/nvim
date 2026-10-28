@@ -257,7 +257,8 @@ ul.entries {
 
 li.entry {
   display: grid;
-  grid-template-columns: 52px 14px minmax(0, 1fr) auto auto 150px;
+  /* state, priority, fold, title, tags, date, project */
+  grid-template-columns: 52px 14px 14px minmax(0, 1fr) auto auto 150px;
   align-items: center;
   gap: 10px;
   padding: 4px 8px;
