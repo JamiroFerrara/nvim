@@ -131,6 +131,79 @@ local function handle(req, res)
     return
   end
 
+  if req.method == 'GET' and path == '/api/text' then
+    local text, err = actions.text {
+      file = req.query.file,
+      line = req.query.line,
+      id = req.query.id,
+    }
+    json(res, { text = text, error = err })
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/text' then
+    local body = payload_of(req)
+    local out, err = actions.write(body, body.lines)
+    json(res, { text = out, error = err })
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/cycle' then
+    local body = payload_of(req)
+    local out, err = actions.cycle(body)
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/tags' then
+    local body = payload_of(req)
+    local out, err = actions.tags(body, body.tags or body.tag)
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/priority' then
+    local body = payload_of(req)
+    local out, err = actions.priority(body, body.priority or '')
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/archive' then
+    local body = payload_of(req)
+    local out, err = actions.archive(body)
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/kill' then
+    local body = payload_of(req)
+    local out, err = actions.kill(body)
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/undo' then
+    local body = payload_of(req)
+    local out, err = actions.undo(body)
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/refile' then
+    local body = payload_of(req)
+    local out, err = actions.refile(body, body.dest or {})
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/launch' then
+    local body = payload_of(req)
+    local out, err = actions.launch(body, body.jump and true or false)
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
   if req.method == 'GET' and path == '/preview' then
     local html, err = actions.entry_html {
       file = req.query.file,

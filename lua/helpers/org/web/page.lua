@@ -17,6 +17,8 @@ function M.asset(name)
     ['index.html'] = 'text/html; charset=utf-8',
     ['app.css'] = 'text/css; charset=utf-8',
     ['app.js'] = 'text/javascript; charset=utf-8',
+    ['editor.css'] = 'text/css; charset=utf-8',
+    ['editor.js'] = 'text/javascript; charset=utf-8',
     ['org.css'] = 'text/css; charset=utf-8',
   }
   if not mime[name] then

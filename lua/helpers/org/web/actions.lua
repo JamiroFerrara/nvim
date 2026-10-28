@@ -121,6 +121,283 @@ function M.open(spec)
   return true
 end
 
+--- The file, buffer and headline a request names.
+---@param spec { file: string, line?: integer, id?: string }
+---@return { path: string, bufnr: integer, hl: org.Headline|nil }|nil
+local function resolve(spec)
+  local path = agenda_path(spec and spec.file)
+  if not path then
+    return nil
+  end
+  local bufnr = buffer_for(path)
+  return { path = path, bufnr = bufnr, hl = headline_at(bufnr, tonumber(spec.line), spec.id) }
+end
+
+--- Write the edit back the way the view does, then drop the payload cache so
+--- the next page load walks the files again. Returns the save's verdict and
+--- its reason, which the page shows as a warning.
+---@param bufnr integer
+---@return boolean saved, string|nil error
+local function commit(bufnr)
+  local saved, err = require('helpers.org.write').save(bufnr, { no_prompt = true })
+  require('helpers.org.web.data').invalidate()
+  return saved, (not saved) and err or nil
+end
+
+--- The entry's own lines -- headline through the end of its subtree -- for
+--- the browser's editor. `start` is where they sit in the file, so the page
+--- can show the line and the write can say what it replaced.
+---@param spec { file: string, line?: integer, id?: string }
+---@return { start: integer, lines: string[], level: integer, path: string }|nil text, string|nil error
+function M.text(spec)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local lines = vim.api.nvim_buf_get_lines(r.bufnr, r.hl.line - 1, r.hl.end_line, false)
+  return { start = r.hl.line, lines = lines, level = r.hl.level, path = r.path }, nil
+end
+
+--- Replace the entry's lines with `lines` and save. The range is resolved
+--- again here (by `:ID:` when the entry has one), so a file that moved under
+--- the open editor still takes the edit at the entry it was written for.
+---@param spec { file: string, line?: integer, id?: string }
+---@param lines string[]
+---@return { ok: boolean, lines: string[], start: integer }|nil out, string|nil error
+function M.write(spec, lines)
+  if type(lines) ~= 'table' or #lines == 0 then
+    return nil, 'no text'
+  end
+  local clean = {}
+  for i, line in ipairs(lines) do
+    if type(line) ~= 'string' then
+      return nil, 'bad line ' .. i
+    end
+    clean[i] = (line:gsub('\r', ''))
+  end
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local ok, err = pcall(vim.api.nvim_buf_set_lines, r.bufnr, r.hl.line - 1, r.hl.end_line, false, clean)
+  if not ok then
+    return nil, tostring(err)
+  end
+  local saved, save_err = commit(r.bufnr)
+  return { ok = saved and true or false, start = r.hl.line, lines = clean }, save_err
+end
+
+--- `N` in the view: the entry's keyword moves on one step.
+---@param spec { file: string, line?: integer, id?: string }
+---@return table|nil out, string|nil error
+function M.cycle(spec)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local ok, res = pcall(require('org.todo').cycle_next, { bufnr = r.bufnr, lnum = r.hl.line })
+  if not ok then
+    return nil, tostring(res)
+  end
+  if not res then
+    return nil, 'state change blocked'
+  end
+  local _, err = commit(r.bufnr)
+  return { state = res.new or '', old = res.old or '' }, err
+end
+
+--- `B`/`F`/`C` (one tag) or `t` (the whole set): the entry's tags become
+--- `tags`, and a bare toggle arrives as the one-tag form.
+---@param spec { file: string, line?: integer, id?: string }
+---@param tags string[]|string
+---@return { tags: string[] }|nil out, string|nil error
+function M.tags(spec, tags)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local ok, err
+  if type(tags) == 'string' then
+    ok, err = pcall(require('org.tags').toggle_tag, { bufnr = r.bufnr, lnum = r.hl.line }, tags)
+  else
+    local list = {}
+    for _, tag in ipairs(tags or {}) do
+      if type(tag) == 'string' and tag ~= '' then
+        list[#list + 1] = tag
+      end
+    end
+    ok, err = pcall(require('org.tags').set_tags, { bufnr = r.bufnr, lnum = r.hl.line }, list, true)
+  end
+  if not ok then
+    return nil, tostring(err)
+  end
+  local _, save_err = commit(r.bufnr)
+  local now = headline_at(r.bufnr, r.hl.line, spec.id)
+  return { tags = now and now.tags or {} }, save_err
+end
+
+--- `p`: the entry's priority becomes `value` ('' clears it).
+---@param spec { file: string, line?: integer, id?: string }
+---@param value string
+---@return { priority: string|nil }|nil out, string|nil error
+function M.priority(spec, value)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local ok, err = pcall(require('org.priority').set, { bufnr = r.bufnr, lnum = r.hl.line }, value and value ~= '' and value or ' ')
+  if not ok then
+    return nil, tostring(err)
+  end
+  local _, save_err = commit(r.bufnr)
+  return { priority = (value ~= '' and value or nil) }, save_err
+end
+
+--- `a`: archive the entry's subtree, the way the view's archive action does.
+---@param spec { file: string, line?: integer, id?: string }
+---@return { ok: boolean }|nil out, string|nil error
+function M.archive(spec)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local ok, err = pcall(require('org.archive').archive_subtree_default, { bufnr = r.bufnr, lnum = r.hl.line })
+  if not ok then
+    return nil, tostring(err)
+  end
+  local _, save_err = commit(r.bufnr)
+  return { ok = true }, save_err
+end
+
+--- `dd`: delete the entry's whole subtree, like the view's kill action.
+---@param spec { file: string, line?: integer, id?: string }
+---@return { ok: boolean }|nil out, string|nil error
+function M.kill(spec)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local last = r.hl.end_line
+  -- the blank line the subtree leaves behind goes with it
+  local total = vim.api.nvim_buf_line_count(r.bufnr)
+  if last < total and (vim.api.nvim_buf_get_lines(r.bufnr, last, last + 1, false)[1] or '') == '' then
+    last = last + 1
+  end
+  local ok, err = pcall(vim.api.nvim_buf_set_lines, r.bufnr, r.hl.line - 1, last, false, {})
+  if not ok then
+    return nil, tostring(err)
+  end
+  local _, save_err = commit(r.bufnr)
+  return { ok = true }, save_err
+end
+
+--- `u`: undo the last change made to the entry's file -- the view actions
+--- all write through the buffer, so nvim's own undo is the view's undo.
+---@param spec { file: string, line?: integer, id?: string }
+---@return { ok: boolean }|nil out, string|nil error
+function M.undo(spec)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  local before = vim.api.nvim_buf_get_changedtick(r.bufnr)
+  local ok, err = pcall(function()
+    vim.api.nvim_buf_call(r.bufnr, function()
+      vim.cmd 'silent! undo'
+    end)
+  end)
+  if not ok then
+    return nil, tostring(err)
+  end
+  if vim.api.nvim_buf_get_changedtick(r.bufnr) == before then
+    return nil, 'nothing to undo'
+  end
+  local saved, save_err = commit(r.bufnr)
+  return { ok = saved and true or false }, save_err
+end
+
+--- `r`: refile the entry's subtree under another headline (`dest`).
+---@param spec { file: string, line?: integer, id?: string }
+---@param dest { file: string, line?: integer, id?: string }
+---@return { ok: boolean }|nil out, string|nil error
+function M.refile(spec, dest)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local d = resolve(dest)
+  if not (d and d.hl) then
+    return nil, 'no destination'
+  end
+  if d.bufnr == r.bufnr and d.hl.line >= r.hl.line and d.hl.line <= r.hl.end_line then
+    return nil, 'cannot refile into its own subtree'
+  end
+  local ok, err = pcall(require('org.refile').refile, { bufnr = r.bufnr, lnum = r.hl.line }, {
+    dest = { bufnr = d.bufnr, lnum = d.hl.line },
+  })
+  if not ok then
+    return nil, tostring(err)
+  end
+  local saved, save_err = commit(r.bufnr)
+  if d.bufnr ~= r.bufnr then
+    require('helpers.org.write').save(d.bufnr, { no_prompt = true })
+  end
+  return { ok = saved and true or false }, save_err
+end
+
+--- `<Space>ai` / `<Space>aj`: hand the entry to the launcher, which starts an
+--- `omp` run on it in a tmux pane (or jumps to the one already running).
+--- Both run out of the request's own callback, so a launch that writes and
+--- commits does not hold the answer to the page.
+---@param spec { file: string, line?: integer, id?: string }
+---@param jump boolean
+---@return { ok: boolean }|nil out, string|nil error
+function M.launch(spec, jump)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local bufnr, lnum = r.bufnr, r.hl.line
+  vim.schedule(function()
+    local ai = require 'helpers.org.ai'
+    if jump then
+      vim.api.nvim_set_current_buf(bufnr)
+      pcall(vim.api.nvim_win_set_cursor, 0, { lnum, 0 })
+      pcall(ai.jump)
+    else
+      pcall(ai.launch_at, bufnr, lnum)
+    end
+  end)
+  return { ok = true }, nil
+end
+
 --- The entry's subtree as exported HTML, for the dashboard's detail pane.
 ---@param spec { file: string, line?: integer, id?: string }
 ---@return string|nil html, string|nil error
