@@ -19,6 +19,8 @@ function M.asset(name)
     ['app.js'] = 'text/javascript; charset=utf-8',
     ['editor.css'] = 'text/css; charset=utf-8',
     ['editor.js'] = 'text/javascript; charset=utf-8',
+    ['jarvis.css'] = 'text/css; charset=utf-8',
+    ['jarvis.js'] = 'text/javascript; charset=utf-8',
     ['org.css'] = 'text/css; charset=utf-8',
     ['org-actions.js'] = 'text/javascript; charset=utf-8',
     ['roam.html'] = 'text/html; charset=utf-8',

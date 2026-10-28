@@ -689,14 +689,15 @@ end
 
 --- Add a timestamped note to the end of an entry's body -- the
 --- `<leader>n` / `z` note of the editor, whose block shape
---- helpers/org/notes.lua owns -- and save it. A note on an entry in `TEST`
---- is the user's answer to the run that handed it back, so it also launches
---- the ticket, exactly as the editor's note does; the launch is deferred to
---- the next event-loop turn, so the page gets its answer and the launch's
---- own writes land after the note is saved.
+--- helpers/org/notes.lua owns -- and save it. A ticket whose run is still
+--- going is handed the note itself, exactly as the editor's note does; one
+--- standing in `TEST` with nothing running is the user's answer to the run
+--- that handed it back, so it launches the ticket instead; the launch is
+--- deferred to the next event-loop turn, so the page gets its answer and the
+--- launch's own writes land after the note is saved.
 ---@param spec { file: string, line?: integer, id?: string }
 ---@param text string|nil
----@return { line: integer, launched: boolean }|nil out, string|nil error
+---@return { line: integer, launched: boolean, delivered: boolean }|nil out, string|nil error
 function M.note(spec, text)
   local r = resolve(spec)
   if not r then
@@ -711,13 +712,16 @@ function M.note(spec, text)
     return nil, 'the note is empty'
   end
   local saved, err = commit(r.bufnr)
-  if retest then
+  local ai = require 'helpers.org.ai'
+  local delivered = ai.deliver_note(r.bufnr, r.hl.line, text)
+  local launching = retest and not delivered
+  if launching then
     local bufnr, lnum = r.bufnr, r.hl.line
     vim.schedule(function()
-      pcall(require('helpers.org.ai').launch_at, bufnr, lnum)
+      pcall(ai.launch_at, bufnr, lnum)
     end)
   end
-  return { line = first, launched = retest }, (not saved) and err or nil
+  return { line = first, launched = launching, delivered = delivered }, (not saved) and err or nil
 end
 
 --- The entry's subtree as exported HTML, for the dashboard's detail pane.

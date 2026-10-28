@@ -476,7 +476,13 @@ function appendNoteBox(body, entry, focus) {
     const res = await post('/api/note', entry, { text: value });
     button.disabled = false;
     if (!res || res.error) return;
-    showToast(res.launched ? 'note added, the ticket was launched' : 'note added');
+    showToast(
+      res.launched
+        ? 'note added, the ticket was launched'
+        : res.delivered
+          ? 'note added, sent to the running run'
+          : 'note added'
+    );
     text.value = '';
     await load();
     refreshSelection();

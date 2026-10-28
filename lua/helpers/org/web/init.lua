@@ -116,6 +116,34 @@ local function handle(req, res)
     return
   end
 
+  -- The orb on the page is UI; what it needs from the machine -- a voice, a
+  -- microphone, a tmux pane for the run -- lives in helpers/org/voice.lua.
+  -- The click starts the conversation and returns at once (it takes as long
+  -- as speaking and listening do); the page polls the state it draws.
+  if req.method == 'GET' and path == '/api/voice' then
+    json(res, require('helpers.org.voice').status())
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/voice' then
+    local body = payload_of(req)
+    if body.cancel then
+      require('helpers.org.voice').cancel()
+      json(res, require('helpers.org.voice').status())
+      return
+    end
+    local started = require('helpers.org.voice').converse(body.view)
+    json(res, { started = started, status = require('helpers.org.voice').status() })
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/voice/say' then
+    local body = payload_of(req)
+    require('helpers.org.voice').say(body.text or '')
+    json(res, require('helpers.org.voice').status())
+    return
+  end
+
   if req.method == 'GET' and path == '/api/live' then
     local live = require 'helpers.org.web.live'
     local r = live.runs()

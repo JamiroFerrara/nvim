@@ -39,14 +39,21 @@
 -- starts the run in one stroke instead of reading the capture buffer's
 -- scratch text as a headline.
 --
--- A note on an entry in TEST starts the same run without the key: the entry
--- is waiting on the user's validation, so a note there is their answer to it
--- and helpers/org/notes.lua hands the headline to M.launch_at once the note
--- is stored -- the agent reads the note as the ticket's new body. That launch
--- claims the entry back to `NEXT` (M.launch_at's `claim`): the hand-back the
--- last run wrote has been answered, so what stands is a run on the ticket
--- again, not a change still awaiting validation. Every other state just
--- stores the note.
+-- A ticket whose run is still on it takes the note itself: helpers/org/notes.lua
+-- and the board's note box both hand the text to M.deliver_note first, which
+-- types it into the instance that already holds the ticket (the ticket's own
+-- pane, or the project orchestrator that batch-launched it) -- the work in
+-- flight reads it as the user's next turn instead of a second instance
+-- starting beside it on the same headline.
+--
+-- With nothing running the note is the usual case again. On an entry in TEST
+-- it starts the same run without the key: the entry is waiting on the user's
+-- validation, so a note there is their answer to it and the headline goes to
+-- M.launch_at once the note is stored -- the agent reads the note as the
+-- ticket's new body. That launch claims the entry back to `NEXT`
+-- (M.launch_at's `claim`): the hand-back the last run wrote has been answered,
+-- so what stands is a run on the ticket again, not a change still awaiting
+-- validation. Every other state just stores the note.
 --
 -- Layout: the first launch splits the nvim pane once with a vertical divider
 -- (`split-window -h`, omp on the right). Once anything already sits beside
@@ -850,10 +857,7 @@ local function prompt(ticket)
     'State: ' .. state .. (ticket.claimed and ' (the launcher claimed it).' or ' (left as the last run left it).'),
   }
   if ticket.note then
-    parts[#parts + 1] = (
-      ticket.spoken and 'Instruction the user dictated by voice, the one this launch answers: "%s".'
-      or 'Note the user wrote on this ticket, the one this launch answers: "%s".'
-    ):format(ticket.note)
+    parts[#parts + 1] = 'Note the user wrote on this ticket, the one this launch answers: "' .. ticket.note .. '".'
   end
   parts[#parts + 1] = 'Follow the omp-org-ticket rules appended to your system prompt.'
   return table.concat(parts, ' ')
@@ -926,10 +930,7 @@ local function batch_prompt(tickets, project)
   -- from the message rather than from a body they were pointed at
   for i, ticket in ipairs(ordered) do
     if ticket.note then
-      parts[#parts + 1] = (
-        ticket.spoken and 'Instruction the user dictated by voice on ticket %d, the one this launch answers: "%s".'
-        or 'Note the user wrote on ticket %d, the one this launch answers: "%s".'
-      ):format(i, ticket.note)
+      parts[#parts + 1] = ('Note the user wrote on ticket %d, the one this launch answers: "%s".'):format(i, ticket.note)
     end
   end
   parts[#parts + 1] = 'Follow the omp-orchestrator rules appended to your system prompt.'
@@ -1463,18 +1464,11 @@ end
 ---
 --- `claim` is handed to ticket_at: the caller has read the state of what it
 --- launches and knows it was answered, so the launch stamps `NEXT` over it.
----
---- `spoken` is what the voice buddy heard (`M.say`): the same message a note
---- reaches the run by (`ticket.note`), only said out loud instead of typed —
---- so the run reads it as the user's turn and the launch is otherwise the
---- ordinary one. The tickets are marked with it so the message says where the
---- words came from.
 --- Returns how many tickets the launch found.
 ---@param targets { bufnr: integer, lnum: integer }[]
 ---@param claim? boolean
----@param spoken? string
 ---@return integer
-local function launch_targets(targets, claim, spoken)
+local function launch_targets(targets, claim)
   table.sort(targets, function(a, b)
     if a.bufnr == b.bufnr then
       return a.lnum > b.lnum
@@ -1491,9 +1485,6 @@ local function launch_targets(targets, claim, spoken)
   for _, target in ipairs(targets) do
     local ticket = ticket_at(target.bufnr, target.lnum, true, claim, batch and batch.key)
     if ticket then
-      if spoken then
-        ticket.note, ticket.spoken = spoken, true
-      end
       checkpoint(ticket)
       tickets[#tickets + 1] = ticket
     end
@@ -1569,47 +1560,53 @@ function M.launch_at(bufnr, lnum)
   M.sync()
 end
 
---- The voice buddy's launch (helpers/org/voice.lua): `<leader>ai` over the
---- headline at point, seeded with the words the user spoke instead of a note
---- they typed. Everything else is the ordinary launch -- the drawer, the
---- claim, the checkpoint, the pane -- because a spoken instruction is a turn
---- of the user's like any other; only the way it arrived differs.
+--- Hand a note to the run already working the ticket, when one is: the
+--- ticket's own instance (`@omp_ticket` carries its :ID:) or the project
+--- orchestrator that batch-launched it (`@omp_orchestrator` carries its
+--- :OMP_SESSION: key). The note is typed into that instance's prompt, so the
+--- run that is on the ticket reads it as its next message instead of a second
+--- instance starting beside it on the same headline -- the note lands in the
+--- entry body either way, which is the record.
 ---
---- Returns false, saying nothing, when the buffer is not one the launcher
---- reads (a plain file, a terminal): the buddy then sends the words to a
---- plain omp pane instead (`M.open_prompt`). A capture buffer is left alone on
---- purpose -- finishing the capture from a voice click would store an entry
---- nobody looked at.
----@param text string what the user said
----@return boolean launched
-function M.say(text)
-  local spoken = one_line(text)
-  if spoken == '' then
+--- Returns whether a run was on the ticket. A live run the note could not be
+--- handed -- the buffer refusing the save an instance needs to read the note,
+--- tmux refusing the keys -- still counts as `true`: the caller must not start
+--- a second instance over a run that holds the ticket. The failure is
+--- notified where it happens.
+---@param bufnr integer
+---@param lnum integer
+---@param note string
+---@return boolean live
+function M.deliver_note(bufnr, lnum, note)
+  if not in_tmux() then
     return false
   end
-  local ft = vim.bo.filetype
-  if ft ~= 'org' and ft ~= 'orgagenda' then
+  local ticket = ticket_at(bufnr, lnum, false)
+  if not (ticket and ticket.id) then
     return false
   end
-  -- an open capture is not a ticket yet, and a voice click is no consent to
-  -- store one: it goes to a plain pane instead
-  if capture_buffer() then
+  local key = session_key(ticket)
+  local pane = (key and key:find '/') and orchestrator_pane(key) or running_pane(ticket.id)
+  if not pane then
     return false
   end
-  local bufnr, lnum = target_at_cursor(false)
-  if not bufnr then
-    return false
+  -- the running instance reads the note off the file, so the note has to be
+  -- there before the message that points at it
+  if not write.save(bufnr, { no_prompt = true }) then
+    notify('org ai: ' .. vim.fn.fnamemodify(ticket.file, ':t') .. ' changed on disk — save or :e! before sending the note', vim.log.levels.WARN)
+    return true
   end
-  notify_launched(launch_targets(expand_target(bufnr, lnum), nil, spoken))
-  M.sync()
+  if deliver(pane, one_line(('Note on %s: %s'):format(ticket.title, note))) then
+    notify('org ai: sent the note to the run on ' .. ticket.title)
+  end
   return true
 end
 
 --- A pane running `omp` on a message that came from outside the board: what
---- the voice buddy heard in a buffer that holds no ticket. The pane carries
---- `@omp_voice` rather than a ticket's `@omp_ticket`: nothing there is the
---- user's to validate and no ticket's :ID: would be telling the truth, so a
---- run's own last act (the skill's pane close) has nothing of ours to match.
+--- the orb on the dashboard's voice buddy heard (helpers/org/voice.lua). The
+--- pane carries `@omp_voice` rather than a ticket's `@omp_ticket`: the words
+--- name no ticket, so no run's last act (the skill's pane close) has anything
+--- of ours to match.
 ---@param text string
 ---@param title? string
 ---@return boolean started

@@ -125,16 +125,22 @@ end
 --- body (chronological order). Registered as `org.todo.add_note`, so both the
 --- org buffer `<leader>n` and the agenda/todo view `z` use it.
 ---
---- A note on an entry in TEST reads the note back to the agent: the entry has
---- been handed back for validation, so the note is the user's answer to it,
---- and storing it also launches the ticket (helpers/org/ai.lua's launch,
---- `M.launch_at`) -- the launcher claims the entry back to NEXT (the note is
---- the answer the hand-back was waiting for) and omp starts with the note
---- itself in its message -- the launcher reads the newest turn off the body,
---- so the run opens knowing what it was started for instead of guessing
---- which block of a growing body is the new one. Any
---- other state stores the note and stops there. TEST is read off the headline
---- as it was found, before the note lands below it.
+--- A ticket whose run is still going gets the note itself: the text is typed
+--- into that instance's prompt (helpers/org/ai.lua's `M.deliver_note`), so the
+--- work in flight reads it as the next thing the user said instead of a second
+--- instance starting beside it on the same headline. Nothing is claimed there
+--- -- the run keeps the ticket.
+---
+--- A note on an entry nothing is running and that stands in TEST reads the
+--- note back to a fresh run: the entry has been handed back for validation, so
+--- the note is the user's answer to it, and storing it also launches the
+--- ticket (helpers/org/ai.lua's launch, `M.launch_at`) -- the launcher claims
+--- the entry back to NEXT (the note is the answer the hand-back was waiting
+--- for) and omp starts with the note itself in its message -- the launcher
+--- reads the newest turn off the body, so the run opens knowing what it was
+--- started for instead of guessing which block of a growing body is the new
+--- one. Any other state stores the note and stops there. TEST is read off the
+--- headline as it was found, before the note lands below it.
 ---@param target? table
 ---@return boolean|nil
 function M.add(target)
@@ -149,8 +155,14 @@ function M.add(target)
   if not M.store(bufnr, hl, note) then
     return nil
   end
+  local ai = require 'helpers.org.ai'
+  -- A run still on the ticket takes the note as its next message; one that
+  -- handed the entry back (TEST) is started on it when nothing is running.
+  if ai.deliver_note(bufnr, hl.line, note) then
+    return true
+  end
   if retest then
-    require('helpers.org.ai').launch_at(bufnr, hl.line)
+    ai.launch_at(bufnr, hl.line)
   end
   return true
 end
