@@ -38,9 +38,15 @@ vim.api.nvim_create_autocmd('BufEnter', {
     -- `[[wikilinks]]` render as `@markup.link.label` (mauve). Point org's
     -- link group at the same one so the two read the same color.
     vim.cmd 'highlight! link OrgLink @markup.link.label'
-    vim.cmd 'highlight @markup.raw.block guibg=#292f45' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    -- a fenced code block in rendered markdown -- a `.md` file, or the
+    -- `#+begin_src markdown` body an entry's prose lives in -- is banded in
+    -- the org block band (`OrgBlockBg`, helpers/org/blocks.lua) by the
+    -- markdown plugin (`code.highlight`, lua/plugins/markdown.lua); its body
+    -- and border rows resolve to the same group, and the code's own
+    -- background is left to it so the block is one color edge to edge.
+    vim.cmd 'highlight @markup.raw.block guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
 
-    vim.cmd 'highlight RenderMarkdownCode guibg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
+    vim.cmd 'highlight! link RenderMarkdownCode OrgBlockBg' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
     vim.cmd 'highlight mkdCodeDelimiter guibg=none guifg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'
 
     vim.cmd 'highlight Folded guibg=none guifg=none' -- vim.cmd 'highlight @markup.heading.3.markdown guifg=@text'

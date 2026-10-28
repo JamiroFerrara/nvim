@@ -85,8 +85,11 @@ return {
       above = '▄',
       -- Used below code blocks for thin border
       below = '▀',
-      --FIX: Highlight for code blocks & inline code
-      highlight = '',
+      -- Highlight for code blocks & inline code: the block is the org block
+      -- band (helpers/org/blocks.lua, theme_catpuccin.lua), so a snippet reads
+      -- as one dark rectangle -- border rows, info row and body alike -- the
+      -- way an org `#+begin_src` block does. Inline code keeps none.
+      highlight = 'OrgBlockBg',
       highlight_inline = '',
     },
     dash = {

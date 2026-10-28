@@ -1,13 +1,22 @@
--- A darker, full-width band behind org's verbatim blocks (wired in
+-- A darker, full-width band behind org's code snippets (wired in
 -- lua/terminal_plugins/org.nvim.lua).
 --
 -- org.nvim's syntax paints a block body only where there is text, and the
 -- language regions (`orgSrcBlock_*`, which win over `orgBlock` on the same
 -- line) carry no background at all: a `#+begin_src` snippet reads as ordinary
--- text whose words happen to be colored. The rows of a verbatim block get an
--- extmark `line_hl_group`, which fills the row to the window edge -- so the
--- snippet reads as a block, blank lines and short lines included, and keeps
--- that shape at any width or with any window showing it.
+-- text whose words happen to be colored.
+--
+-- A `src` block holding markdown is not a snippet: it is an entry's prose --
+-- an agent's answer, a note -- written in a block so the markdown plugin
+-- renders it. That body is left alone, and the fenced code inside it is banded
+-- by the plugin itself (`code.highlight` in lua/plugins/markdown.lua, the same
+-- `OrgBlockBg`), so the band lands on the snippet and never on the answer
+-- around it.
+--
+-- Every other row of a verbatim block gets an extmark `line_hl_group`, which
+-- fills the row to the window edge -- so the snippet reads as a block, blank
+-- and short lines included, and keeps that shape at any width or with any
+-- window showing it.
 --
 -- The colors live in the theme (`OrgBlockBg`, lua/terminal_plugins/
 -- theme_catpuccin.lua); nothing here depends on them.
@@ -22,6 +31,11 @@ local GROUP = 'OrgBlockBg'
 -- text and get their own face instead.
 local VERBATIM = { src = true, example = true, export = true, comment = true }
 
+-- the `src` languages whose body is prose rather than code: the markdown
+-- plugin renders the body (queries/org/injections.scm) and bands its fenced
+-- code blocks
+local PROSE = { markdown = true, md = true }
+
 local pending = {}
 
 -- the block ranges last painted, per buffer: typing inside a block (most of
@@ -32,6 +46,12 @@ local painted = {}
 --- The `#+begin_` kind of `line`, lowercased, or nil.
 local function begin_kind(line)
   return line:lower():match '^%s*#%+begin_(%S+)'
+end
+
+--- The language of a `#+begin_src` line -- the first parameter after the
+--- block name -- lowercased, or nil when it carries none.
+local function src_language(line)
+  return line:lower():match '^%s*#%+begin_src%s+(%S+)'
 end
 
 --- Whether `line` closes the block of `kind`. org.nvim ends the region on the
@@ -47,9 +67,8 @@ local function mark(buf, first, last)
   end
 end
 
---- Band every verbatim block of `buf`, delimiter lines included, so the
---- block is one rectangle rather than a body with two gray lines hanging off
---- it.
+--- Band every code snippet of `buf`, delimiter lines included, so the block is
+--- one rectangle rather than a body with two gray lines hanging off it.
 local function paint(buf)
   pending[buf] = nil
   if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
@@ -73,7 +92,8 @@ local function paint(buf)
       end
     else
       local kind = begin_kind(line)
-      if kind and VERBATIM[kind] then
+      local lang = kind == 'src' and src_language(line)
+      if kind and VERBATIM[kind] and not (lang and PROSE[lang]) then
         open, first = kind, row
       end
     end
