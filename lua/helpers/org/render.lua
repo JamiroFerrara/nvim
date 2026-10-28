@@ -13,6 +13,10 @@ function M.setup()
     require('helpers.org.web').preview()
   end, { desc = 'Render the org node at the cursor in the browser' })
 
+  vim.api.nvim_create_user_command('OrgRoam', function()
+    require('helpers.org.web').roam()
+  end, { desc = 'Open the org-roam notes and link graph in the browser' })
+
   vim.api.nvim_create_user_command('OrgWebStop', function()
     require('helpers.org.web').stop()
   end, { desc = 'Stop the org browser server' })

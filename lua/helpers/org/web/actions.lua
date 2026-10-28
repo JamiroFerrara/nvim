@@ -73,6 +73,43 @@ local function headline_at(bufnr, line, id)
   return file:headline_at(line)
 end
 
+--- The headlines under `hl` -- the entry's own excluded -- in file order: the
+--- headings the exporter draws inside the entry's body.
+---@param bufnr integer
+---@param hl org.Headline
+---@return org.Headline[]
+local function under(bufnr, hl)
+  local file = require('org.files').get_buffer(bufnr)
+  local out = {}
+  for _, h in ipairs(file and file.headlines or {}) do
+    if h.line > hl.line and h.line <= hl.end_line then
+      out[#out + 1] = h
+    end
+  end
+  return out
+end
+
+--- The letters and digits of a piece of text, lowercased: what two spellings
+--- of one title or list item have in common once the markup is gone.
+---@param text string|nil
+---@return string
+local function letters(text)
+  return (tostring(text or ''):lower():gsub('[^%w]', ''))
+end
+
+--- Whether two spellings of one line agree: the same letters, or the same
+--- first dozen of them (a link's label against the link it was written as).
+---@param a string|nil
+---@param b string|nil
+---@return boolean
+local function alike(a, b)
+  local x, y = letters(a), letters(b)
+  if x == '' or y == '' then
+    return false
+  end
+  return x == y or x:sub(1, 12) == y:sub(1, 12)
+end
+
 --- The file, buffer and headline a request names.
 ---@param spec { file: string, line?: integer, id?: string }
 ---@return { path: string, bufnr: integer, hl: org.Headline|nil }|nil
@@ -136,6 +173,128 @@ function M.set_state(spec, state)
     return nil, 'entry not found'
   end
   return change_state(r.bufnr, r.hl, state)
+end
+
+--- The keyword of one headline under the entry becomes `state`. The page
+--- names the headline by its place (`index`, 1-based, as written by
+--- helpers/org/web/clicks) and the title it drew, so a file that moved under
+--- the render still changes the headline it was asked for -- and one that no
+--- longer holds that title is refused rather than changed.
+---@param spec { file: string, line?: integer, id?: string }
+---@param index integer
+---@param text string|nil
+---@param state string
+---@return { state: string, line: integer, warning?: string }|nil out, string|nil error
+function M.heading_state(spec, index, text, state)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local list = under(r.bufnr, r.hl)
+  local hl = list[tonumber(index) or 0]
+  if hl and text and not alike(text, hl.title) then
+    local found
+    for _, h in ipairs(list) do
+      if alike(text, h.title) then
+        if found then
+          found = nil
+          break
+        end
+        found = h
+      end
+    end
+    hl = found
+  end
+  if not hl then
+    return nil, 'that headline has moved; reload the page'
+  end
+  local new, err, warning = change_state(r.bufnr, hl, state)
+  if err then
+    return nil, err
+  end
+  return { state = new or '', line = hl.line, warning = warning }
+end
+
+--- Tick or untick one checkbox item of the entry's subtree. The page names
+--- the box by its place (`index`, 1-based, as written by
+--- helpers/org/web/clicks) and the text it drew, and asks for the state it
+--- shows, so a list that moved under the render is found by its text
+--- instead, and one that no longer holds it is refused. The entry's
+--- statistics cookie -- and the entry itself, when it was the last box --
+--- follow the toggle, as `<CR>` on the box does in the editor.
+---@param spec { file: string, line?: integer, id?: string }
+---@param index integer
+---@param text string|nil
+---@param on boolean
+---@return { box: string, line: integer }|nil out, string|nil error
+function M.box(spec, index, text, on)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local lines = vim.api.nvim_buf_get_lines(r.bufnr, 0, -1, false)
+  local entries = { r.hl }
+  vim.list_extend(entries, under(r.bufnr, r.hl))
+  local boxes = {}
+  for _, h in ipairs(entries) do
+    local _, all = require('org.lists').parse_region(lines, h.line + 1, h.body_end or h.line)
+    for _, it in ipairs(all) do
+      if it.checkbox then
+        it.text = (lines[it.lnum] or ''):match('%[[ xX%-]%]%s*(.*)$') or ''
+        boxes[#boxes + 1] = it
+      end
+    end
+  end
+  if #boxes == 0 then
+    return nil, 'no checkbox in this entry'
+  end
+  local function pick(it)
+    return (it.checkbox == ' ') and 'off' or (it.checkbox == 'X') and 'on' or 'trans'
+  end
+  local function wanted()
+    return on and 'X' or ' '
+  end
+  local item = boxes[tonumber(index) or 0]
+  if item and not alike(text, item.text) then
+    local found
+    for _, it in ipairs(boxes) do
+      if alike(text, it.text) then
+        if found then
+          found = nil
+          break
+        end
+        found = it
+      end
+    end
+    item = found
+  end
+  if not item then
+    return nil, 'that checkbox has moved; reload the page'
+  end
+  if item.checkbox ~= wanted() then
+    local ok, err = pcall(function()
+      vim.api.nvim_buf_call(r.bufnr, function()
+        vim.api.nvim_win_set_cursor(0, { item.lnum, 0 })
+        require('org.lists').toggle_checkbox()
+      end)
+      require('helpers.org.cookies').ensure(r.bufnr)
+    end)
+    if not ok then
+      return nil, tostring(err)
+    end
+    item.checkbox = wanted()
+    local saved, save_err = commit(r.bufnr)
+    if not saved then
+      return nil, save_err or 'the file could not be written'
+    end
+  end
+  return { box = pick(item), line = item.lnum }
 end
 
 --- Show one entry in a window of this nvim.
@@ -549,12 +708,20 @@ function M.entry_html(spec)
   if wanted and not hl then
     return nil, 'entry not found'
   end
-  -- no headline asked for (the cursor above the first one): the whole file
+  local links = require 'helpers.org.web.links'
+  -- no headline asked for (the cursor above the first one): the whole file.
+  -- The lines are exported as a copy whose `::62` line numbers do not stop
+  -- the export (helpers/org/web/links), and a link that still cannot be
+  -- resolved is marked in the text instead of failing the whole page. The
+  -- checkboxes come out as real controls, not `[X]` text.
   local ok, html = pcall(function()
     return require('org.export').to_string('html', {
       bufnr = bufnr,
+      filename = path,
+      lines = links.lines(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)),
       subtree_line = hl and hl.line or nil,
       body_only = true,
+      options = { with_broken_links = 'mark', checkbox_type = 'html' },
     })
   end)
   if not ok then
@@ -567,7 +734,62 @@ function M.entry_html(spec)
   -- one line (helpers/org/web/headings)
   html = require('helpers.org.web.highlight').html(html)
   html = require('helpers.org.web.turns').headers(html)
-  return require('helpers.org.web.headings').html(html), nil
+  html = require('helpers.org.web.headings').html(html)
+  -- a keyword and a checkbox both write the file, so both are given the
+  -- place they stand for (helpers/org/web/clicks)
+  html = require('helpers.org.web.clicks').html(html, {
+    headlines = hl and under(bufnr, hl) or {},
+    writable = hl ~= nil,
+  })
+  return links.html(html, vim.fs.dirname(path)), nil
+end
+
+-- What the file viewer (/file) will show: a text file under the home
+-- directory, and nothing else. The server hands its pages to any process on
+-- this machine, so the walk is bounded to the tree the vault lives in, and a
+-- file too large to read, or one holding binary data, is reported instead of
+-- streamed.
+local MAX_VIEW_BYTES = 512 * 1024
+
+--- Read a file for the viewer, with the treesitter language its filetype
+--- maps to (the filetype itself when nvim maps nothing).
+---@param path string|nil
+---@return { path: string, text: string, lang: string|nil }|nil out, string|nil error
+function M.file(path)
+  if type(path) ~= 'string' or path == '' then
+    return nil, 'no file given'
+  end
+  local full = vim.fs.normalize(vim.fn.fnamemodify(vim.fn.expand(path), ':p'))
+  local home = vim.fs.normalize(vim.fn.expand '~')
+  if full ~= home and full:sub(1, #home + 1) ~= home .. '/' then
+    return nil, 'only files under your home directory can be shown'
+  end
+  local stat = vim.uv.fs_stat(full)
+  if not stat then
+    return nil, 'no such file'
+  end
+  if stat.type ~= 'file' then
+    return nil, 'that is not a file'
+  end
+  if stat.size > MAX_VIEW_BYTES then
+    return nil, ('too large to show (%d KB)'):format(math.floor(stat.size / 1024))
+  end
+  local fd = io.open(full, 'r')
+  if not fd then
+    return nil, 'could not read the file'
+  end
+  local text = fd:read '*a' or ''
+  fd:close()
+  if text:find('\0', 1, true) then
+    return nil, 'that file is binary'
+  end
+  local ft = vim.filetype.match { filename = full }
+  local lang = ft
+  if ft then
+    local ok, mapped = pcall(vim.treesitter.language.get_lang, ft)
+    lang = ok and type(mapped) == 'string' and mapped or ft
+  end
+  return { path = full, text = text, lang = lang }
 end
 
 return M

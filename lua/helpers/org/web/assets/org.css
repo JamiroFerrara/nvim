@@ -91,7 +91,10 @@
 }
 
 .headline .title {
-  flex: 1 1 0;
+  /* wide enough to sit on the heading's own line; a pane too narrow for that
+     puts the title under the number and the state, where it has the row to
+     itself, instead of squeezing it into a column of one word */
+  flex: 1 1 12em;
   min-width: 0;
   color: var(--text);
 }
@@ -510,4 +513,14 @@
 
 #table-of-contents a:hover {
   color: var(--blue);
+}
+
+/* a contents entry keeps the title at its own width, so the cookie sits right
+   after it instead of at the far edge, and the tags alone take the end */
+#table-of-contents .headline .title {
+  flex: 0 1 auto;
+}
+
+#table-of-contents a.headline:hover .title {
+  color: var(--lavender);
 }

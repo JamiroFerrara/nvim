@@ -20,6 +20,9 @@ function M.asset(name)
     ['editor.css'] = 'text/css; charset=utf-8',
     ['editor.js'] = 'text/javascript; charset=utf-8',
     ['org.css'] = 'text/css; charset=utf-8',
+    ['roam.html'] = 'text/html; charset=utf-8',
+    ['roam.css'] = 'text/css; charset=utf-8',
+    ['roam.js'] = 'text/javascript; charset=utf-8',
   }
   if not mime[name] then
     return nil
@@ -37,6 +40,12 @@ end
 ---@return string
 function M.dashboard()
   return M.asset 'index.html' or '<!doctype html><p>dashboard assets are missing</p>'
+end
+
+--- The roam mode: notes and the link graph, also a shell the client fills.
+---@return string
+function M.roam()
+  return M.asset 'roam.html' or '<!doctype html><p>roam assets are missing</p>'
 end
 
 local function escape(text)
@@ -144,8 +153,8 @@ function M.preview(opts)
       line: params.get('line'),
       id: params.get('id') || undefined,
       where: document.querySelector('.bar .file').textContent,
-      insert: false,
       onSaved: () => refresh(),
+      onMissing: (msg) => console.warn(msg),
     });
   });
 
@@ -185,6 +194,127 @@ function M.preview(opts)
 </script>
 </body>
 </html>]]):format(escape(where), escape(where), node_title(opts.entry), content, vim.json.encode(query), vim.json.encode(opts.file))
+end
+
+-- The viewer's metrics: the page scrolls the code to the line the link named
+-- by multiplying it by the row height, so the height is a number here and
+-- not something the browser is left to work out (a wrapped line would move
+-- every line under it).
+local ROW = 20
+local TOP = 14
+
+--- The file viewer: one file of the tree, coloured the way the editor
+--- colours it, opened at the line a link named.
+---@param opts { path: string, line: integer|nil, lang: string|nil, inner: string|nil, text: string|nil, error: string|nil }
+---@return string
+function M.file(opts)
+  local where = opts.path:gsub('^' .. vim.pesc(vim.fn.expand '~'), '~')
+  local title = where
+  if opts.line then
+    title = title .. ':' .. opts.line
+  end
+  local line = tonumber(opts.line) or 0
+  local body
+  if opts.error or not opts.text then
+    body = '<p class="empty">' .. escape(opts.error or 'Nothing to show.') .. '</p>'
+  else
+    -- the code comes coloured from the exporter's highlighter
+    -- (helpers/org/web/highlight); a language with no parser keeps plain
+    -- escaped text, and the gutter is counted off the source, so both look
+    -- the same
+    local inner = opts.inner or escape(opts.text)
+    local count = 1
+    for _ in opts.text:gmatch '\n' do
+      count = count + 1
+    end
+    local numbers = {}
+    for i = 1, count do
+      numbers[i] = tostring(i)
+    end
+    body = ('<div class="file-body" id="scroller">%s<div class="gutter">%s</div>'
+      .. '<pre class="file-code"><code>%s</code></pre></div>'):format(
+      line > 0 and '<div class="line-mark" id="mark" hidden></div>' or '',
+      table.concat(numbers, '\n'),
+      inner
+    )
+  end
+  local lang = opts.lang and opts.lang ~= '' and ('<span class="lang">' .. escape(opts.lang) .. '</span>') or ''
+  return ([[<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>%s</title>
+<link rel="stylesheet" href="/assets/org.css">
+<style>
+  html { background: var(--crust); }
+  body { margin: 0; }
+  .bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    height: 38px; padding: 0 18px; box-sizing: border-box;
+    font-family: var(--font); font-size: 11px; color: var(--overlay);
+    border-bottom: 1px solid var(--surface);
+  }
+  .bar .file { color: var(--subtext); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar .lang { color: var(--overlay); }
+  .empty { font-family: var(--font); color: var(--overlay); font-style: italic; padding: 24px 18px; }
+  .file-body {
+    position: relative; display: flex; align-items: flex-start;
+    overflow: auto; height: calc(100vh - 38px);
+    font-family: var(--font); font-size: 12.5px; line-height: %dpx;
+  }
+  .gutter {
+    position: sticky; left: 0; z-index: 1; flex: 0 0 auto;
+    padding: %dpx 12px 60px 16px; text-align: right; white-space: pre;
+    color: #45475a; background: var(--crust); user-select: none;
+  }
+  .file-code {
+    margin: 0; padding: %dpx 22px 60px 2px; flex: 0 0 auto;
+    white-space: pre; color: var(--text);
+  }
+  .file-code code { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+  .line-mark {
+    position: absolute; left: 0; right: 0; z-index: 0; pointer-events: none;
+    background: rgba(137, 220, 235, 0.09);
+    border-top: 1px solid rgba(137, 220, 235, 0.28);
+    border-bottom: 1px solid rgba(137, 220, 235, 0.28);
+  }
+</style>
+</head>
+<body>
+<div class="bar"><span class="file">%s</span>%s</div>
+%s
+<script>
+  // The link said which line it pointed at, so the page opens there: the
+  // row height is the one the stylesheet set, and the mark sits over the
+  // line, inside the scrolling body.
+  (function() {
+    const line = %d;
+    if (!line) return;
+    const scroller = document.getElementById('scroller');
+    const mark = document.getElementById('mark');
+    if (!scroller || !mark) return;
+    const row = %d;
+    const top = %d;
+    mark.hidden = false;
+    mark.style.top = (top + (line - 1) * row) + 'px';
+    mark.style.height = row + 'px';
+    scroller.scrollTop = Math.max(0, (line - 3) * row);
+  })();
+</script>
+</body>
+</html>]]):format(
+    escape(title),
+    ROW,
+    TOP,
+    TOP,
+    escape(title),
+    lang,
+    body,
+    line,
+    ROW,
+    TOP
+  )
 end
 
 return M

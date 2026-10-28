@@ -75,6 +75,25 @@ button {
   margin-bottom: 12px;
 }
 
+/* the way into the roam mode: same row as the capture button, quiet until
+   the pointer finds it */
+#roam-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  color: var(--subtext);
+  text-decoration: none;
+  font-size: 12px;
+}
+
+#roam-link:hover {
+  background: var(--base);
+  color: var(--lavender);
+}
+
 #search:focus {
   border-color: var(--blue);
 }
@@ -774,4 +793,175 @@ button.primary:disabled {
   background: var(--surface);
   color: var(--text);
   font-size: 11px;
+}
+
+/* ---- runs in flight ---------------------------------------------------- */
+
+/* The dot a running entry carries in front of its title, and the line under
+   the row saying what the run is doing now. */
+li.entry .live-dot {
+  color: var(--teal);
+  font-size: 8px;
+  margin-right: 5px;
+  animation: run-pulse 1.8s ease-in-out infinite;
+}
+
+li.entry:not(.running) .live-dot {
+  animation: none;
+}
+
+li.entry.running .title {
+  color: var(--teal);
+}
+
+li.entry .live-line {
+  grid-column: 1 / -1;
+  padding-left: 62px;
+  font-size: 10px;
+  color: var(--overlay);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes run-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* The detail pane's window on the run: what the agent is doing, step by
+   step, as its session transcript grows. */
+.run-box {
+  margin-top: 22px;
+  border: 1px solid var(--surface);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--base);
+}
+
+.run-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: var(--mantle);
+  border-bottom: 1px solid var(--surface);
+  font-size: 11px;
+}
+
+.run-head .live-dot {
+  color: var(--overlay);
+  font-size: 8px;
+}
+
+.run-box.running .run-head .live-dot {
+  color: var(--teal);
+  animation: run-pulse 1.8s ease-in-out infinite;
+}
+
+.run-head .run-state {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--overlay);
+}
+
+.run-box.running .run-state {
+  color: var(--teal);
+}
+
+.run-head .run-title {
+  flex: 1;
+  color: var(--subtext);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.run-head button {
+  color: var(--overlay);
+  font-size: 10px;
+  border: 1px solid var(--surface);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.run-head button:hover {
+  color: var(--text);
+  border-color: var(--surface1);
+}
+
+.run-log {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.run-log p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.run-say {
+  color: var(--text);
+}
+
+.run-think {
+  color: var(--overlay);
+  font-style: italic;
+}
+
+.run-tool {
+  color: var(--lavender);
+}
+
+.run-tool-name {
+  font-weight: 700;
+}
+
+.run-title {
+  color: var(--overlay);
+  font-style: italic;
+}
+
+.run-log details {
+  border-left: 2px solid var(--surface);
+  padding-left: 8px;
+}
+
+.run-log summary {
+  cursor: pointer;
+  color: var(--subtext);
+  font-size: 10.5px;
+}
+
+.run-result summary {
+  color: var(--green);
+}
+
+.run-result.failed summary {
+  color: var(--red);
+}
+
+.run-log pre {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--overlay);
+  font-family: var(--font);
+  font-size: 10.5px;
+  max-height: 14em;
+  overflow-y: auto;
 }

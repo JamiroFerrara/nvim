@@ -19,6 +19,7 @@ local actions = require 'helpers.org.web.actions'
 local data = require 'helpers.org.web.data'
 local http = require 'helpers.org.web.http'
 local page = require 'helpers.org.web.page'
+local roam = require 'helpers.org.web.roam'
 
 local state = {
   server = nil,
@@ -94,8 +95,24 @@ local function handle(req, res)
     return
   end
 
+  if req.method == 'GET' and path == '/roam' then
+    res.send(200, 'text/html; charset=utf-8', page.roam())
+    return
+  end
+
   if req.method == 'GET' and path == '/events' then
     res.sse()
+    return
+  end
+
+  if req.method == 'GET' and path == '/api/roam' then
+    json(res, roam.payload())
+    return
+  end
+
+  if req.method == 'GET' and path == '/api/roam/note' then
+    local note, err = roam.note(req.query.id)
+    json(res, { note = note, error = err })
     return
   end
 
@@ -134,6 +151,12 @@ local function handle(req, res)
     return
   end
 
+  -- the states a page may offer, without walking the files
+  if req.method == 'GET' and path == '/api/keywords' then
+    json(res, { keywords = keyword_lists() })
+    return
+  end
+
   if req.method == 'GET' and path == '/api/entry' then
     local html, err = actions.entry_html {
       file = req.query.file,
@@ -149,6 +172,23 @@ local function handle(req, res)
     local new, err, warning = actions.set_state(body, body.state)
     data.invalidate()
     json(res, { state = new, error = err, warning = warning })
+    return
+  end
+
+  -- the keyword of a headline drawn inside the entry's body ('NEXT' on a
+  -- child heading), named by its place under the entry
+  if req.method == 'POST' and path == '/api/header' then
+    local body = payload_of(req)
+    local out, err = actions.heading_state(body, body.heading, body.text, body.state)
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
+    return
+  end
+
+  -- one checkbox item of the entry's body, named by its place in the list
+  if req.method == 'POST' and path == '/api/box' then
+    local body = payload_of(req)
+    local out, err = actions.box(body, body.box, body.text, body.on and true or false)
+    json(res, vim.tbl_extend('force', { error = err }, out or {}))
     return
   end
 
@@ -277,6 +317,22 @@ local function handle(req, res)
     return
   end
 
+  if req.method == 'GET' and path == '/file' then
+    local out, err = actions.file(req.query.path)
+    if not out then
+      res.send(200, 'text/html; charset=utf-8', page.file { path = req.query.path or '', line = nil, error = err })
+      return
+    end
+    local line = tonumber(req.query.line)
+    local html = require('helpers.org.web.highlight').code(out.text, out.lang or '')
+    res.send(
+      200,
+      'text/html; charset=utf-8',
+      page.file { path = out.path, line = line, lang = out.lang, inner = html, text = out.text }
+    )
+    return
+  end
+
   res.send(404, 'text/plain; charset=utf-8', 'not found')
 end
 
@@ -296,6 +352,7 @@ local function broadcast()
     state.timer = nil
     vim.schedule(function()
       data.invalidate()
+      roam.invalidate()
       if state.server then
         state.server.broadcast('change', '{}')
       end
@@ -417,6 +474,16 @@ function M.preview(bufnr, lnum)
     query = query .. '&line=' .. line
   end
   local url = M.url('/preview?' .. query)
+  open_url(url)
+  return url
+end
+
+--- Open the roam mode in the browser (the `:OrgRoam` command): the notes
+--- under the roam directory, each rendered with its links, and the graph of
+--- the links between them.
+---@return string url
+function M.roam()
+  local url = M.url '/roam'
   open_url(url)
   return url
 end

@@ -485,6 +485,119 @@ function appendNoteBox(body, entry, focus) {
   if (focus) text.focus();
 }
 
+// ---- the run in flight ---------------------------------------------------
+
+function stopRunStream() {
+  if (state.runStream) {
+    state.runStream.close();
+    state.runStream = null;
+  }
+}
+
+// One event of the run, drawn as what it is: the agent speaking, a step of
+// thought, a tool it reached for, what the tool answered.
+function runEvent(ev) {
+  if (ev.k === 'say') return el('p', 'run-say', ev.t);
+  if (ev.k === 'think') return el('p', 'run-think', ev.t);
+  if (ev.k === 'user') {
+    const box = el('details', 'run-user');
+    box.append(el('summary', '', 'the message the run was started with'));
+    box.append(el('pre', '', ev.t));
+    return box;
+  }
+  if (ev.k === 'result') {
+    const box = el('details', 'run-result' + (ev.e ? ' failed' : ''));
+    box.append(el('summary', '', (ev.e ? '✗ ' : '← ') + (ev.n || 'tool')));
+    box.append(el('pre', '', ev.t));
+    return box;
+  }
+  if (ev.k === 'tool') {
+    const row = el('p', 'run-tool');
+    row.append(el('span', 'run-tool-name', ev.n || 'tool'));
+    if (ev.t) row.append(document.createTextNode(' ' + ev.t));
+    return row;
+  }
+  if (ev.k === 'title') return el('p', 'run-title', ev.t);
+  return null;
+}
+
+// The detail pane's window on the run: the tail of the session transcript
+// now, then each step as the run writes it, over a stream the server keeps
+// open on that one ticket (helpers/org/web/live.lua). Nothing is drawn for
+// an entry no run has ever been on.
+function appendRunBox(body, entry) {
+  stopRunStream();
+  const key = entry.session || (entry.id && state.live.tickets.has(entry.id) ? entry.id : null);
+  if (!key) return;
+
+  const box = el('div', 'run-box');
+  const head = el('div', 'run-head');
+  const stateText = el('span', 'run-state', 'connecting…');
+  const title = el('span', 'run-title', '');
+  const hide = el('button', '', 'hide');
+  hide.type = 'button';
+  head.append(el('span', 'live-dot', '●'), stateText, title, hide);
+  const log = el('div', 'run-log');
+  box.append(head, log);
+  body.append(box);
+
+  const stick = () => log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+  const trim = () => {
+    while (log.childElementCount > 400) log.firstElementChild.remove();
+  };
+  const bottom = (wasStuck) => {
+    if (wasStuck) log.scrollTop = log.scrollHeight;
+  };
+  const draw = (events, wasStuck) => {
+    for (const ev of events || []) {
+      const node = runEvent(ev);
+      if (node) log.append(node);
+    }
+    trim();
+    bottom(wasStuck);
+  };
+  const setState = (running) => {
+    box.classList.toggle('running', !!running);
+    stateText.textContent = running ? 'live' : 'stopped';
+  };
+
+  const source = new EventSource('/api/live/stream?key=' + encodeURIComponent(key));
+  state.runStream = source;
+  source.addEventListener('snapshot', (msg) => {
+    const snap = JSON.parse(msg.data);
+    const wasStuck = true;
+    log.replaceChildren();
+    if (snap.title) title.textContent = snap.title;
+    if (!snap.file) {
+      log.append(el('p', 'empty', 'This run has not written anything yet.'));
+    }
+    draw(snap.events, wasStuck);
+    setState(snap.running);
+  });
+  source.addEventListener('reset', (msg) => {
+    const snap = JSON.parse(msg.data);
+    const wasStuck = stick();
+    log.replaceChildren();
+    if (snap.title) title.textContent = snap.title;
+    draw(snap.events, wasStuck);
+    setState(snap.running);
+  });
+  source.addEventListener('events', (msg) => {
+    const payload = JSON.parse(msg.data);
+    log.querySelector('.empty')?.remove();
+    draw(payload.events, stick());
+    setState(true);
+  });
+  source.addEventListener('status', (msg) => setState(JSON.parse(msg.data).running));
+  source.addEventListener('error', () => setState(false));
+
+  hide.addEventListener('click', () => {
+    stopRunStream();
+    box.remove();
+  });
+  log.scrollTop = log.scrollHeight;
+}
+
 // ---- capture ------------------------------------------------------------
 
 // The destinations the capture form offers: the entry the view has selected
