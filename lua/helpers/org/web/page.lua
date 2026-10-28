@@ -95,6 +95,7 @@ function M.preview(opts)
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>%s</title>
 <link rel="stylesheet" href="/assets/org.css">
+<link rel="stylesheet" href="/assets/editor.css">
 <style>
   html { background: #11111b; }
   body { margin: 0; }
@@ -107,36 +108,60 @@ function M.preview(opts)
   .bar .dot { color: #45475a; transition: color 0.3s; }
   .bar .dot.on { color: #a6e3a1; }
   .bar .file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar .keys { color: #45475a; }
   .empty { color: #6c7086; font-style: italic; }
   .node-title { font-family: 'Inter', system-ui, sans-serif; font-size: 1.6em; line-height: 1.3; margin: 0 0 1.4em; color: #cdd6f4; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="bar"><span class="file">%s</span><span class="dot" id="live">● live</span></div>
+  <div class="bar"><span class="file">%s</span><span class="keys">i edit</span><span class="dot" id="live">● live</span></div>
   %s
   <div class="org" id="content">%s</div>
 </div>
+<script src="/assets/editor.js"></script>
 <script>
   const query = %s;
+  const file = %s;
   const content = document.getElementById('content');
   const live = document.getElementById('live');
   const es = new EventSource('/events');
   let timer;
+
+  // `i` edits the node in place: the editor holds the node's own lines and
+  // writes them back through nvim, which saves the file like any view
+  // action. Everything else on the page stays read-only.
+  const params = new URLSearchParams(query);
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'i' || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (ev.target.closest('textarea, input, .editor')) return;
+    ev.preventDefault();
+    OrgEditor.open({
+      file: file,
+      line: params.get('line'),
+      id: params.get('id') || undefined,
+      where: document.querySelector('.bar .file').textContent,
+      insert: false,
+      onSaved: () => refresh(),
+    });
+  });
+
+  async function refresh() {
+    try {
+      const res = await fetch('/api/entry?' + query);
+      const json = await res.json();
+      if (json.html) content.innerHTML = json.html;
+    } catch (e) {}
+  }
+
   es.addEventListener('open', () => live.classList.add('on'));
   es.addEventListener('error', () => live.classList.remove('on'));
   es.addEventListener('change', (ev) => {
     let data = {};
     try { data = JSON.parse(ev.data || '{}'); } catch (e) {}
-    if (data.file && data.file !== %s) return;
+    if (data.file && data.file !== file) return;
     clearTimeout(timer);
-    timer = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/entry?' + query);
-        const json = await res.json();
-        if (json.html) content.innerHTML = json.html;
-      } catch (e) {}
-    }, 120);
+    timer = setTimeout(refresh, 120);
   });
 </script>
 </body>

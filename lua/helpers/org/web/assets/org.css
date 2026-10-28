@@ -248,6 +248,44 @@
   font-size: 0.85em;
 }
 
+/* A turn's header (helpers/org/web/turns.lua): the date the turn was taken,
+   then a rule to the edge of the page -- the editor's own header
+   (helpers/org/decorations.lua), in the browser. The agent's turns carry the
+   🤖 and the accent colour, so they read apart from the plain notes. */
+
+.org .turn {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 1.6em 0 0.5em;
+}
+
+.org .turn .who {
+  font-size: 0.95em;
+  line-height: 1;
+}
+
+.org .turn time {
+  color: var(--overlay);
+  font-family: var(--font);
+  font-size: 0.8em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.org .turn .rule {
+  flex: 1;
+  border-top: 1px solid var(--surface1);
+}
+
+.org .turn.agent time {
+  color: var(--mauve);
+}
+
+.org .turn.agent .rule {
+  border-color: color-mix(in srgb, var(--mauve) 40%, transparent);
+}
+
 .org .org-ul li input,
 .org input[type='checkbox'] {
   margin-right: 0.4em;
