@@ -264,8 +264,13 @@ function M.setup()
       })
       -- `<CR>` on a tag runs that tag as a query; anywhere else it stays org's
       -- open-at-point, which is the action this shadows. The agenda has its own
-      -- `<CR>`, so this is org files only.
-      if args.match == 'org' then
+      -- `<CR>`, so this is org files only. An open capture buffer is neither:
+      -- its text names no file yet (a tag there queries nothing, open-at-point
+      -- has nowhere to go), and helpers/org/mappings.lua binds `<CR>` there to
+      -- store the entry and start OMP on it -- one key captures and runs. This
+      -- hook lands later, so it would shadow that binding.
+      local capture = package.loaded['org.capture']
+      if args.match == 'org' and not (capture and capture.sessions[args.buf]) then
         vim.keymap.set('n', '<CR>', function()
           local kb = require 'helpers.org.kb'
           local tag = kb.tag_at_cursor()

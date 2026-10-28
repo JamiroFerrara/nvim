@@ -1,6 +1,8 @@
 -- Buffer-local org mappings for org.nvim (wired in
 -- lua/terminal_plugins/org.nvim.lua): normal-mode <CR> like the markdown
--- config's smart action (obsidian util.toggle_checkbox), plus following
+-- config's smart action (obsidian util.toggle_checkbox) -- except in a
+-- capture buffer, where it stores the entry and starts OMP on it, the same
+-- as <leader>ai --, plus following
 -- the link under the cursor, insert-mode <CR> continuing lists like
 -- bullets.vim, dd deleting a whole subtree, the
 -- one-key tag/priority toggles (helpers/org/tagging.lua), and the
@@ -164,6 +166,18 @@ function M.setup()
           utils.run(capture.refile, buf)
         end, 'org: refile capture')
 
+        -- Normal-mode <CR> in a capture buffer is <leader>ai there: store the
+        -- entry, then start the run on the headline it landed on
+        -- (helpers/org/ai.lua, target_at_cursor with store_capture). The
+        -- entry itself is typed in insert mode, where <CR> stays a newline
+        -- (and a list continuation); only the Escape-then-Enter reaches this,
+        -- where the smart action of an org buffer has nothing to act on -- an
+        -- unfiled entry is no headline yet. The capture stays open, with its
+        -- text, when it could not be stored, and the launch reports why.
+        vim.keymap.set('n', '<CR>', function()
+          require('helpers.org.ai').launch()
+        end, { buffer = buf, desc = 'org: store the capture and start OMP on it' })
+
         -- The entry is typed in insert mode, but org.nvim only starts
         -- insert when it opens the buffer: coming back to it (a window
         -- switch, closing a picker) landed in normal mode. Re-enter insert
@@ -243,7 +257,9 @@ function M.setup()
       --
       -- In an open capture buffer <leader>ai finishes the capture first and
       -- launches on the entry it stored (one key: capture, then run); the
-      -- capture stays open when it could not be stored. <leader>aj writes
+      -- capture stays open when it could not be stored. <CR> in normal mode
+      -- there is the same launch (the capture branch below rebinds it), so
+      -- Escape-then-Enter also captures and runs. <leader>aj writes
       -- nothing there -- there is no ticket until the capture is filed.
       -- Normal mode only: in insert mode the leader sequence would be typed
       -- text, and org.nvim's capture buffer already re-enters insert on
