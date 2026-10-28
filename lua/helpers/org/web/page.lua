@@ -59,7 +59,7 @@ end
 --- it are drawn by one set of rules.
 ---@param entry table|nil
 ---@return string
-local function node_title(entry)
+function M.node_title(entry)
   if not entry then
     return ''
   end
@@ -204,6 +204,10 @@ function M.preview(opts)
       const res = await fetch('/api/entry?' + query);
       const json = await res.json();
       if (json.html) content.innerHTML = json.html;
+      // the heading carries the cookie, which a ticked box or a changed
+      // keyword moves
+      const title = document.querySelector('.node-title');
+      if (json.title && title) title.outerHTML = json.title;
     } catch (e) {}
   }
 
@@ -218,7 +222,7 @@ function M.preview(opts)
   });
 </script>
 </body>
-</html>]]):format(escape(where), node_title(opts.entry), escape(where), content, vim.json.encode(query), vim.json.encode(opts.file))
+</html>]]):format(escape(where), M.node_title(opts.entry), escape(where), content, vim.json.encode(query), vim.json.encode(opts.file))
 end
 
 -- The viewer's metrics: the page scrolls the code to the line the link named

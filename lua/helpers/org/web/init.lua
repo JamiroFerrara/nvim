@@ -163,7 +163,12 @@ local function handle(req, res)
       line = req.query.line,
       id = req.query.id,
     }
-    json(res, { html = html, error = err })
+    -- the page's own heading, drawn again: a box ticked or a keyword changed
+    -- in the body moves the entry's cookie, and the heading would keep the
+    -- one it was loaded with
+    local path_file = actions.agenda_path(req.query.file)
+    local entry = path_file and data.find(path_file, tonumber(req.query.line), req.query.id) or nil
+    json(res, { html = html, error = err, title = page.node_title(entry) })
     return
   end
 
