@@ -118,23 +118,36 @@ function M.preview(opts)
   html { background: #11111b; }
   body { margin: 0; }
   .wrap { max-width: 940px; margin: 0 auto; padding: 34px 30px 140px; }
+  /* the page's header is the node itself: its title on the left, and the
+     technical bit under it -- where the entry lives and the keys -- also
+     left, so nothing in the header is pushed to a margin */
   .bar {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+    border-bottom: 1px solid #313244; padding-bottom: 10px; margin-bottom: 26px;
+  }
+  .bar .sub {
+    display: flex; align-items: baseline; gap: 14px; max-width: 100%%;
     font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px;
-    color: #6c7086; border-bottom: 1px solid #313244; padding-bottom: 10px; margin-bottom: 26px;
+    color: #6c7086;
   }
   .bar .dot { color: #45475a; transition: color 0.3s; }
   .bar .dot.on { color: #a6e3a1; }
   .bar .file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar .keys { color: #45475a; }
   .empty { color: #6c7086; font-style: italic; }
-  .node-title { font-family: var(--prose); font-size: 1.55em; line-height: 1.3; font-weight: 650; margin: 0 0 1.5em; padding-bottom: 0.45em; border-bottom: 1px solid #313244; }
+  .node-title { font-family: var(--prose); font-size: 1.55em; line-height: 1.3; font-weight: 650; margin: 0; padding: 0; border: 0; }
+  /* the parts of the title flow after it instead of stretching to the margins:
+     the cookie and the tags belong to the title, not to the page's edges */
+  .bar .node-title .title { flex: 0 1 auto; }
+  .bar .node-title .tag { margin-left: 0; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="bar"><span class="file">%s</span><span class="keys">i edit</span><span class="dot" id="live">● live</span></div>
-  %s
+  <header class="bar">
+    %s
+    <div class="sub"><span class="file">%s</span><span class="keys">i edit</span><span class="dot" id="live">● live</span></div>
+  </header>
   <div class="org" id="content">%s</div>
 </div>
 <script src="/assets/org-actions.js"></script>
@@ -205,7 +218,7 @@ function M.preview(opts)
   });
 </script>
 </body>
-</html>]]):format(escape(where), escape(where), node_title(opts.entry), content, vim.json.encode(query), vim.json.encode(opts.file))
+</html>]]):format(escape(where), node_title(opts.entry), escape(where), content, vim.json.encode(query), vim.json.encode(opts.file))
 end
 
 -- The viewer's metrics: the page scrolls the code to the line the link named
