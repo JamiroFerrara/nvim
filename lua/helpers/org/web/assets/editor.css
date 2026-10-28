@@ -1,0 +1,147 @@
+/* The modal editor of the browser org views (assets/editor.js): one textarea
+   over the entry's own lines, a mode chip and a command line. Reads from
+   org.css's palette, so the page keeps one set of colours. */
+
+.editor-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: rgba(17, 17, 27, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  width: min(980px, 100%);
+  margin: 24px;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  background: #11111b;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #313244;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: #6c7086;
+}
+
+.editor-where {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.editor-actions button {
+  font-family: inherit;
+  font-size: 11px;
+  color: #a6adc8;
+  background: #1e1e2e;
+  border: 1px solid #313244;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.editor-actions button:hover {
+  color: #cdd6f4;
+  border-color: #585b70;
+}
+
+.editor-text {
+  flex: 1;
+  min-height: 40vh;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  resize: none;
+  outline: none;
+  background: transparent;
+  color: #cdd6f4;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 20px;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+  caret-color: #f5e0dc;
+}
+
+.editor-text::selection {
+  background: #585b70;
+  color: #cdd6f4;
+}
+
+.editor-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px;
+  border-top: 1px solid #313244;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: #6c7086;
+}
+
+.editor-mode {
+  padding: 1px 7px;
+  border-radius: 3px;
+  background: #1e1e2e;
+  color: #a6adc8;
+}
+
+.editor-mode.insert {
+  background: #a6e3a1;
+  color: #11111b;
+}
+
+.editor-mode.command {
+  background: #f9e2af;
+  color: #11111b;
+}
+
+.editor-at {
+  color: #9399b2;
+}
+
+.editor-note {
+  margin-left: auto;
+  color: #f9e2af;
+}
+
+.editor-cmd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-top: 1px solid #313244;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  color: #cdd6f4;
+}
+
+.editor-cmd input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+}
