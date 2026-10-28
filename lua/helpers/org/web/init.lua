@@ -16,8 +16,9 @@
 --
 -- The dashboard carries the voice orb (`/api/voice`, drawn by
 -- assets/jarvis.js): the click starts a conversation in helpers/org/voice.lua
--- -- speak, listen, then an `omp` pane seeded with the words -- and the page
--- polls the phase it draws from the same route.
+-- -- record, report the level, transcribe, then an `omp` pane seeded with the
+-- words -- and the page polls the phase and the level it draws from the same
+-- route.
 local M = {}
 
 local actions = require 'helpers.org.web.actions'

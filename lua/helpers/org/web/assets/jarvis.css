@@ -13,9 +13,9 @@
 #jarvis {
   --jv-a: var(--sky);
   --jv-b: var(--teal);
-  --jv-spin: 18s;
-  --jv-pulse: 1.6s;
-  --jv-ripple: 3s;
+  --jv-spin: 9s;
+  --jv-pulse: 2s;
+  --jv-ripple: 2.2s;
   position: fixed;
   right: 22px;
   bottom: 22px;
@@ -33,8 +33,8 @@
   width: 84px;
   height: 84px;
   transition:
-    width 0.45s cubic-bezier(0.2, 0.9, 0.2, 1),
-    height 0.45s cubic-bezier(0.2, 0.9, 0.2, 1);
+    width 0.3s cubic-bezier(0.2, 0.9, 0.2, 1),
+    height 0.3s cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
 /* the collapsed face: the orb alone, a button */
@@ -75,6 +75,7 @@
     inset 0 0 22px rgba(255, 255, 255, 0.25);
   animation: jv-pulse var(--jv-pulse) ease-in-out infinite;
   transition: inset 0.3s;
+  will-change: transform, opacity;
 }
 
 /* the rim: the hard edge that makes the orb read as a crystal and not a
@@ -92,11 +93,11 @@
   0%,
   100% {
     transform: scale(1);
-    filter: brightness(1);
+    opacity: 0.86;
   }
   50% {
-    transform: scale(1.06);
-    filter: brightness(1.25);
+    transform: scale(1.05);
+    opacity: 1;
   }
 }
 
@@ -108,7 +109,7 @@
   inset: 0;
   pointer-events: none;
   opacity: 0.9;
-  transition: inset 0.45s;
+  transition: inset 0.3s;
 }
 
 #jarvis .jv-rings svg {
@@ -121,6 +122,7 @@
   fill: none;
   stroke-linecap: round;
   transform-origin: 50% 50%;
+  will-change: transform;
 }
 
 #jarvis .jv-ring.r1 {
@@ -195,6 +197,7 @@
   -webkit-mask: radial-gradient(circle, transparent 58%, #000 62%, transparent 74%);
   mask: radial-gradient(circle, transparent 58%, #000 62%, transparent 74%);
   animation: jv-spin calc(var(--jv-spin) * 0.5) linear infinite;
+  will-change: transform;
   pointer-events: none;
 }
 
@@ -204,7 +207,7 @@
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.35s;
+  transition: opacity 0.22s;
 }
 
 #jarvis .jv-panel {
@@ -213,12 +216,12 @@
   padding: 9px 11px 10px;
   border: 1px solid color-mix(in srgb, var(--jv-a) 22%, transparent);
   border-radius: 3px;
-  background: linear-gradient(160deg, rgba(30, 30, 46, 0.72), rgba(24, 24, 37, 0.5));
+  background: linear-gradient(160deg, rgba(30, 30, 46, 0.9), rgba(24, 24, 37, 0.78));
   box-shadow:
     0 0 22px -12px color-mix(in srgb, var(--jv-a) 70%, transparent),
     inset 0 0 20px -14px var(--jv-a);
-  backdrop-filter: blur(6px);
   animation: jv-float 7s ease-in-out infinite;
+  will-change: transform;
 }
 
 #jarvis .jv-panel:nth-child(2) {
@@ -273,22 +276,20 @@
   text-overflow: ellipsis;
 }
 
-/* a panel that wants attention: a waiting alert, a failed run */
+/* a panel that wants attention: a waiting alert, a failed run. It reads amber
+   all the time instead of pulsing: any animation on this panel -- on the box
+   it wears or on a pseudo-element -- made the browser redo style and layout on
+   every frame, which is what dragged the whole rig down. A fixed glow costs
+   one paint and says the same thing */
 #jarvis .jv-panel.alert {
-  border-color: color-mix(in srgb, var(--peach) 55%, transparent);
-  animation:
-    jv-float 7s ease-in-out infinite,
-    jv-alert 1.8s ease-in-out infinite;
+  border-color: color-mix(in srgb, var(--peach) 70%, transparent);
+  box-shadow:
+    0 0 22px -6px var(--peach),
+    inset 0 0 20px -12px var(--peach);
 }
 
 #jarvis .jv-panel.alert .k {
   color: var(--peach);
-}
-
-@keyframes jv-alert {
-  50% {
-    box-shadow: 0 0 26px -8px var(--peach);
-  }
 }
 
 /* the graph: the vault's own counts over the session, one column per sample */
@@ -300,7 +301,7 @@
   width: 40%;
   height: 34px;
   opacity: 0;
-  transition: opacity 0.35s;
+  transition: opacity 0.22s;
   pointer-events: none;
 }
 
@@ -308,6 +309,39 @@
   width: 100%;
   height: 100%;
   display: block;
+}
+
+/* the level: a hairline above the caption that fills with the microphone's own
+   loudness while it records. A dead microphone keeps it empty, which is the
+   point -- the fill rides a transform, so three updates a second cost a
+   composite and no repaint */
+#jarvis .jv-meter {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  width: 34%;
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--jv-a) 18%, transparent);
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.22s;
+  pointer-events: none;
+}
+
+#jarvis .jv-meter.on {
+  opacity: 1;
+}
+
+#jarvis .jv-meter-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--jv-b), var(--jv-a));
+  transition: transform 0.12s linear;
 }
 
 /* the caption: what it is doing, and the words it heard */
@@ -336,14 +370,16 @@
 
 /* --- open: the rig takes the middle of the page, the orb at half its height */
 
+/* the dim behind the rig. No blur: a viewport-wide backdrop filter re-blurs
+   the page under every frame the orb animates, which is what made the rig
+   crawl. The gradient alone hides the page well enough and costs one paint */
 #jarvis .jv-backdrop {
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at 50% 55%, rgba(17, 17, 27, 0.72), rgba(17, 17, 27, 0.94));
-  backdrop-filter: blur(3px);
+  background: radial-gradient(circle at 50% 55%, rgba(17, 17, 27, 0.9), rgba(17, 17, 27, 0.98));
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.35s;
+  transition: opacity 0.28s;
   z-index: -1;
 }
 
@@ -401,16 +437,16 @@
 #jarvis.phase-speaking {
   --jv-a: var(--mauve);
   --jv-b: var(--sky);
-  --jv-spin: 6s;
-  --jv-pulse: 1s;
+  --jv-spin: 4s;
+  --jv-pulse: 1.2s;
 }
 
 #jarvis.phase-listening {
   --jv-a: var(--sky);
   --jv-b: var(--lavender);
-  --jv-spin: 4s;
-  --jv-pulse: 0.8s;
-  --jv-ripple: 1.6s;
+  --jv-spin: 3s;
+  --jv-pulse: 1.1s;
+  --jv-ripple: 1.4s;
 }
 
 #jarvis.phase-listening .jv-core {
@@ -420,16 +456,16 @@
 #jarvis.phase-thinking {
   --jv-a: var(--yellow);
   --jv-b: var(--peach);
-  --jv-spin: 2.4s;
-  --jv-pulse: 0.7s;
-  --jv-ripple: 1.2s;
+  --jv-spin: 1.8s;
+  --jv-pulse: 0.9s;
+  --jv-ripple: 1s;
 }
 
 #jarvis.phase-error {
   --jv-a: var(--red);
   --jv-b: var(--peach);
-  --jv-spin: 9s;
-  --jv-pulse: 2.2s;
+  --jv-spin: 5s;
+  --jv-pulse: 1.8s;
 }
 
 #jarvis.phase-error .jv-core {

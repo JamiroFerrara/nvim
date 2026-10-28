@@ -113,13 +113,15 @@
 --                   come back into nvim (a state change, opening an entry)
 --   voice.lua       the engine behind the orb on the dashboard
 --                   (helpers/org/web/assets/jarvis.js): a click there is
---                   `POST /api/voice`, which speaks a line about the view,
---                   listens, reads back what it heard and hands the words to
---                   a fresh `omp` pane (`ai.open_prompt`) -- that run decides
---                   what to do with them inside the org system. Speech and
---                   dictation are local, from whatever the machine has:
---                   piper / espeak-ng / spd-say and whisper.cpp, or Windows'
---                   own voice through powershell.exe when nvim runs under WSL
+--                   `POST /api/voice`, which records through PulseAudio while
+--                   reporting the microphone's level, reads the recording back
+--                   into words and hands them to a fresh `omp` pane
+--                   (`ai.open_prompt`) -- that run decides what to do with them
+--                   inside the org system. The orb stays silent unless the
+--                   voice is turned on (`OMP_VOICE_SPEAK=1`); dictation is
+--                   local: whisper.cpp, Windows' own recognizer through
+--                   powershell.exe when nvim runs under WSL, or a command of
+--                   the user's
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'

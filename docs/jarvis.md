@@ -70,12 +70,13 @@ it to the board.
 
 | | |
 |---|---|
-| Voice | local, chosen at click time: piper, `espeak-ng`, `spd-say`, or Windows' own `System.Speech` voice through `powershell.exe` under WSL |
-| Timing | the ack is spoken *before* the microphone opens ("Listening on Board"), so the click registers out loud before anything is expected of the user |
-| Sync | the orb is mauve while speaking, sky while listening, amber while the words are being handed over; the caption prints the same words |
+| Voice | **off by default.** The orb listens and starts a run; it does not talk. `speak = true` in `voice.setup`, or `OMP_VOICE_SPEAK=1`, brings back the local voice: piper, `espeak-ng`, `spd-say`, or Windows' own `System.Speech` voice through `powershell.exe` under WSL |
+| Level | a 3 px bar under the orb, filled from the loudness nvim measures on the recording itself (RMS of each ~100 ms chunk, 0 at −55 dBFS and below, 1 at full scale), polled with the rest of the status. A dead microphone keeps it empty — this is the feedback that says whether the microphone is delivering anything at all |
+| Dead microphone | while listening, if no chunk has passed a tenth of the meter after a second, the caption says `listening — no sound from the microphone`; a listen that ends with no sound at all ends in the red phase and the error `the microphone delivered no sound` |
+| Sync | the orb is sky while listening, amber while the transcription and the hand-over run; the caption prints the same words |
 | Confirmation | two-note chime (880 Hz then 1318 Hz, sine, WebAudio) and one flash of the rig when the heard words leave for a run |
 | Errors | a 96 Hz sawtooth buzz, 0.4 s, and the reason on the caption |
-| Waveform | **not drawn.** The microphone is read by nvim (ffmpeg or the Windows recognizer), never by the page, so any waveform here would be animation standing in for data that was never captured. The listening state is shown by the ring tempo, the expanding ripple and the caption instead |
+| Waveform | **not drawn.** The microphone is read by nvim (`parec` on PulseAudio), never by the page, so a waveform here would be animation standing in for data the page never captured. The level bar is real: every value it draws came from the recording |
 
 Voice style (calm, British, "intelligent") is whatever voice the machine has
 installed; the module does not ship one. `OMP_VOICE_RATE` is honoured by the
@@ -98,9 +99,9 @@ ticket moving to `DONE` steps the count down, two new `NEXT` entries step it up.
 
 | Gesture | Result |
 |---|---|
-| Click the shut orb (bottom right, 84 px) | the rig opens in the middle of the page, the ack is spoken, the microphone opens |
+| Click the shut orb (bottom right, 84 px) | the rig opens in the middle of the page and the microphone opens |
 | Click the orb while listening | the listen is cancelled (`{cancel: true}`) |
-| Click the orb while speaking or thinking | a toast: "still working — one moment" |
+| Click the orb while speaking (voice on) or thinking | a toast: "still working — one moment" |
 | Click the orb while idle (rig open) | another conversation |
 | Click the backdrop, or `Escape` | the rig shuts; a listen already running keeps running and still ends in a run |
 | Hover | the stage scales 1.04 |
@@ -127,16 +128,20 @@ every 4 s, independently, so a keyword changed in the list shows up in them.
 ## The conversation behind it
 
 1. `POST /api/voice` with `{view}` — the dashboard's current view title.
-2. nvim (`helpers/org/voice.lua`) speaks `Listening on <view>`, then listens:
-   ffmpeg on PulseAudio → whisper.cpp, or Windows' dictation recognizer.
-3. The transcript is spoken back, so the user hears what the run was given.
+2. nvim (`helpers/org/voice.lua`) records through PulseAudio (`parec`) into a
+   16 kHz mono wav, measuring each chunk on the way in and publishing the level
+   on `GET /api/voice`; the orb draws it as the bar.
+3. When the listening window ends (or a second click stops it), the wav goes to
+   whisper.cpp, to a command of the user's, or to Windows' own recognizer run on
+   the file. The transcript is the words the run receives.
 4. The words go to a fresh `omp` pane (`helpers/org/ai.lua`'s `open_prompt`),
    carrying one line of context — that they were said on the dashboard, the
    view's name, and where the vault is. From there the run decides what to do
-   inside the org system; the orb's part ends.
-5. The page polls `GET /api/voice` for the phase, the words heard and any
-   error, and draws them.
+   inside the org system; the orb's part ends. When the voice is on, the
+   transcript is spoken back first.
+5. The page polls `GET /api/voice` for the phase, the level, the words heard
+   and any error, and draws them.
 
-Overrides, when detection guesses wrong: `OMP_VOICE_TTS`, `OMP_VOICE_STT`,
-`OMP_VOICE_WHISPER_MODEL`, `OMP_VOICE_LANG`, `OMP_VOICE_PIPER_MODEL`,
-`OMP_VOICE_LISTEN_SECONDS`.
+Overrides, when detection guesses wrong: `OMP_VOICE_SPEAK`, `OMP_VOICE_TTS`,
+`OMP_VOICE_STT`, `OMP_VOICE_WHISPER_MODEL`, `OMP_VOICE_LANG`,
+`OMP_VOICE_PIPER_MODEL`, `OMP_VOICE_LISTEN_SECONDS`.

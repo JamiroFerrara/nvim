@@ -5,24 +5,30 @@
 -- machine. A click comes in as `POST /api/voice` (helpers/org/web/init.lua)
 -- and the conversation runs here:
 --
---   1. speak a line about the view that was clicked -- the click registering
---   2. listen, and read back what was heard
+--   1. listen -- record through PulseAudio and report the level as it goes,
+--      so a machine whose microphone is dead looks dead instead of silent
+--   2. read the recording back into words
 --   3. hand the words to an `omp` instance in a tmux pane
 --      (`helpers.org.ai.open_prompt`): that run decides what to do with them
 --      inside the org system, the buddy only carries the words
 --
+-- The orb is silent: speaking is off unless asked for (`OMP_VOICE_SPEAK=1`,
+-- or `speak = true` in setup), because the voice was getting in the way of
+-- the conversation. `:OrgVoiceSpeak` still says a line on demand.
+--
 -- Everything is local. Each half is picked from what the machine has, and a
--- missing speaker or microphone degrades instead of breaking:
+-- missing speaker or transcriber degrades instead of breaking:
 --
 --   text -> speech |  piper, espeak-ng, spd-say, or Windows' own voice
 --                  |  (System.Speech, through powershell.exe under WSL)
---   recording     |  ffmpeg on PulseAudio (`/mnt/wslg/PulseServer` under WSLg)
---   speech -> text |  whisper.cpp (`whisper-cli`), or Windows' own dictation
+--   recording     |  parec on PulseAudio (`/mnt/wslg/PulseServer` under WSLg)
+--   speech -> text |  whisper.cpp (`whisper-cli`), Windows' own recognizer on
+--                  |  the recorded wav, or a command of the user's
 --
 -- Overrides, when the detection guesses wrong: `OMP_VOICE_TTS` (a shell
 -- command, the words on stdin), `OMP_VOICE_STT` (a shell command, the wav
 -- path as `$1`), `OMP_VOICE_WHISPER_MODEL`, `OMP_VOICE_LANG`,
--- `OMP_VOICE_PIPER_MODEL`, `OMP_VOICE_LISTEN_SECONDS`.
+-- `OMP_VOICE_PIPER_MODEL`, `OMP_VOICE_LISTEN_SECONDS`, `OMP_VOICE_SPEAK`.
 --
 -- The browser polls `GET /api/voice` for `M.status()` while the orb is open:
 -- the phase is what it draws (idle, speaking, listening, thinking, error) and
@@ -62,17 +68,23 @@ local opts = {
   tts = nil,
   stt = nil,
   whisper_model = nil,
+  speak = false,
 }
 
 --- What the orb draws. `phase` is the state machine's, `heard` the words the
 --- last listen produced, `view` the dashboard view the click came from and
---- `error` what went wrong, if anything.
+--- `error` what went wrong, if anything. `level` is the microphone's loudness
+--- a moment ago (0 empty, 1 full), `level_db` the raw reading it came from and
+--- `signal` whether any sound at all has arrived in this listen.
 local state = {
   phase = 'idle',
   heard = '',
   view = '',
   error = '',
   at = 0,
+  level = 0,
+  level_db = nil,
+  signal = false,
 }
 
 local function set_phase(phase, extra)
@@ -93,6 +105,10 @@ function M.status()
     view = state.view,
     error = state.error,
     at = state.at,
+    level = state.level,
+    level_db = state.level_db,
+    signal = state.signal,
+    speak = opts.speak and tts_backend() ~= nil,
     tts = tts_backend() ~= nil,
     stt = stt_backend() ~= nil,
   }
@@ -182,9 +198,9 @@ end
 
 -- ---------------------------------------------------------------- listening
 
---- The PulseAudio server WSLg runs for the distro. `ffmpeg -f pulse` needs it
---- named: nothing sets PULSE_SERVER in a WSL shell, so a recorder would find
---- no source without this.
+--- The PulseAudio server WSLg runs for the distro. `parec` needs it named:
+--- nothing sets PULSE_SERVER in a WSL shell, so a recorder would find no
+--- source without this.
 local function audio_env()
   if vim.env.PULSE_SERVER and vim.env.PULSE_SERVER ~= '' then
     return nil
@@ -230,15 +246,15 @@ local function whisper_model()
   return nil
 end
 
---- The listening half: whisper.cpp when the machine has both the binary and a
---- model (better dictation, and no desktop session involved), else Windows'
---- own recognizer.
+--- The listening half's transcriber: whisper.cpp when the machine has both
+--- the binary and a model (better dictation, and no desktop session
+--- involved), else Windows' own recognizer on the recorded wav.
 ---@return string|nil backend
 function stt_backend()
   if opts.stt and opts.stt ~= '' then
     return 'custom'
   end
-  if (exe 'whisper-cli' or exe 'main') and exe 'ffmpeg' and whisper_model() then
+  if (exe 'whisper-cli' or exe 'main') and whisper_model() then
     return 'whisper'
   end
   if windows() then
@@ -246,20 +262,97 @@ function stt_backend()
   end
 end
 
---- Windows' own dictation, through interop: the recognizer listens to the
---- default microphone itself (no recording, no file), stops at the first
---- pause after speech and caps the whole wait at the listening window.
-local PS_LISTEN = table.concat({
+--- Windows' own recognizer, run on the wav this module recorded: one recording
+--- path for every transcriber, so the level meter and the words always come
+--- from the same capture. The path is substituted into the script (a
+--- PowerShell single-quoted string) because WSL interop does not hand Linux
+--- environment variables to a Windows process.
+local PS_RECOGNIZE = table.concat({
   'Add-Type -AssemblyName System.Speech;',
   '$r = New-Object System.Speech.Recognition.SpeechRecognitionEngine;',
   '$r.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar));',
-  '$r.SetInputToDefaultAudioDevice();',
-  '$w = [int]$env:OMP_VOICE_LISTEN_SECONDS; if ($w -le 0) { $w = 10 };',
-  '$r.InitialSilenceTimeout = [TimeSpan]::FromSeconds($w);',
-  '$r.BabbleTimeout = [TimeSpan]::FromSeconds(3);',
-  '$x = $r.Recognize([TimeSpan]::FromSeconds($w));',
-  'if ($x) { [Console]::Out.Write($x.Text) }',
+  "$r.SetInputToWaveFile('__WAV__');",
+  '$out = @();',
+  'while ($true) {',
+  '  try { $x = $r.Recognize() } catch { break };',
+  '  if ($null -eq $x) { break };',
+  '  $out += $x.Text',
+  '};',
+  "[Console]::Out.Write(($out -join ' '))",
 }, ' ')
+
+--- The level below which the meter reads empty. A live microphone sits
+--- around -50 dBFS of room noise; digital silence is `-inf`, which the meter
+--- must show as nothing at all rather than as a quiet room.
+local METER_FLOOR = 55
+
+--- The recording's format, fixed: 16 kHz mono, 16-bit, which is what every
+--- transcriber this module knows how to drive expects.
+local PCM = { rate = 16000, channels = 1, bits = 16 }
+
+local function u16(n)
+  return string.char(n % 256, math.floor(n / 256) % 256)
+end
+
+local function u32(n)
+  return string.char(n % 256, math.floor(n / 256) % 256, math.floor(n / 65536) % 256, math.floor(n / 16777216) % 256)
+end
+
+--- A RIFF header over `bytes` of PCM data at the module's fixed format. The
+--- recorder writes one with a zero length first and patches the two sizes when
+--- it stops, so the file is a valid wav at every moment the process is alive.
+---@param bytes integer
+---@return string
+local function wav_header(bytes)
+  local block = PCM.channels * PCM.bits / 8
+  return 'RIFF'
+    .. u32(36 + bytes)
+    .. 'WAVEfmt '
+    .. u32(16)
+    .. u16(1)
+    .. u16(PCM.channels)
+    .. u32(PCM.rate)
+    .. u32(PCM.rate * block)
+    .. u16(block)
+    .. u16(PCM.bits)
+    .. 'data'
+    .. u32(bytes)
+end
+
+--- The loudness of one chunk of the recording, as the orb draws it: the RMS
+--- of the samples turned into dBFS, then squashed into 0..1 between
+--- `METER_FLOOR` and full scale. Digital silence stays at zero, which is what
+--- makes a dead microphone visible.
+---@param data string
+local function level_of(data)
+  local n = #data - (#data % 2)
+  if n == 0 then
+    return
+  end
+  local total = 0
+  for i = 1, n, 2 do
+    local lo, hi = data:byte(i, i + 1)
+    local v = lo + hi * 256
+    if v >= 32768 then
+      v = v - 65536
+    end
+    total = total + v * v
+  end
+  local rms = math.sqrt(total / (n / 2)) / 32768
+  local db = rms > 0 and 20 * math.log(rms) / math.log(10) or -math.huge
+  if db == -math.huge then
+    state.level = 0
+    state.level_db = nil
+    return
+  end
+  state.level = math.max(0, math.min(1, (db + METER_FLOOR) / METER_FLOOR))
+  state.level_db = db
+  -- one tenth of the meter, about -49 dBFS: a microphone delivering dither
+  -- and the odd electrical click is not a microphone anyone can talk into
+  if state.level >= 0.1 then
+    state.signal = true
+  end
+end
 
 --- The words a program printed, or nothing when it failed. `text = true`
 --- hands the output back as one string; a list is accepted all the same.
@@ -278,7 +371,7 @@ end
 
 --- The running child of this listen, so a second click (or `M.cancel`) can
 --- cut it short. One listen at a time: the phase is the lock.
-local job = { proc = nil, timer = nil, wav = nil }
+local job = { proc = nil, timer = nil, wav = nil, fd = nil, bytes = 0 }
 
 local function drop_timer()
   if job.timer then
@@ -291,34 +384,62 @@ end
 --- Close the listen and hand `text` (empty when nothing was heard) to `done`,
 --- once. Every way out -- the recognizer answering, the recorder stopped, the
 --- cap firing, a program failing -- comes through here, so the phase always
---- returns to idle.
+--- returns to idle. A recording whose every sample was digital silence is an
+--- error, not a quiet listen: it is the one signal that the microphone itself
+--- is not delivering anything.
 ---@param text string
 ---@param done fun(text: string)
 local function heard(text, done)
   drop_timer()
   job.proc = nil
+  job.wav = nil
+  state.level = 0
+  state.level_db = nil
   local said = vim.trim((text or ''):gsub('%s+', ' '))
+  if said == '' and not state.signal then
+    set_phase('error', { heard = '', error = 'the microphone delivered no sound' })
+    done ''
+    return
+  end
   set_phase(said == '' and 'idle' or 'thinking', { heard = said })
   done(said)
 end
 
---- Read `wav` back into words: whisper.cpp, or the user's own command
---- (`OMP_VOICE_STT`, the wav path as `$1`).
+--- Read `wav` back into words: the user's own command (`OMP_VOICE_STT`, the
+--- wav path as `$1`), Windows' recognizer on the file, or whisper.cpp.
 ---@param wav string
 ---@param backend string
 ---@param done fun(text: string)
 local function transcribe(wav, backend, done)
-  local cmd
+  local cmd, env
   if backend == 'custom' then
     cmd = { 'sh', '-c', opts.stt .. ' "$1"', 'sh', wav }
+    env = audio_env()
+  elseif backend == 'windows' then
+    -- the recognizer runs on Windows and reads the file through the WSL
+    -- share, so the wav has to be named the way Windows names it
+    local win = vim.trim(vim.fn.systemlist({ 'wslpath', '-w', wav })[1] or '')
+    if win == '' then
+      pcall(uv.fs_unlink, wav)
+      vim.schedule(function()
+        set_phase('error', { error = 'could not hand the recording to Windows' })
+        done ''
+      end)
+      return
+    end
+    local script = PS_RECOGNIZE:gsub('__WAV__', function()
+      return (win:gsub("'", "''"))
+    end)
+    cmd = { 'powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script }
   else
     cmd = { exe 'whisper-cli' and 'whisper-cli' or 'main', '-m', whisper_model(), '-f', wav, '-nt', '-np' }
     local lang = opts.lang or vim.env.OMP_VOICE_LANG
     if lang then
       vim.list_extend(cmd, { '-l', lang })
     end
+    env = audio_env()
   end
-  pcall(vim.system, cmd, { text = true, env = audio_env() }, function(obj)
+  pcall(vim.system, cmd, { text = true, env = env }, function(obj)
     pcall(uv.fs_unlink, wav)
     local text = text_of(obj)
     vim.schedule(function()
@@ -327,46 +448,84 @@ local function transcribe(wav, backend, done)
   end)
 end
 
---- Record until a second click (or the cap), then transcribe. ffmpeg closes
---- the wav on SIGINT, so its own exit is what says the file is whole.
----@param backend string
+--- Close the wav and fill in its two sizes, so the file is whole before any
+--- transcriber opens it. Safe to call twice: the handle is gone after the
+--- first.
+local function close_wav()
+  if not job.fd then
+    return
+  end
+  local bytes = job.bytes or 0
+  pcall(uv.fs_write, job.fd, u32(36 + bytes), 4)
+  pcall(uv.fs_write, job.fd, u32(bytes), 40)
+  pcall(uv.fs_close, job.fd)
+  job.fd = nil
+end
+
+--- Record until a second click (or the cap), then transcribe. `parec`
+--- streams the microphone as raw PCM instead of writing a file itself, which
+--- is what lets the same bytes become both the wav and the level: an
+--- encoded recorder buffers its output and the meter would only arrive when
+--- the recording ended. Every chunk is measured for the orb and appended to
+--- the wav; stopping closes the file before anything reads it.
+---@param backend string|nil
 ---@param done fun(text: string)
 local function start_recording(backend, done)
   local wav = vim.fn.tempname() .. '.wav'
-  job.wav = wav
+  local fd = uv.fs_open(wav, 'w', 384)
+  if not fd then
+    set_phase('error', { error = 'could not write the recording' })
+    done ''
+    return
+  end
+  job.wav, job.fd, job.bytes = wav, fd, 0
+  uv.fs_write(fd, wav_header(0), 0)
   local function finished()
+    close_wav()
     if state.phase ~= 'listening' then
+      pcall(uv.fs_unlink, wav)
       return
     end
     job.proc = nil
     drop_timer()
-    if vim.fn.filereadable(wav) == 1 then
-      set_phase 'thinking'
-      transcribe(wav, backend, done)
-    else
+    if vim.fn.filereadable(wav) ~= 1 then
       heard('', done)
+      return
     end
+    if not backend then
+      pcall(uv.fs_unlink, wav)
+      job.wav = nil
+      set_phase('error', { error = 'recorded, but no speech-to-text is installed' })
+      done ''
+      return
+    end
+    set_phase 'thinking'
+    transcribe(wav, backend, done)
+  end
+  local function on_stdout(_, data)
+    if not data or data == '' or not job.fd then
+      return
+    end
+    pcall(uv.fs_write, job.fd, data, 44 + job.bytes)
+    job.bytes = job.bytes + #data
+    level_of(data)
   end
   local ok, handle = pcall(vim.system, {
-    'ffmpeg',
-    '-hide_banner',
-    '-loglevel',
-    'error',
-    '-f',
-    'pulse',
-    '-i',
-    'default',
-    '-ar',
-    '16000',
-    '-ac',
-    '1',
-    '-y',
-    wav,
-  }, { env = audio_env() }, function()
+    'parec',
+    '--format=s16le',
+    '--rate=' .. PCM.rate,
+    '--channels=' .. PCM.channels,
+    '--latency-msec=100',
+    '--raw',
+  }, { env = audio_env(), stdout = on_stdout }, function()
     vim.schedule(finished)
   end)
   if not ok then
+    close_wav()
+    pcall(uv.fs_unlink, wav)
+    job.wav = nil
     set_phase('error', { error = 'could not start the recorder' })
+    done ''
     return
   end
   job.proc = handle
@@ -380,55 +539,19 @@ local function start_recording(backend, done)
   end)
 end
 
---- Listen once and hand the words to `done`: record through PulseAudio and
---- let whisper read it back, ask Windows' recognizer, or -- with neither --
---- report that there is no microphone on this machine.
+--- Listen once and hand the words to `done`: record through PulseAudio, show
+--- the level while it records, then read the file back. Recording comes first
+--- even when no transcriber is installed, because a silent level is the
+--- answer to "is the microphone working at all".
 ---@param done fun(text: string)
 local function listen(done)
-  local backend = stt_backend()
-  if not backend then
-    set_phase('error', { error = 'no microphone backend (whisper.cpp + ffmpeg, or Windows speech)' })
+  if not exe 'parec' then
+    set_phase('error', { error = 'no recorder: parec (pulseaudio-utils) is not installed' })
     done ''
     return
   end
-  set_phase 'listening'
-
-  if backend ~= 'windows' then
-    start_recording(backend, done)
-    return
-  end
-
-  -- the recognizer listens to the microphone itself and answers on the first
-  -- pause, so its own window is the cap; the timer is the backstop for a
-  -- program that never returns
-  local ok, handle = pcall(vim.system, {
-    'powershell.exe',
-    '-NoProfile',
-    '-NonInteractive',
-    '-Command',
-    PS_LISTEN,
-  }, {
-    text = true,
-    env = { OMP_VOICE_LISTEN_SECONDS = tostring(opts.listen_seconds) },
-  }, function(obj)
-    local text = text_of(obj)
-    vim.schedule(function()
-      heard(text, done)
-    end)
-  end)
-  if not ok then
-    set_phase('error', { error = 'could not start the recognizer' })
-    return
-  end
-  job.proc = handle
-  job.timer = uv.new_timer()
-  job.timer:start((opts.listen_seconds + 5) * 1000, 0, function()
-    vim.schedule(function()
-      if state.phase == 'listening' then
-        heard('', done)
-      end
-    end)
-  end)
+  set_phase('listening', { level = 0, level_db = nil, signal = false })
+  start_recording(stt_backend(), done)
 end
 
 -- ------------------------------------------------------------------ the run
@@ -448,7 +571,7 @@ local function launch(text)
       org_dir = vim.fn.expand(cfg.org_directory)
     end
   end)
-  local message = ('Said out loud on the org dashboard (%s view): "%s". The vault is at %s; work it out from there.'):format(
+  local message = ('Spoken to the org dashboard (%s view): "%s". The vault is at %s; work it out from there.'):format(
     state.view ~= '' and state.view or 'dashboard',
     text,
     org_dir
@@ -464,29 +587,43 @@ local function launch(text)
   set_phase 'idle'
 end
 
---- The whole conversation: acknowledge the click out loud, listen, read the
---- words back, hand them to a run. `view` names what the dashboard had open
---- when the orb was clicked, so the run is told where the words came from.
+--- Does the orb say anything at all? Off by default: the orb is a microphone
+--- and a run, not a speaker, and the voice was getting in the way. `speak =
+--- true` in setup, or `OMP_VOICE_SPEAK=1`, brings it back.
+local function speaks()
+  return opts.speak and tts_backend() ~= nil
+end
+
+--- The whole conversation: listen, read the words back, hand them to a run.
+--- The click is acknowledged out loud only when the voice is on. `view` names
+--- what the dashboard had open when the orb was clicked, so the run is told
+--- where the words came from.
 ---@param view? string
 function M.converse(view)
   if state.phase ~= 'idle' and state.phase ~= 'error' then
     return false
   end
-  set_phase('speaking', { view = vim.trim(view or ''), heard = '', error = '' })
-  speak(state.view ~= '' and ('Listening on ' .. state.view) or 'Listening', function()
-    if state.phase ~= 'speaking' then
-      return
-    end
-    set_phase 'idle'
+  local function begin()
     listen(function(text)
       M._said(text)
     end)
+  end
+  set_phase('idle', { view = vim.trim(view or ''), heard = '', error = '' })
+  if not speaks() then
+    begin()
+    return true
+  end
+  set_phase 'speaking'
+  speak(state.view ~= '' and ('Listening on ' .. state.view) or 'Listening', function()
+    if state.phase == 'speaking' then
+      begin()
+    end
   end)
   return true
 end
 
---- What was heard: read it back so the user hears what the run was given, then
---- start the run.
+--- What was heard: start the run from it, saying it back first when the voice
+--- is on.
 ---@param text string
 function M._said(text)
   local said = vim.trim((text or ''):gsub('%s+', ' '))
@@ -495,9 +632,13 @@ function M._said(text)
     return
   end
   set_phase('thinking', { heard = said })
-  speak(said, function()
+  if speaks() then
+    speak(said, function()
+      launch(said)
+    end)
+  else
     launch(said)
-  end)
+  end
 end
 
 --- Stop whatever is running: the second click on a listening orb, and the
@@ -509,7 +650,14 @@ function M.cancel()
     pcall(handle.kill, handle, 'sigterm')
   end
   drop_timer()
-  set_phase('idle', { heard = '' })
+  if job.fd then
+    close_wav()
+    if job.wav then
+      pcall(uv.fs_unlink, job.wav)
+      job.wav = nil
+    end
+  end
+  set_phase('idle', { heard = '', level = 0, level_db = nil })
 end
 
 --- `:OrgVoiceSay {text}`: the run without the microphone -- the same path the
@@ -530,6 +678,16 @@ function M.setup(user)
   opts = vim.tbl_extend('force', opts, user or {})
   if vim.env.OMP_VOICE_LISTEN_SECONDS then
     opts.listen_seconds = tonumber(vim.env.OMP_VOICE_LISTEN_SECONDS) or opts.listen_seconds
+  end
+  if vim.env.OMP_VOICE_SPEAK and vim.env.OMP_VOICE_SPEAK ~= '' then
+    local v = vim.env.OMP_VOICE_SPEAK:lower()
+    opts.speak = v ~= '0' and v ~= 'off' and v ~= 'false' and v ~= 'no'
+  end
+  if not opts.tts and vim.env.OMP_VOICE_TTS and vim.env.OMP_VOICE_TTS ~= '' then
+    opts.tts = vim.env.OMP_VOICE_TTS
+  end
+  if not opts.stt and vim.env.OMP_VOICE_STT and vim.env.OMP_VOICE_STT ~= '' then
+    opts.stt = vim.env.OMP_VOICE_STT
   end
   vim.api.nvim_create_user_command('OrgVoice', function()
     M.converse()

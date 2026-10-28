@@ -14,17 +14,18 @@
 //                            (state.data / state.live), one figure each. A
 //                            panel turns amber when the thing it counts is
 //                            waiting on a person -- tickets in TEST
-//   4. voice feedback      -- a chime when a run starts, a low buzz when the
+//   4. voice feedback      -- a level bar under the orb while it listens, fed
+//                            by the loudness nvim measures on the recording
+//                            itself, so a dead microphone reads as dead; plus
+//                            a chime when a run starts and a low buzz when the
 //                            machine reports an error. No waveform is drawn:
-//                            the browser never sees the microphone, the
-//                            recording happens in nvim, and inventing one
-//                            would be drawing audio that does not exist
+//                            the browser never sees the microphone
 //   5. the graphs          -- the vault's in-flight count sampled over the
 //                            session and drawn as bars, plus the same figures
 //                            the panels print
 //
-// Clicking the small orb opens the rig and starts the conversation; clicking
-// it while it listens cancels that listen; Escape closes the rig.
+// The orb does not speak: nvim stays quiet unless the voice is turned on. A
+// click starts the listen; a second click cancels it; Escape closes the rig.
 
 (() => {
   const PHASES = ['idle', 'speaking', 'listening', 'thinking', 'error'];
@@ -57,6 +58,7 @@
       <div class="jv-panel p4"><span class="k">Vault</span><span class="v">—</span><span class="s"></span></div>
     </div>
     <div class="jv-graph"><canvas width="420" height="88"></canvas></div>
+    <div class="jv-meter" aria-hidden="true"><span class="jv-meter-fill"></span></div>
     <div class="jv-caption" aria-live="polite">click to speak</div>
     </div>
   `;
@@ -71,9 +73,11 @@
     vault: root.querySelector('.p4'),
   };
   const graph = root.querySelector('.jv-graph canvas');
+  const meter = root.querySelector('.jv-meter');
+  const meterFill = root.querySelector('.jv-meter-fill');
 
   let open = false;
-  let status = { phase: 'idle', heard: '', view: '', error: '', tts: true, stt: true };
+  let status = { phase: 'idle', heard: '', view: '', error: '', tts: false, stt: false, speak: false, level: 0, level_db: null, signal: false };
   let poller = null;
   let sampler = null;
   let last = 'idle';
@@ -169,14 +173,17 @@
       case 'speaking':
         return 'speaking';
       case 'listening':
+        // the meter has had a second to move: if it has not, the microphone
+        // is not delivering anything and the caption says so instead of
+        // asking the user to speak into a dead device
+        if (!s.signal && s.at && Date.now() / 1000 - s.at >= 1) return 'listening — no sound from the microphone · click to stop';
         return 'listening — click to stop';
       case 'thinking':
         return 'handing it to a run';
       case 'error':
         return s.error || 'something went wrong';
       default:
-        if (s.tts === false && s.stt === false) return 'no voice on this machine';
-        if (s.stt === false) return 'no microphone — the orb can only talk';
+        if (s.stt === false) return 'no microphone on this machine';
         return s.heard ? `“${s.heard}”` : 'click to speak';
     }
   }
@@ -187,6 +194,15 @@
     root.className = `phase-${phase}${open ? ' open' : ''}`;
     caption.textContent = captionFor(status);
     stage.title = phase === 'listening' ? 'J.A.R.V.I.S. — listening, click to stop' : 'J.A.R.V.I.S. — speak, and a run starts from it';
+
+    // the level is the recording's own loudness, polled at 350 ms: the fill
+    // rides a transform so the bar costs a composite and not a paint
+    const level = Math.max(0, Math.min(1, Number(status.level) || 0));
+    meterFill.style.transform = `scaleX(${level.toFixed(3)})`;
+    meter.classList.toggle('on', phase === 'listening');
+    if (phase !== 'listening') meter.title = '';
+    else if (!status.signal) meter.title = 'the microphone is delivering no sound';
+    else meter.title = `${Math.round(status.level_db || 0)} dB`;
 
     ripple.classList.toggle('on', phase === 'speaking' || phase === 'listening' || phase === 'thinking');
 
@@ -199,7 +215,6 @@
       if (phase === 'error') buzz();
       last = phase;
     }
-    metrics();
   }
 
   async function poll() {
@@ -293,6 +308,7 @@
       if (!poller) poller = setInterval(poll, 350);
       if (!sampler) sampler = setInterval(metrics, 2000);
       poll();
+      metrics();
     } else {
       clearInterval(poller);
       poller = null;
