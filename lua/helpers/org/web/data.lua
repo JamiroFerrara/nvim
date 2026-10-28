@@ -7,7 +7,9 @@
 --   board      the `w` board -- In progress, one section per classification
 --              tag, the untagged rest, Done (most recently closed first)
 --   open       the `o` list, one section per project file
---   flight     the `f` list -- NEXT, TEST and WARN
+--   flight     the `f` list -- NEXT, TEST and WARN, one section per
+--              classification tag (the bug / feat / chore sections, the
+--              untagged rest last), each with NEXT first
 --   state      the `g` list -- one section per open state
 --   priority   the `p` list -- A, then B
 --   wayfinder  the `y` view -- the charted map as a tree, then one section
@@ -354,10 +356,42 @@ local function in_flight(entry)
   return not entry.done and (entry.todo == 'NEXT' or entry.todo == 'TEST' or entry.todo == 'WARN')
 end
 
+-- The `f` list read category first: one section per classification tag, the
+-- untagged rest last -- the board's order and wording, cut to the in-flight
+-- states -- and inside each the entry a run is on above the one waiting on
+-- validation, then the troubled one (the `w` board's in-progress ranking,
+-- which puts NEXT before TEST).
+local FLIGHT_RANK = { NEXT = 1, TEST = 2, WARN = 3 }
+local FLIGHT_LABELS = { bug = 'Bugs in flight', feat = 'Features in flight', chore = 'Chores in flight' }
+
+local function by_flight(a, b)
+  local ra, rb = FLIGHT_RANK[a.todo] or 99, FLIGHT_RANK[b.todo] or 99
+  if ra ~= rb then
+    return ra < rb
+  end
+  return by_priority(a, b)
+end
+
 local function flight(entries)
   local items = pick(entries, in_flight)
-  table.sort(items, by_state_rank)
-  return { { title = 'Everything in flight', icon = '▶', items = indent(items) } }
+  local sections = {}
+  for _, tag in ipairs(CLASS_TAGS) do
+    local tagged = pick(items, function(e)
+      return has_tag(e, tag)
+    end)
+    table.sort(tagged, by_flight)
+    if #tagged > 0 then
+      sections[#sections + 1] = { title = FLIGHT_LABELS[tag], icon = '◆', items = indent(tagged) }
+    end
+  end
+  local rest = pick(items, function(e)
+    return not has_class(e)
+  end)
+  table.sort(rest, by_flight)
+  if #rest > 0 then
+    sections[#sections + 1] = { title = 'Untagged in flight', icon = '○', items = indent(rest) }
+  end
+  return sections
 end
 
 local function state_sections(entries)
