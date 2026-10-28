@@ -11,10 +11,8 @@
 --
 -- Pages follow the vault: an fs watcher over ~/org (helpers/org/watch.lua)
 -- and TextChanged events broadcast on the event stream, and the browser
--- refetches. The server binds 0.0.0.0 under WSL, where a Windows browser
--- cannot reach a socket bound to Linux loopback; every request then has to
--- carry the token minted at startup (a cookie, or `?token=` on the URL
--- opened), so the LAN cannot read the vault off that port.
+-- refetches. The server listens on the loopback address only, the way
+-- markdown-preview.nvim's does.
 local M = {}
 
 local actions = require 'helpers.org.web.actions'
@@ -25,7 +23,6 @@ local page = require 'helpers.org.web.page'
 local state = {
   server = nil,
   port = nil,
-  token = nil,
   timer = nil,
 }
 
@@ -37,13 +34,6 @@ local function is_wsl()
   end
   local release = uv.os_uname().release or ''
   return release:lower():find('microsoft', 1, true) ~= nil
-end
-
-local function mint_token()
-  local raw = uv.random(18)
-  return (raw:gsub('.', function(char)
-    return string.format('%02x', char:byte())
-  end))
 end
 
 local function json(res, value, status)
@@ -59,22 +49,6 @@ end
 
 local function encode(text)
   return vim.uri_encode(text or '', 'rfc3986')
-end
-
---- The request carried the startup token: either in the cookie a page sets
---- on its first load, or as `?token=` on the URL nvim opened.
----@param req table
----@return boolean
-local function authorized(req)
-  local token = state.token
-  if not token then
-    return false
-  end
-  if req.query.token == token then
-    return true
-  end
-  local cookie = req.headers.cookie or ''
-  return cookie:find('orgweb=' .. token, 1, true) ~= nil
 end
 
 local function keyword_lists()
@@ -102,15 +76,10 @@ local function keyword_lists()
 end
 
 local function handle(req, res)
-  if not authorized(req) then
-    res.send(403, 'text/plain; charset=utf-8', 'forbidden: reopen the view from nvim')
-    return
-  end
-  local extra = { 'Set-Cookie: orgweb=' .. state.token .. '; Path=/; SameSite=Strict' }
   local path = req.path
 
   if req.method == 'GET' and path == '/' then
-    res.send(200, 'text/html; charset=utf-8', page.dashboard(), extra)
+    res.send(200, 'text/html; charset=utf-8', page.dashboard())
     return
   end
 
@@ -118,7 +87,7 @@ local function handle(req, res)
   if req.method == 'GET' and asset then
     local body, mime = page.asset(asset)
     if body then
-      res.send(200, mime, body, extra)
+      res.send(200, mime, body)
       return
     end
     res.send(404, 'text/plain; charset=utf-8', 'no such asset')
@@ -179,7 +148,7 @@ local function handle(req, res)
       html = html,
       error = err,
       entry = data.find(file, tonumber(req.query.line), req.query.id),
-    }, extra)
+    })
     return
   end
 
@@ -213,11 +182,8 @@ local function start()
   if state.server then
     return state.server
   end
-  state.token = mint_token()
-  local host = is_wsl() and '0.0.0.0' or '127.0.0.1'
-  local ok, server = pcall(http.listen, { host = host, port = 0 }, handle)
+  local ok, server = pcall(http.listen, { host = '127.0.0.1', port = 0 }, handle)
   if not ok or not server then
-    state.token = nil
     error('org web: could not start the server: ' .. tostring(server))
   end
   state.server = server
@@ -249,26 +215,36 @@ function M.base()
   return string.format('http://127.0.0.1:%d', state.port)
 end
 
---- URL of `path` on the running server, carrying the startup token.
+--- URL of `path` on the running server.
 ---@param path string
 ---@return string
 function M.url(path)
-  local url = M.base() .. path
-  return url .. (path:find('?', 1, true) and '&' or '?') .. 'token=' .. state.token
+  return M.base() .. path
 end
 
+--- Hand `url` to the desktop's browser.
+---
+--- WSL has no X server, so `xdg-open` finds no browser there, and
+--- `explorer.exe` takes the URL and does nothing with it. This is how
+--- markdown-preview.nvim opens its page (its `lib/util/opener.js` treats a
+--- Microsoft kernel as win32): the URL goes to the Windows shell through
+--- `cmd.exe /c start`, with an empty window title, from a Windows-side
+--- working directory (a UNC `cwd` makes cmd complain), and with `&` written
+--- `^&` so a query string survives cmd's own parsing.
+---@param url string
+---@return boolean
 local function open_url(url)
-  local function run(cmd)
-    local ok = pcall(vim.system, cmd, { detach = true })
-    return ok
+  local function run(cmd, opts)
+    return pcall(vim.system, cmd, vim.tbl_extend('force', { detach = true }, opts or {}))
   end
   if vim.fn.executable 'wslview' == 1 then
     if run { 'wslview', url } then
       return true
     end
   end
-  if is_wsl() and vim.fn.executable 'explorer.exe' == 1 then
-    if run { 'explorer.exe', url } then
+  if is_wsl() and vim.fn.executable 'cmd.exe' == 1 then
+    local cwd = vim.uv.fs_stat '/mnt/c' and '/mnt/c' or nil
+    if run({ 'cmd.exe', '/c', 'start', '""', (url:gsub('&', '^&')) }, { cwd = cwd }) then
       return true
     end
   end
@@ -334,7 +310,6 @@ function M.stop()
   end
   state.server = nil
   state.port = nil
-  state.token = nil
 end
 
 return M
