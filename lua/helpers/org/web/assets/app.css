@@ -477,10 +477,11 @@ li.entry .row-acts .kill.armed {
   }
 }
 
-/* a Runs view row is a run, not a ticket: it has nothing to start, so it
-   keeps the row without the action's column */
+/* a Runs view row is a run, not a ticket: nothing to start and nothing to
+   close, so the last column holds the one button a run has -- the `✕` that
+   cancels it */
 li.entry.run-row {
-  grid-template-columns: 52px 14px 14px minmax(0, 1fr) auto auto 150px;
+  grid-template-columns: 52px 14px 14px minmax(0, 1fr) auto auto 150px auto;
 }
 
 /* ---- the agenda --------------------------------------------------------- */
@@ -1483,7 +1484,15 @@ li.entry .live-line {
   }
 
   li.entry.run-row {
-    grid-template-columns: 56px 16px 40px minmax(0, 1fr);
+    grid-template-columns: 56px 16px 40px minmax(0, 1fr) 28px;
+  }
+
+  /* the cancel button keeps the right edge of the row's first line, where
+     the desktop list has it */
+  li.entry.run-row .row-acts {
+    grid-column: 5;
+    grid-row: 1;
+    justify-self: end;
   }
 
   /* an agenda row on a phone: the time and the keyword keep their own

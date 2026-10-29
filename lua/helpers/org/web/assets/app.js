@@ -607,12 +607,55 @@ function runRow(run) {
   li.append(el('span', 'tags'));
   li.append(el('span', 'meta', elapsed(run.started)));
   li.append(el('span', 'project', state.selection === 'all' ? (entry && entry.project) || '' : ''));
+  // the way out of a run that is going nowhere: the pane goes, and the omp
+  // inside it with it. Armed like the ticket row's `✕` -- the first click
+  // says what the second will do.
+  const acts = el('span', 'row-acts');
+  const cancel = el('button', 'kill', '✕');
+  cancel.type = 'button';
+  cancel.title = 'cancel this run';
+  cancel.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (!cancel.dataset.armed) {
+      cancel.dataset.armed = '1';
+      cancel.textContent = 'cancel?';
+      cancel.classList.add('armed');
+      clearTimeout(cancel._disarm);
+      cancel._disarm = setTimeout(() => {
+        delete cancel.dataset.armed;
+        cancel.textContent = '✕';
+        cancel.classList.remove('armed');
+      }, 4000);
+      return;
+    }
+    cancelRun(run);
+  });
+  acts.append(cancel);
+  li.append(acts);
   li.append(el('span', 'live-line', run.activity || ''));
   if (entry) {
     title.addEventListener('click', () => selectEntry(entry));
     li.addEventListener('click', () => selectEntry(entry));
   }
   return li;
+}
+
+// The click of a run's `✕`: the server kills the pane, and the row goes at
+// once -- no waiting on the next poll to say the run is over.
+async function cancelRun(run) {
+  const res = await post('/api/cancel', {}, { pane: run.pane });
+  if (res && !res.error) {
+    state.live.instances = state.live.instances.filter((r) => r.pane !== run.pane);
+    for (const key of [run.ticket, run.key]) {
+      if (key) {
+        state.live.tickets.delete(key);
+        state.live.sessions.delete(key);
+      }
+    }
+    showToast(`${run.title} → cancelled`);
+    renderRuns();
+    syncRunsBadge();
+  }
 }
 
 function renderRuns() {
