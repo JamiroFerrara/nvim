@@ -1,0 +1,153 @@
+/* ---- the graph ---------------------------------------------------------
+   The one graph both pages draw (assets/graph.js): the roam notes and the
+   ticket board. The canvas is an svg that the layout's viewBox scales, so a
+   pan or a zoom is one attribute and the labels scale with it. -- */
+
+.graph-svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+.graph-svg.panning {
+  cursor: grabbing;
+}
+
+.graph-svg line {
+  stroke: var(--surface1);
+  stroke-width: 1;
+  opacity: 0.55;
+  transition: stroke 0.2s, opacity 0.2s;
+}
+
+.graph-svg line.lit {
+  stroke: var(--blue);
+  stroke-width: 1.6;
+  opacity: 0.95;
+}
+
+.graph-svg circle {
+  fill: var(--surface1);
+  stroke: var(--crust);
+  stroke-width: 1.5;
+  cursor: pointer;
+  transition: fill 0.18s;
+}
+
+.graph-svg g.node:hover circle {
+  fill: var(--blue);
+}
+
+.graph-svg g.node.here circle {
+  fill: var(--lavender);
+  stroke: var(--lavender);
+}
+
+.graph-svg g.node.lit circle {
+  fill: var(--sky);
+}
+
+.graph-svg g.node {
+  transition: opacity 0.2s;
+}
+
+.graph-svg g.node.muted {
+  opacity: 0.16;
+}
+
+.graph-svg g.node .label {
+  font-family: var(--font);
+  font-size: 9px;
+  fill: var(--subtext);
+  paint-order: stroke;
+  stroke: var(--crust);
+  stroke-width: 2.5px;
+  pointer-events: none;
+  display: none;
+}
+
+.graph-svg g.node .label.on {
+  display: block;
+}
+
+/* ---- the tickets' own marks --------------------------------------------
+   A ticket is the state it is in, the way its row on the board is: the same
+   colours, on the circle. A closed one is what an open ticket points back
+   at, so it stays in the picture, drained of colour. -- */
+
+.graph-svg g.node.state-TODO circle {
+  fill: var(--blue);
+}
+
+.graph-svg g.node.state-NEXT circle {
+  fill: var(--peach);
+}
+
+.graph-svg g.node.state-PEND circle {
+  fill: var(--yellow);
+}
+
+.graph-svg g.node.state-TEST circle {
+  fill: var(--mauve);
+}
+
+.graph-svg g.node.state-WARN circle {
+  fill: var(--red);
+}
+
+.graph-svg g.node.done circle {
+  fill: color-mix(in srgb, var(--green) 45%, var(--surface1));
+  stroke: transparent;
+}
+
+.graph-svg g.node.done .label {
+  fill: var(--overlay);
+}
+
+/* a run is in a pane on this ticket right now */
+.graph-svg g.node.running circle {
+  stroke: var(--green);
+  stroke-width: 2.5;
+}
+
+/* the two edges: the nesting a ticket sits in, and an `[[id:…]]` link its
+   body wrote. A link is thinner and dashed, so a tree reads as a tree. */
+.graph-svg line.link {
+  stroke-dasharray: 4 3;
+  opacity: 0.42;
+}
+
+.graph-hud {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  color: var(--overlay);
+  font-size: 11px;
+  display: flex;
+  gap: 14px;
+  pointer-events: none;
+}
+
+.graph-tip {
+  position: absolute;
+  pointer-events: none;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: var(--mantle);
+  border: 1px solid var(--surface1);
+  color: var(--text);
+  font-size: 11px;
+  max-width: 320px;
+  transform: translate(12px, -50%);
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 5;
+}
+
+.graph-tip.on {
+  opacity: 1;
+}

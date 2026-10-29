@@ -639,7 +639,7 @@ async function renderGraph() {
     id: node.key,
     // a whole ticket title is a sentence: the picture takes its head, the
     // hover and the detail pane take the rest
-    label: node.title.length > 38 ? node.title.slice(0, 37).trimEnd() + '…' : node.title,
+    label: node.title.length > 30 ? node.title.slice(0, 29).trimEnd() + '…' : node.title,
     class: ['state-' + (node.todo || 'none'), node.done ? 'done' : '', runKey(node) ? 'running' : ''].join(' ').trim(),
   }));
   OrgGraph.draw(container, {
@@ -649,9 +649,9 @@ async function renderGraph() {
       `${data.stats.open} open · ${data.stats.nodes - data.stats.open} closed · ${data.stats.edges} edges`,
       'click a ticket · drag to pan · scroll to zoom',
     ],
-    // a board of a few dozen tickets is read by name; a whole vault's worth
-    // is a shape until it is zoomed in, the way the roam graph is
-    labelsAll: data.nodes.length <= 45,
+    // a ticket is read by its name: the dots say the shape, the names say
+    // which ticket, and a zoom is what makes room for the long ones
+    labelsAll: true,
     query: state.query,
     open: (node) => selectEntry({ ...node, id: node.entryId }),
     tip: (node) => {

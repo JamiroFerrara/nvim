@@ -519,13 +519,14 @@ end
 ---@return table
 local function agenda_row(item, day, entries_by_line)
   local entry = item.filename and entries_by_line[item.filename .. '#' .. tostring(item.lnum)] or nil
-  local row = entry or {
-    file = item.filename or '',
-    rel = item.filename and relative(item.filename) or '',
-    line = item.lnum,
-    project = item.filename and require('helpers.org.project').file_title(item.filename) or (item.category or ''),
-    ancestors = {},
-  }
+  local row = entry
+    or {
+      file = item.filename or '',
+      rel = item.filename and relative(item.filename) or '',
+      line = item.lnum,
+      project = item.filename and require('helpers.org.project').file_title(item.filename) or (item.category or ''),
+      ancestors = {},
+    }
   local merged = vim.tbl_extend('force', row, {
     title = item.display_title or item.title or '',
     todo = item.todo,
@@ -608,32 +609,50 @@ local function agenda(file, entries_by_line)
   -- what is late: an item that carries a keyword and is still open, its date
   -- behind it. A past appointment is not late, it just happened, and it stays
   -- on its own day where the week lists it
-  section('Overdue', '!', pick(rows, function(e)
-    return e.day < today and not e.done and e.todo ~= nil
-  end))
+  section(
+    'Overdue',
+    '!',
+    pick(rows, function(e)
+      return e.day < today and not e.done and e.todo ~= nil
+    end)
+  )
   local now = date.now()
   local now_at = (now.hour or 0) * 60 + (now.min or 0)
   for d = monday, sunday do
     local day = date.from_days(d)
     -- a day gone by lists what was closed on it; its open work is Overdue,
     -- one section above, and a second copy here would say nothing new
-    section(day:strftime '%A %d %B %Y', '◷', pick(rows, function(e)
-      return e.day == d and (d >= today or e.done)
-    end), {
-      day = d,
-      today = d == today,
-      now = d == today and now_at or nil,
-      label = { dow = day:strftime '%A', date = day:strftime '%d %B %Y' },
-    })
+    section(
+      day:strftime '%A %d %B %Y',
+      '◷',
+      pick(rows, function(e)
+        return e.day == d and (d >= today or e.done)
+      end),
+      {
+        day = d,
+        today = d == today,
+        now = d == today and now_at or nil,
+        label = { dow = day:strftime '%A', date = day:strftime '%d %B %Y' },
+      }
+    )
   end
-  section('Next week', '›', pick(rows, function(e)
-    return e.day > sunday
-  end))
+  section(
+    'Next week',
+    '›',
+    pick(rows, function(e)
+      return e.day > sunday
+    end)
+  )
   -- the weeks behind the one on screen, latest first: the closed work that
   -- would otherwise leave the agenda for good
-  section('Earlier', '‹', pick(rows, function(e)
-    return e.day < monday and e.done
-  end), { newest = true })
+  section(
+    'Earlier',
+    '‹',
+    pick(rows, function(e)
+      return e.day < monday and e.done
+    end),
+    { newest = true }
+  )
   return sections
 end
 
