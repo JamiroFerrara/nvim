@@ -6,8 +6,9 @@
 --
 --   board      the `w` board -- In progress, one section per classification
 --              tag, the untagged rest, Done (most recently closed first)
---   agenda     the `§` agenda -- the current week, one section per day that
---              holds work with a SCHEDULED or DEADLINE date, Monday first
+--   agenda     the `§` agenda -- the current week day by day, Monday first,
+--              with what is overdue above it and the weeks either side of it
+--              below (the dates on SCHEDULED and DEADLINE)
 --   open       the `o` list, one section per project file
 --   flight     the `f` list -- NEXT, TEST and WARN, one section per
 --              classification tag (the bug / feat / chore sections, the
