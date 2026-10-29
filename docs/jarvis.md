@@ -89,10 +89,11 @@ installed; the module does not ship one.
 | Gesture | Result |
 |---|---|
 | Click the button while idle, failed, sent or holding words | a listen starts (`POST /api/voice` with the view's title); words held in `review` are dropped with it |
-| Click the button while listening | the listen is cancelled (`{cancel: true}`); the recording is dropped |
+| Click the button while listening | the listen stops and its words are read back (`{stop: true}`); this is the only way a listen ends — there is no clock on it |
 | Click the button while speaking (voice on) or transcribing | a toast: "still working — one moment" |
 | Click `send` while words wait | they go to the talking instance (`{send: true}`) |
-| `Escape` while listening | the same cancel; in `review` it throws the waiting words away |
+| `Escape` while listening | a cancel (`{cancel: true}`): the recording is dropped, and it is the way out of a listen left running |
+| `Escape` while words wait | they are thrown away; nothing was sent |
 | `Tab` / `Enter` | the button is a `<button>`, so the page's own focus order reaches it |
 
 Polling is 300 ms while a listen runs and 1.5 s while idle, so a listen started
@@ -111,8 +112,9 @@ a half.
    again by the same transcriber, and the words land on `partial`: the sentence
    shows up as it is said. `OMP_VOICE_PARTIAL` sets that clock (`0` turns the
    re-reads off).
-4. When the listening window ends (or a second click stops it), the whole wav
-   goes to Handy's own model, to whisper.cpp, to a command of the user's, or to
+4. When the second click stops the listen -- there is no other end: the
+   recording has no clock, so a sentence lasts exactly as long as it takes you
+   to say it -- the whole wav goes to Handy's own model, to whisper.cpp, to a command of the user's, or to
    Windows' own recognizer run on the file. The transcript is the words the run
    will receive, and it stops here: the phase is `review` until the send button
    (or `:OrgVoiceSend`) releases it. `:OrgVoiceSay` skips that step — the words
@@ -190,4 +192,4 @@ audio.
 Overrides, when detection guesses wrong: `OMP_VOICE_SPEAK`, `OMP_VOICE_TTS`,
 `OMP_VOICE_STT`, `OMP_VOICE_HANDY_MODEL` (a gguf path),
 `OMP_VOICE_WHISPER_MODEL`, `OMP_VOICE_LANG`, `OMP_VOICE_PIPER_MODEL`,
-`OMP_VOICE_LISTEN_SECONDS`, `OMP_VOICE_PARTIAL`.
+`OMP_VOICE_PARTIAL`.

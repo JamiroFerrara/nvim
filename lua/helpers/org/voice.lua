@@ -12,7 +12,11 @@
 --      microphone: the page captures the sound and streams it up
 --      (`POST /api/voice/audio`), and what lands here is the same raw PCM a
 --      local recorder would have written. Speaking into the computer from
---      across the room was the one thing this card could not do
+--      across the room was the one thing this card could not do. The listen
+--      has no clock of its own: it runs until the mic is clicked again,
+--      because the person talking is the only one who knows when the sentence
+--      is over, and a line cut at ten seconds was a line they had to start
+--      again. A listen nobody ends records until `M.cancel` reaches it
 --   2. read the recording back into words -- the sentence so far, a piece at
 --      a time while it is still being said, then all of it at the end. On a
 --      machine whose only transcriber is Windows' own, one recognizer stays
@@ -78,9 +82,9 @@
 -- Overrides, when the detection guesses wrong: `OMP_VOICE_TTS` (a shell
 -- command, the words on stdin), `OMP_VOICE_STT` (a shell command, the wav
 -- path as `$1`), `OMP_VOICE_HANDY_MODEL` (a gguf path), `OMP_VOICE_WHISPER_MODEL`,
--- `OMP_VOICE_LANG`, `OMP_VOICE_PIPER_MODEL`, `OMP_VOICE_LISTEN_SECONDS`,
--- `OMP_VOICE_SPEAK`, `OMP_VOICE_PARTIAL` (seconds between two reads of a
--- sentence being said; `0` turns them off).
+-- `OMP_VOICE_LANG`, `OMP_VOICE_PIPER_MODEL`, `OMP_VOICE_SPEAK`,
+-- `OMP_VOICE_PARTIAL` (seconds between two reads of a sentence being said; `0`
+-- turns them off).
 --
 -- The browser polls `GET /api/voice` for `M.status()`: the phase is what the
 -- card draws (idle, speaking, listening, thinking, review, sent, error),
@@ -118,7 +122,6 @@ end
 local tts_backend, stt_backend
 
 local opts = {
-  listen_seconds = 10,
   partial_seconds = 0.4,
   lang = nil,
   tts = nil,
@@ -636,15 +639,7 @@ end
 --- cut it short. One listen at a time: the phase is the lock. A recording made
 --- by the page's own microphone has no child at all -- `finish` is what ends
 --- it, where `proc` is the process the local recorder is signalled through.
-local job = { proc = nil, timer = nil, wav = nil, fd = nil, bytes = 0, finish = nil, ended = false }
-
-local function drop_timer()
-  if job.timer then
-    pcall(job.timer.stop, job.timer)
-    pcall(job.timer.close, job.timer)
-    job.timer = nil
-  end
-end
+local job = { proc = nil, wav = nil, fd = nil, bytes = 0, finish = nil, ended = false }
 
 --- The words of the sentence so far, read again every `partial_seconds` while
 --- the recording runs, so the screen can show what was heard while it is still
@@ -682,7 +677,6 @@ local reader_start, reader_stop, reader_exit, reader_ask, reader_parse
 ---@param text string
 ---@param done fun(text: string)
 local function heard(text, done)
-  drop_timer()
   drop_partial()
   reader_stop()
   if job.wav then
@@ -1170,28 +1164,11 @@ local function open_wav(done)
   return wav
 end
 
---- The cap: a listen nobody stops ends here rather than holding the card in
---- `listening` forever. `stop` is what ends the recording the way its half
---- needs -- a signal to the recorder, or the wav closed for a page that
---- streamed its own sound.
----@param stop fun()
-local function cap(stop)
-  drop_timer()
-  job.timer = uv.new_timer()
-  job.timer:start(opts.listen_seconds * 1000, 0, function()
-    vim.schedule(function()
-      if state.phase == 'listening' then
-        stop()
-      end
-    end)
-  end)
-end
-
 --- Close the recording and read it back: the last step of a listen, whichever
 --- half recorded it. The bytes are on disk in the module's format by now, so
 --- from here on nothing knows the difference. Safe to call twice -- the
---- second click and the cap can both land here -- because the first call is
---- what sets `job.ended`.
+--- second click and a failing recorder can both land here -- because the
+--- first call is what sets `job.ended`.
 ---@param backend string|nil
 ---@param wav string
 ---@param done fun(text: string)
@@ -1208,7 +1185,6 @@ local function end_recording(backend, wav, done)
     return
   end
   job.proc = nil
-  drop_timer()
   if vim.fn.filereadable(wav) ~= 1 then
     heard('', done)
     return
@@ -1234,12 +1210,14 @@ local function end_recording(backend, wav, done)
   transcribe(wav, backend, done)
 end
 
---- Record until a second click (or the cap), then transcribe. `parec`
---- streams the microphone as raw PCM instead of writing a file itself, which
---- is what lets the same bytes become both the wav and the level: an
---- encoded recorder buffers its output and the meter would only arrive when
---- the recording ended. Every chunk is measured for the card and appended to
---- the wav; stopping closes the file before anything reads it.
+--- Record until a second click, then transcribe. The recording has no clock of
+--- its own: the click that ends the sentence is the one that wants it, so a
+--- sentence nobody ends keeps recording until `M.stop` or `M.cancel` reaches
+--- it. `parec` streams the microphone as raw PCM instead of writing a file
+--- itself, which is what lets the same bytes become both the wav and the
+--- level: an encoded recorder buffers its output and the meter would only
+--- arrive when the recording ended. Every chunk is measured for the card and
+--- appended to the wav; stopping closes the file before anything reads it.
 ---@param backend string|nil
 ---@param done fun(text: string)
 local function start_recording(backend, done)
@@ -1281,11 +1259,6 @@ local function start_recording(backend, done)
     return
   end
   job.proc = handle
-  cap(function()
-    if job.proc then
-      pcall(handle.kill, handle, 'sigint')
-    end
-  end)
   peek(backend)
 end
 
@@ -1308,7 +1281,6 @@ local function start_stream(backend, done)
   job.finish = function()
     end_recording(backend, wav, done)
   end
-  cap(job.finish)
   peek(backend)
 end
 
@@ -1552,7 +1524,6 @@ function M.stop()
   if state.phase ~= 'listening' then
     return false
   end
-  drop_timer()
   if job.finish then
     -- a recording the page made has no process to signal: the wav is already
     -- whole, and closing it is the whole of stopping
@@ -1579,7 +1550,6 @@ function M.cancel()
     job.proc = nil
     pcall(handle.kill, handle, 'sigterm')
   end
-  drop_timer()
   drop_partial()
   reader_stop()
   if job.fd then
@@ -1623,9 +1593,6 @@ end
 
 function M.setup(user)
   opts = vim.tbl_extend('force', opts, user or {})
-  if vim.env.OMP_VOICE_LISTEN_SECONDS then
-    opts.listen_seconds = tonumber(vim.env.OMP_VOICE_LISTEN_SECONDS) or opts.listen_seconds
-  end
   if vim.env.OMP_VOICE_PARTIAL then
     opts.partial_seconds = tonumber(vim.env.OMP_VOICE_PARTIAL) or opts.partial_seconds
   end
