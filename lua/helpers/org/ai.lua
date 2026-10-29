@@ -84,6 +84,14 @@
 -- before the run is dispatched, so the board shows the work started as soon as
 -- the words are filed.
 --
+-- The words carry the selection: the dashboard's highlighted entry, or the
+-- headline at point when the command ran in the editor (`M.entry_at_point`). A
+-- ticket a run already holds is the exception to the one instance, because it
+-- has a vocal of its own: the words about it are typed into that run
+-- (`say_to_run`) and written into the entry's body as the user's turn, so
+-- talking about a ticket in flight reaches the run working it instead of
+-- starting a second conversation over the same headline.
+--
 -- The pane runs `nvim "+terminal sh <script>"`, the same shape as the tmux
 -- default-command (`nvim +terminal`) every other pane uses, so the instance
 -- lives in an nvim terminal buffer and navigates like the rest of the session

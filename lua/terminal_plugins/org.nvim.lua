@@ -130,7 +130,12 @@
 --                   the one talking instance (`ai.open_prompt`, the `talk/one`
 --                   session) -- it answers a question, or files work as a
 --                   ticket and starts the run on it, so the board shows the
---                   work started as soon as the words are filed. A second
+--                   work started as soon as the words are filed. A selection
+--                   that names a ticket a run already holds is that run's
+--                   instead: the words are typed into it and written into the
+--                   ticket's body -- `:OrgVoice` / `:OrgVoiceSay` run in an org
+--                   buffer or the agenda take the headline at point the same
+--                   way a click takes the page's highlight. A second
 --                   click ends the recording and keeps what it heard (Escape
 --                   throws it away). The card stays silent unless the voice is
 --                   turned on (`OMP_VOICE_SPEAK=1`); dictation is local:

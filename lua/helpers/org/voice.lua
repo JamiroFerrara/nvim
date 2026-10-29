@@ -403,7 +403,7 @@ local function handy_source()
   end
   for _, user in ipairs(vim.fn.glob('/mnt/c/Users/*', false, true)) do
     local found = {}
-    local selected = (slurp(user .. HANDY_SETTINGS) or ''):match('"selected_model"%s*:%s*"([^"]+)"')
+    local selected = (slurp(user .. HANDY_SETTINGS) or ''):match '"selected_model"%s*:%s*"([^"]+)"'
     local org, repo, file = (selected or ''):match '^([^/]+)/([^/]+)/(.+)$'
     if org then
       vim.list_extend(found, vim.fn.glob(('%s/.cache/huggingface/hub/models--%s--%s/snapshots/*/%s'):format(user, org, repo, file), false, true))
@@ -471,7 +471,7 @@ local function handy_model()
       elseif not handy.warned then
         handy.warned = true
         vim.schedule(function()
-          notify('voice: could not copy Handy\'s model to ' .. dir, vim.log.levels.WARN)
+          notify("voice: could not copy Handy's model to " .. dir, vim.log.levels.WARN)
         end)
       end
     end)
@@ -735,7 +735,7 @@ local function transcribe(wav, backend, done, quiet)
       pcall(uv.fs_unlink, wav)
       vim.schedule(function()
         if not quiet then
-          set_phase('error', { error = 'Handy\'s model is not readable' })
+          set_phase('error', { error = "Handy's model is not readable" })
         end
         done ''
       end)
@@ -1431,10 +1431,14 @@ end
 --- card takes once it has them, so it is also what a test drives. `entry` is
 --- the selection a click would have carried: the dashboard's highlight, or the
 --- headline at point when the command was run from the editor (`M.converse`'s
---- `entry`, helpers/org/ai.lua's `entry_at_point`).
+--- `entry`, helpers/org/ai.lua's `entry_at_point`). `view` is what was open
+--- when the words were said, for the instance the words reach -- a page's view
+--- title, or `editor` for the command.
 ---@param text string
 ---@param entry? { file: string, line?: integer, id?: string, title?: string }
-function M.say(text, entry)
+---@param view? string
+function M.say(text, entry, view)
+  state.view = vim.trim(view or '')
   state.target = target_of(entry)
   M._said(text)
 end
@@ -1476,7 +1480,7 @@ function M.setup(user)
     M.converse('editor', selection())
   end, { desc = 'voice: say a line, listen, hand the words to the talking instance' })
   vim.api.nvim_create_user_command('OrgVoiceSay', function(args)
-    M.say(args.args, selection())
+    M.say(args.args, selection(), 'editor')
   end, { nargs = '+', desc = 'voice: hand the words to the talking instance, without the microphone' })
   vim.api.nvim_create_user_command('OrgVoiceSpeak', function(args)
     M.speak(args.args)
