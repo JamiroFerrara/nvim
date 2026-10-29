@@ -2010,6 +2010,47 @@ function M.open_prompt(text, target, view)
   return pane
 end
 
+--- What the editor has selected, in the shape the board sends with a click:
+--- the headline at point as `{ file, line, id, title }` -- in an org buffer
+--- (the entry the preview shows too) and in an agenda view. nil elsewhere,
+--- and on a line no headline owns.
+---
+--- `:OrgVoice` / `:OrgVoiceSay` hand it to the words the way a highlighted
+--- entry on the dashboard is handed, so speech started on a ticket is about
+--- that ticket: its own run hears it when one is going, and the talking
+--- instance is told which entry the words hang under otherwise.
+---@return { file: string, line: integer, id: string|nil, title: string }|nil
+function M.entry_at_point()
+  local bufnr, lnum
+  local ft = vim.bo.filetype
+  if ft == 'orgagenda' then
+    local ok, view = pcall(require, 'org.agenda.view')
+    local item = ok and view.item_at_cursor()
+    local r = item and view.resolve_target(item)
+    if not r then
+      return nil
+    end
+    bufnr, lnum = r.bufnr, r.lnum
+  elseif ft == 'org' then
+    local src, l = preview_source()
+    bufnr, lnum = src or vim.api.nvim_get_current_buf(), l or vim.api.nvim_win_get_cursor(0)[1]
+  else
+    return nil
+  end
+  local ok, file = pcall(require('org.files').get_buffer, bufnr)
+  local hl = ok and file and file:headline_on(lnum)
+  if not hl then
+    return nil
+  end
+  local id = require('org.id').get { bufnr = bufnr, lnum = hl.line }
+  return {
+    file = vim.api.nvim_buf_get_name(bufnr),
+    line = hl.line,
+    id = (id and id:match '%S') and vim.trim(id) or nil,
+    title = hl:plain_title(),
+  }
+end
+
 --- The talking instance's one act: the words in a spec file become a ticket,
 --- and the ticket's run starts -- the write first, the run after, in that
 --- order, so the board shows the work the moment the words are filed and the

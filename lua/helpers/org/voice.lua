@@ -25,6 +25,17 @@
 -- project the user was reading. A listen with nothing highlighted carries no
 -- target, and the instance picks the project the words belong to.
 --
+-- One selected entry is not the talking instance's: a ticket a run already
+-- holds (`@omp_ticket`, or the orchestrator that batch-launched it) hears the
+-- words itself -- `ai.open_prompt` types them into that instance and writes
+-- them into the entry's body as the user's turn. Speech about a ticket in
+-- flight is the ticket's, not a new conversation over the same headline.
+--
+-- `:OrgVoice` and `:OrgVoiceSay` take their selection from the editor the way
+-- a click takes it from the page: the headline at point (`ai.entry_at_point`),
+-- so speech started on a ticket in the agenda or an org buffer is about that
+-- ticket.
+--
 -- A click while listening stops the recording and reads it back (`M.stop`);
 -- throwing it away is `M.cancel`, the card's escape key.
 --
@@ -1279,16 +1290,17 @@ local function watch_run()
   end)
 end
 
---- Hand the heard words to the talking instance (`helpers.org.ai.open_prompt`):
---- it is the one omp the renderer's words reach, and it is what sorts them --
---- answering a question, or filing the work as a ticket and starting the run on
---- it. The card carries the words and the view they were said on, and nothing
---- else: the rules the instance works to are its own system prompt.
+--- Hand the heard words on (`helpers.org.ai.open_prompt`): a run already on the
+--- ticket the selection names hears them as the user's next turn, and every
+--- other line reaches the one talking instance, which sorts it -- answering a
+--- question, or filing the work as a ticket and starting the run on it. The
+--- card carries the words, the view they were said on and the entry they are
+--- about, and nothing else: the rules are the instance's own system prompt.
 ---
---- With the dashboard's highlight in hand (`state.target`) the instance is told
---- which entry the words hang under, so a spoken command lands in the project
---- the user was reading. Without one the words name no destination, and the
---- instance picks the project they belong to.
+--- With the selection in hand (`state.target`) the instance is told which entry
+--- the words hang under, so a spoken command lands in the project the user was
+--- reading, or on the ticket they were looking at. Without one the words name
+--- no destination, and the instance picks the project they belong to.
 ---@param text string
 local function launch(text)
   if text == '' then
@@ -1321,10 +1333,14 @@ local function speaks()
 end
 
 --- The whole conversation: listen, read the words back, hand them to the
---- talking instance. The click is acknowledged out loud only when the voice is
---- on. `view` names what the dashboard had open when the mic was clicked, and
---- `entry` (the entry the list had highlighted) is the entry the words hang
---- under when they become a ticket; the instance is told both (`launch`).
+--- talking instance -- or to the run already on the ticket the selection names
+--- (`launch`, `ai.open_prompt`'s own route). The click is acknowledged out loud
+--- only when the voice is on. `view` names what was open when the listen
+--- started: the dashboard's view title, or `editor` for the commands, which
+--- run in an nvim buffer rather than on the page. `entry` (the entry the list
+--- had highlighted, or the headline at point) is the entry the words belong
+--- to; it is what the words hang under when they become a ticket and what
+--- decides which run hears them.
 ---@param view? string
 ---@param entry? { file: string, line?: integer, id?: string, title?: string }
 function M.converse(view, entry)
@@ -1413,7 +1429,9 @@ end
 
 --- `:OrgVoiceSay {text}`: the words without the microphone -- the same path the
 --- card takes once it has them, so it is also what a test drives. `entry` is
---- the dashboard highlight a click would have carried; a command line has none.
+--- the selection a click would have carried: the dashboard's highlight, or the
+--- headline at point when the command was run from the editor (`M.converse`'s
+--- `entry`, helpers/org/ai.lua's `entry_at_point`).
 ---@param text string
 ---@param entry? { file: string, line?: integer, id?: string, title?: string }
 function M.say(text, entry)
@@ -1446,11 +1464,19 @@ function M.setup(user)
   if not opts.stt and vim.env.OMP_VOICE_STT and vim.env.OMP_VOICE_STT ~= '' then
     opts.stt = vim.env.OMP_VOICE_STT
   end
+  -- words said from the editor carry what is at point the way a click on the
+  -- board carries its highlight: the ticket selected is the ticket spoken about
+  local function selection()
+    local ok, entry = pcall(function()
+      return require('helpers.org.ai').entry_at_point()
+    end)
+    return ok and entry or nil
+  end
   vim.api.nvim_create_user_command('OrgVoice', function()
-    M.converse()
+    M.converse('editor', selection())
   end, { desc = 'voice: say a line, listen, hand the words to the talking instance' })
   vim.api.nvim_create_user_command('OrgVoiceSay', function(args)
-    M.say(args.args)
+    M.say(args.args, selection())
   end, { nargs = '+', desc = 'voice: hand the words to the talking instance, without the microphone' })
   vim.api.nvim_create_user_command('OrgVoiceSpeak', function(args)
     M.speak(args.args)

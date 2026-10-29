@@ -402,14 +402,15 @@ li.entry .project {
    already has -- quiet until the row is under the pointer or the ticket is
    running, so a list of tickets does not read as a wall of buttons */
 li.entry button.do {
-  width: 20px;
+  width: 32px;
   height: 20px;
   padding: 0;
   border-radius: 5px;
   border: 1px solid transparent;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
-  color: var(--surface2);
+  text-align: center;
+  color: var(--overlay);
 }
 
 li.entry button.do:hover {
@@ -1345,7 +1346,7 @@ li.entry .live-line {
   li.entry button.do {
     width: 44px;
     height: 44px;
-    font-size: 15px;
+    font-size: 12px;
   }
 
   li.entry.run-row {
