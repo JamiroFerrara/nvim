@@ -147,6 +147,15 @@ function entryRow(entry) {
   li.append(meta);
   li.append(el('span', 'project', state.selection === 'all' ? entry.project || '' : ''));
 
+  const doButton = el('button', 'do');
+  doButton.type = 'button';
+  paintDo(doButton, entry);
+  doButton.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    launchEntry(entry, !!runKey(entry));
+  });
+  li.append(doButton);
+
   const key = runKey(entry);
   if (key) {
     li.classList.add('running');
@@ -277,6 +286,17 @@ function runKey(entry) {
   return null;
 }
 
+// The button a row carries to act on its ticket at once: a ticket with no
+// run is started on the spot, one a run is already on is jumped to. It is
+// the two halves `<Space>ai` and `<Space>aj` do, and the row says which it
+// will do -- `▸` to start, `●` to the run.
+function paintDo(button, entry) {
+  const running = !!runKey(entry);
+  button.classList.toggle('running', running);
+  button.textContent = running ? 'jump' : 'run';
+  button.title = running ? 'jump to the run on this ticket' : 'start a run on this ticket now';
+}
+
 function setLive(live) {
   live = live || {};
   state.live.tickets = new Set(live.tickets || []);
@@ -297,6 +317,7 @@ function applyLive() {
     li.classList.toggle('running', !!key);
     const title = li.querySelector('.title');
     let dot = title && title.querySelector('.live-dot');
+
     if (key && title && !dot) {
       dot = el('span', 'live-dot', '●');
       title.prepend(dot);
@@ -313,6 +334,8 @@ function applyLive() {
     } else if (line) {
       line.remove();
     }
+    const doButton = li.querySelector('button.do');
+    if (doButton) paintDo(doButton, entry);
   }
 }
 
@@ -1154,7 +1177,12 @@ async function undoWrite() {
 function launchEntry(entry, jump) {
   if (!entry) return;
   post('/api/launch', entry, { jump: !!jump });
-  showToast(jump ? 'jumping to the run' : 'launching a run on it');
+  showToast(jump ? 'jumping to the run' : 'starting a run on it');
+  if (jump) return;
+  // the pane the launcher opens is what turns the row's button into "jump",
+  // and only a look at /api/live can say it is there: look again while it
+  // lands, a few times over the first seconds
+  for (const wait of [1000, 3000, 6000]) setTimeout(pollLive, wait);
 }
 
 // ---- the entry editor ---------------------------------------------------
@@ -1252,6 +1280,7 @@ const HELP = [
   ['/ / ?', 'filter the view / this help'],
   ['<Space>ow / oa / oo / of / og / op / oy', 'board / agenda / open / in flight / by state / priorities / wayfinder'],
   ['<Space>ai / <Space>aj', 'launch a run on the entry / jump to it'],
+  ['the run button on a row', 'start a run on that ticket; jump goes to the run it has'],
 ];
 
 function showHelp() {

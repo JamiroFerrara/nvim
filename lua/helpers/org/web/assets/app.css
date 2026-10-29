@@ -275,8 +275,8 @@ ul.entries {
 
 li.entry {
   display: grid;
-  /* state, priority, fold, title, tags, date, project */
-  grid-template-columns: 52px 14px 14px minmax(0, 1fr) auto auto 150px;
+  /* state, priority, fold, title, tags, date, project, do */
+  grid-template-columns: 52px 14px 14px minmax(0, 1fr) auto auto 150px 34px;
   align-items: center;
   gap: 10px;
   padding: 4px 8px;
@@ -396,6 +396,35 @@ li.entry .project {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* the row's one-tap action: start a run on the ticket, or go to the one it
+   already has -- quiet until the row is under the pointer or the ticket is
+   running, so a list of tickets does not read as a wall of buttons */
+li.entry button.do {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--surface2);
+}
+
+li.entry button.do:hover {
+  color: var(--teal);
+  border-color: var(--teal);
+}
+
+li.entry button.do.running {
+  color: var(--teal);
+}
+
+/* a Runs view row is a run, not a ticket: it has nothing to start, so it
+   keeps the row without the action's column */
+li.entry.run-row {
+  grid-template-columns: 52px 14px 14px minmax(0, 1fr) auto auto 150px;
 }
 
 .empty {
@@ -1306,10 +1335,21 @@ li.entry .live-line {
   /* the row grows to a thumb's height, and the state chip to the smallest
      target a finger hits without aiming */
   li.entry {
-    grid-template-columns: 56px 16px 40px minmax(0, 1fr);
+    grid-template-columns: 56px 16px 40px minmax(0, 1fr) 44px;
     gap: 4px;
     min-height: 52px;
     padding: 4px;
+  }
+
+  /* the row's action is a thumb's target too: the button fills the column */
+  li.entry button.do {
+    width: 44px;
+    height: 44px;
+    font-size: 15px;
+  }
+
+  li.entry.run-row {
+    grid-template-columns: 56px 16px 40px minmax(0, 1fr);
   }
 
   li.entry .state {

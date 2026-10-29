@@ -73,14 +73,16 @@
 -- outside the board -- the voice card on the dashboard, `:OrgVoice`,
 -- `:OrgVoiceSay` -- are handed to a single talking instance (`TALK_KEY`, its
 -- own session, marked `@omp_orchestrator` like a project's batch and found by
--- that mark the same way). It is a router, not a worker: it answers what is a
--- question, and for work it files a ticket and starts the run on it (`M.talk`
--- -- the same `preset_ticket` write and `launch_targets` dispatch a keypress
--- gets, so a spoken ticket is the ordinary ticket on the board), then quotes
--- the launcher's one line back. One instance keeps one conversation, which is
--- what lets "that one too" mean anything, and the org write lands before the
--- run is dispatched, so the board shows the work started as soon as the words
--- are filed.
+-- that mark the same way). It is a router, not a worker, and the argv makes
+-- that literal: its own prompt in place of the coding assistant's, the shell
+-- and no other tool, no skills or vault rules to browse with. It answers a
+-- question in a line, and for work it files a ticket and starts the run on it
+-- (`M.talk` -- the same `preset_ticket` write and `launch_targets` dispatch a
+-- keypress gets, so a spoken ticket is the ordinary ticket on the board), then
+-- quotes the launcher's one line back. One instance keeps one conversation,
+-- which is what lets "that one too" mean anything, and the org write lands
+-- before the run is dispatched, so the board shows the work started as soon as
+-- the words are filed.
 --
 -- The pane runs `nvim "+terminal sh <script>"`, the same shape as the tmux
 -- default-command (`nvim +terminal`) every other pane uses, so the instance
@@ -200,61 +202,59 @@ local TALK_KEY = 'talk/one'
 --- last lines said, which outlive the editor (Open_Prompt's own note).
 local SPECS_KEPT = 200
 
---- What the talking instance is told once, as its system prompt: it is the
---- one instance the renderer's words reach, and its whole job is to sort them
---- -- answer a question here, file work as a ticket and start that ticket's
---- run (`M.talk`), which is the feedback the user wants as soon as they stop
---- talking. It never does the work itself: the run the ticket starts does.
---- The vault path is read from the config at the time the instance opens, so
---- the rules name the vault this nvim is looking at.
+--- What the talking instance is told once, as its system prompt. It is a
+--- router and nothing else: answer a line, or file the words and start their
+--- run (`M.talk`) with one command. Every word here that opens a door -- the
+--- vault's rules, "pick the project file it belongs to" -- was a door the
+--- instance walked through to read code and repair old tickets, so the rules
+--- are the short list of the one act it has, and the argv leaves it no tool
+--- but the shell that one command needs.
 ---@return string
 local function talk_rules()
-  local org_dir = '~/org'
-  pcall(function()
-    local cfg = require('org.config').opts
-    if cfg and cfg.org_directory then
-      org_dir = cfg.org_directory
-    end
-  end)
-  org_dir = vim.fn.expand(org_dir)
   return table.concat({
-    'You are the talking instance of the org renderer: the one omp that every line spoken or typed into it',
-    'is handed to (the voice card on the dashboard, :OrgVoice, :OrgVoiceSay). There is one of you, and there',
-    'stays one: the launcher hands a new line to this session instead of starting another.',
+    'You are the talking instance of the org renderer: the one omp every spoken or typed line reaches',
+    '(the voice card, :OrgVoice, :OrgVoiceSay). There is one of you, and there stays one.',
     '',
-    'You do not work tickets, and you never close this pane. A run does the work; your job is to sort what',
-    'the user said and get work onto the board immediately, so that the board shows it started as soon as',
-    'they stop talking.',
+    'You are a router, not a worker. Each message you do exactly one of two things: answer in a line, or',
+    'run one command. Nothing else, ever.',
     '',
-    'The vault is at ' .. org_dir .. ', and its rules are in ' .. org_dir .. '/WORKFLOW.org.',
+    'You never:',
+    '- open the spec file: the message already says the words, the view, the org file and the entry;',
+    '- read, list or search a repository, a config file or the vault;',
+    '- run tests, scripts or nvim other than the one command below;',
+    '- edit an org file, a ticket, or a code file by hand;',
+    '- look at tmux panes, jobs, logs or other runs;',
+    '- start subagents or tasks;',
+    '- repair, retitle, reopen or re-file anything said earlier.',
     '',
-    'Each message is one thing the user said: the words, the view they were said on, and the path of a spec',
-    'file holding the same words as JSON. Sort the words into one of these, and act in the same turn:',
+    'A message is the words, the view they were said on, their org file (or none), the entry they hang',
+    'under (or none), and the path of the spec the command takes.',
     '',
-    '- A question: answer it here, in two or three lines. No file, no run.',
-    '- A remark to you: say what you take from it, one line, and stop.',
-    '- Work: file it and start it, in that order, with one command --',
+    'WORK: file it and start it, with exactly this command, once:',
     '',
     "    nvim --headless -c \"lua require('helpers.org.ai').talk('<spec path>')\" -c 'qa!'",
     '',
-    '  The spec already names the org file the words belong to, and -- when the dashboard had an entry',
-    '  highlighted -- the entry they hang under, by its :ID:. When the spec names no file, the words did not',
-    '  say where they belong: pick the project file they belong to (the WORKFLOW rules say how a project is',
-    '  filed) and pass it as the second argument --',
+    'Then quote the one line it printed and stop. That command is the whole write -- the headline, its',
+    ':ID:, the launch state, the checkpoint, a pane of its own -- and the run it starts is the worker.',
+    'You write no org text and do none of the work.',
+    '',
+    'When the message says the org file is none, the words did not say which project they belong to.',
+    'Ask one line, "which file?", and stop. Never go looking. When the answer comes, run the same',
+    'command with it:',
     '',
     "    nvim --headless -c \"lua require('helpers.org.ai').talk('<spec path>', '<file>')\" -c 'qa!'",
     '',
-    '  The command writes the words as a ticket -- the headline, its :ID:, its body, then the launch every',
-    '  other launch is: the state to NEXT, the session link, the checkpoint, a pane of its own -- and prints',
-    '  one line saying what it wrote and where the run lives. Nobody writes org text by hand here: the',
-    '  command is the write, and the run it starts is what reads it.',
+    'Words that are plainly two separate jobs: the command twice, once each.',
     '',
-    '  Words that are plainly two jobs are two tickets: run the command for each, one after the other.',
-    '  Never do the work the words ask for: the run the command starts is the worker, and you are not.',
+    'A question: at most three lines, from the words and this conversation alone. If the answer needs a',
+    'look at anything, file it as work instead of looking. A remark to you: one line, what you take from',
+    "it. A correction to an earlier ticket: file it as new work -- the ticket it corrects is a run's, not",
+    'yours.',
     '',
-    'Reply short. When the command printed its line, quote that line and nothing else; when you answered a',
-    'question, the answer is the whole reply. You keep the conversation, so a later "that one too" or "no,',
-    'the other project" is answered from what came before -- the spec files are the record of what was said.',
+    'The command settles a repeat itself: when it says the words are already a ticket, quote that and',
+    'write nothing.',
+    '',
+    "Reply short: the command's line, or the answer, and nothing around it.",
   }, '\n')
 end
 
@@ -1086,10 +1086,35 @@ end
 --- the same session on every later line, which is what makes it one instance
 --- with one conversation instead of one per utterance. A nil `message` opens
 --- the session alone.
+---
+--- The rules *replace* the coding assistant's prompt (`--system-prompt`, not
+--- `--append-system-prompt`): a router told half its rules by a coding prompt
+--- reads the repository, runs scripts and repairs tickets, which is exactly
+--- what "doing way too much" was. The flags leave it nothing to do it with,
+--- either -- the shell for its one command and no other tool, no skills, no
+--- vault rules, no AGENTS.md, no thinking -- so the words it was handed are
+--- the only thing it can act on.
 ---@param message string|nil
 ---@return string[]
 local function talk_argv(message)
-  return session_argv(TALK_KEY, talk_rules_path(), message)
+  local dir = session_dir(TALK_KEY)
+  local argv = { 'omp', '--session-dir', dir }
+  if has_session(dir) then
+    argv[#argv + 1] = '--continue'
+  end
+  vim.list_extend(argv, {
+    '--tools=bash',
+    '--no-skills',
+    '--no-rules',
+    '--no-context-files',
+    '--thinking=off',
+    '--system-prompt',
+    talk_rules_path(),
+  })
+  if message then
+    argv[#argv + 1] = message
+  end
+  return argv
 end
 
 local function omp_argv(ticket)
@@ -1225,6 +1250,21 @@ local function orchestrator_pane(key)
       return pane
     end
   end
+end
+
+--- The pane the run working `ticket` lives in, when one holds it: the
+--- ticket's own instance (`@omp_ticket` carries its :ID:) or the project
+--- orchestrator that batch-launched it (`@omp_orchestrator` carries its
+--- :OMP_SESSION: key). nil when no run has the ticket, and when this nvim is
+--- not in tmux -- nothing is found by a mark that cannot be read.
+---@param ticket table bufnr/lnum enough of an OrgTicket; `id` and `session` are what the lookup reads
+---@return string|nil pane
+local function run_pane(ticket)
+  local key = session_key(ticket)
+  if key and key:find '/' then
+    return orchestrator_pane(key)
+  end
+  return ticket.id and running_pane(ticket.id) or nil
 end
 
 --- Hand `message` to the omp running in `pane`: typed into its own prompt and
@@ -1750,8 +1790,7 @@ function M.deliver_note(bufnr, lnum, note)
   if not (ticket and ticket.id) then
     return false
   end
-  local key = session_key(ticket)
-  local pane = (key and key:find '/') and orchestrator_pane(key) or running_pane(ticket.id)
+  local pane = run_pane(ticket)
   if not pane then
     return false
   end
@@ -1826,12 +1865,77 @@ local function preset_ticket(text, target)
   return { bufnr = r.bufnr, lnum = at + (hl and 1 or 2) }
 end
 
+--- Hand the words to the run already holding the entry `target` names, when
+--- there is one: the ticket the user selected has its own instance while a run
+--- is on it (`run_pane`), and that instance is the vocal talking about that
+--- ticket -- the words are typed into its prompt, the way a note reaches it
+--- (`M.deliver_note`), so the run reads them as the next thing the user said
+--- instead of a fresh conversation starting over the same headline.
+---
+--- They are written into the entry's body first (helpers/org/notes.lua's
+--- `store`), the block a note is: the run reads the file, and a conversation
+--- that only ever existed in a prompt is gone with the pane.
+---
+--- nil when no run holds the entry, when the target names none, and when this
+--- nvim is not in tmux: the words are the talking instance's then, which is
+--- where anything without a live ticket belongs.
+---@param target { file: string, line?: integer, id?: string }|nil
+---@param words string
+---@param view string
+---@return string|nil pane
+local function say_to_run(target, words, view)
+  if not (target and target.file and in_tmux()) then
+    return nil
+  end
+  local ok, r = pcall(require('helpers.org.web.actions').resolve, target)
+  if not (ok and r and r.bufnr and r.hl) then
+    return nil
+  end
+  local hl = r.hl
+  local id = require('org.id').get { bufnr = r.bufnr, lnum = hl.line }
+  local ticket = {
+    bufnr = r.bufnr,
+    lnum = hl.line,
+    id = (id and id:match '%S') and vim.trim(id) or nil,
+    session = hl:get_property(SESSION_PROP, false),
+    title = hl:plain_title(),
+  }
+  local pane = run_pane(ticket)
+  if not pane then
+    return nil
+  end
+  -- the entry is the record, so the words land in it before the message that
+  -- points at them does; a buffer another writer moved under us cannot take
+  -- the block, and the run is told that much rather than being told nothing
+  local stored = false
+  if not write.stale(r.bufnr) then
+    stored = require('helpers.org.notes').store(r.bufnr, hl, words) ~= nil
+    if stored and not write.save(r.bufnr, { no_prompt = true }) then
+      stored = false
+      notify('org ai: ' .. vim.fn.fnamemodify(r.path, ':t') .. ' is not writable — the words reached the run but not the entry', vim.log.levels.WARN)
+    end
+  end
+  local message = one_line(('The user said this aloud about %s, on the org %s view: "%s"'):format(ticket.title, view, words))
+  if not deliver(pane, message) then
+    return nil
+  end
+  notify('org ai: gave the words to the run on ' .. ticket.title .. (stored and '' or ' (not written to the entry)'))
+  return pane
+end
+
 --- Hand words that came from outside the board to the one talking instance
 --- (`TALK_KEY`): the dashboard's voice card (helpers/org/voice.lua), and the
 --- `:OrgVoice` / `:OrgVoiceSay` commands that speak the same way. Nothing is
 --- filed here and no run starts here: the words go to the instance, and it is
 --- what answers, files and starts a run (`M.talk`) -- one conversation for
 --- every line the user says, whatever the view said them on.
+---
+--- One entry the selection can name is not the instance's, though: a ticket a
+--- run already holds has its own instance, and the words about it belong there
+--- (`say_to_run`) -- the run reads them as the user's next turn instead of a
+--- second conversation starting on the same headline. The talking instance is
+--- what takes everything else: a question, an entry nothing is running, no
+--- entry at all.
 ---
 --- The words ride along as a spec file, written beside the message: the words
 --- themselves, the view they were said on, and -- when the dashboard had an
@@ -1842,14 +1946,22 @@ end
 ---@param target? { file: string, line?: integer, id?: string } what the
 --- renderer had highlighted, when it had anything
 ---@param view? string the view they were said on
----@return string|nil pane the talking instance's pane ('' for a window of its
---- own, when this is not tmux), or nil when nothing could be reached
+---@return string|nil pane the instance's pane -- the ticket's run or the
+--- talking one ('' for a window of its own, when this is not tmux) -- or nil
+--- when nothing could be reached
 function M.open_prompt(text, target, view)
   local words = one_line(text)
   if words == '' then
     return nil
   end
-  local spec = { text = words, view = view and view ~= '' and view or 'dashboard' }
+  local where = view and view ~= '' and view or 'dashboard'
+  -- the ticket the user selected, when a run is on it, takes the words before
+  -- any conversation about them is started here
+  local on_ticket = say_to_run(target, words, where)
+  if on_ticket then
+    return on_ticket
+  end
+  local spec = { text = words, view = where }
   if target then
     spec.file = target.file
     spec.under = target.id
@@ -1874,8 +1986,18 @@ function M.open_prompt(text, target, view)
       pcall(vim.fn.delete, kept[i])
     end
   end
-  local msg =
-    one_line(('Words said on the org %s view: "%s". Spec: %s. Answer them, or file the work and start it, as your rules say.'):format(spec.view, words, path))
+  -- what the spec says that the instance acts on rides in the message too, so
+  -- it never has to open the file: it reads the words, the view, the file and
+  -- the entry it hangs under, and its next act is the command or the answer
+  local msg = one_line(
+    ('Words said on the org %s view: "%s". Their org file: %s. Entry they hang under: %s. Spec: %s. Answer them, or file the work and start it, as your rules say.'):format(
+      spec.view,
+      words,
+      spec.file or 'none',
+      spec.under or 'none',
+      path
+    )
+  )
   if not in_tmux() then
     open_window(talk_argv(msg))
     return ''
@@ -1904,7 +2026,8 @@ end
 --- entry they hang under (`M.open_prompt` writes it). `file` is the one thing
 --- the talking instance may have to supply, as its second argument, when the
 --- spec names none: a listen with nothing highlighted does not say which
---- project the words belong to, and the instance is what reads the vault.
+--- project the words belong to, and the instance asks the user for it rather
+--- than going to look (the vault is not its to read).
 ---
 --- This is called by the talking instance, from the shell of a headless nvim
 --- (`nvim --headless -c "lua require('helpers.org.ai').talk('<spec>')" -c
