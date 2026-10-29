@@ -13,9 +13,21 @@
 // `GET /api/voice` (helpers/org/voice.lua). The card shows itself while a
 // listen is running, and stays a few seconds after it ends so the last words
 // can be read, then folds back into the button.
+//
+// Where the sound comes from depends on where the page is running. A page on
+// this machine lets nvim record with the machine's own microphone, which is
+// what it has always done. A page on another device -- a phone on the ngrok
+// tunnel -- has the microphone the words should come from, so it captures the
+// sound here and streams it up as raw 16 kHz mono PCM (`/api/voice/audio`):
+// the server writes the same wav either way, so the level, the words so far
+// and the transcription are unchanged. `?mic=browser` / `?mic=server` overrides
+// the guess, for a machine whose PulseAudio is dead or a page that looks local
+// and is not.
 
 (() => {
   const PHASES = ['idle', 'speaking', 'listening', 'thinking', 'sent', 'error'];
+  // the phases a capture still belongs to: a spoken ack is the same listen
+  const HELD = ['speaking', 'listening'];
   const LINGER = 5000; // how long the finished words stay on screen
   const FAST = 300; // poll while a listen runs: the level and the words move
   const SLOW = 1500; // poll while idle
@@ -167,6 +179,9 @@
       }
       last = phase;
     }
+    // the listen is over: the microphone goes with it, so the phone stops
+    // showing that it is recording
+    if (capture.stream && !capture.holding && !HELD.includes(phase)) closeMic();
     render();
   }
 
@@ -184,20 +199,41 @@
   }
 
   async function start() {
+    // this page's own microphone first, while the click is still the gesture
+    // the browser asks permission for; the server is told which half records.
+    // `holding` keeps a poll that lands mid-click from letting go of it
+    let from = 'server';
+    capture.holding = true;
     try {
+      if (wanted()) {
+        try {
+          from = (await openMic()) ? 'browser' : 'server';
+        } catch (err) {
+          apply({ phase: 'error', error: micProblem(err) });
+          return;
+        }
+      }
       const res = await fetch('/api/voice', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ view: viewTitle(), entry: highlighted() }),
+        body: JSON.stringify({ view: viewTitle(), entry: highlighted(), source: from }),
       });
       const out = await res.json();
       if (out.status) apply(out.status);
+      // a listen that never started, or one the machine records itself, has
+      // nothing for this page to send: let the microphone go. A spoken ack
+      // (`speaking`) is still the same listen, and the microphone stays held
+      if (!out.status || out.status.source !== 'browser' || !HELD.includes(out.status.phase)) closeMic();
     } catch (err) {
+      closeMic();
       apply({ phase: 'error', error: 'could not reach nvim' });
+    } finally {
+      capture.holding = false;
     }
   }
 
   async function cancel() {
+    closeMic();
     try {
       const res = await fetch('/api/voice', {
         method: 'POST',
@@ -213,6 +249,14 @@
 
   // the second click: finish the recording and keep what it heard
   async function stop() {
+    if (capture.stream) {
+      // the sentence is over: stop listening to the microphone, then let the
+      // last quarter second go up before the server closes the wav
+      capture.node.onaudioprocess = null;
+      clearInterval(capture.timer);
+      capture.timer = null;
+      await pump();
+    }
     try {
       const res = await fetch('/api/voice', {
         method: 'POST',
@@ -289,6 +333,175 @@
     } catch (err) {
       // silent
     }
+  }
+
+  // --------------------------------------------------- the page's microphone
+  //
+  // A page on another device -- a phone on the ngrok tunnel -- records with the
+  // microphone that is actually in front of the person speaking, not the one on
+  // the machine running nvim. `getUserMedia` hands that microphone over, an
+  // AudioContext turns it into the format the server's wav holds (16 kHz, mono,
+  // 16-bit PCM), and a quarter second of it goes up at a time: the server
+  // measures the level and reads the words as the sound lands, exactly what it
+  // does with a recorder of its own.
+
+  const PCM_RATE = 16000; // the wav the server writes, whatever recorded it
+  const SEND_MS = 250; // one upload per quarter second: the meter follows closely
+
+  const capture = {
+    stream: null, // the microphone's tracks, released when the listen ends
+    ctx: null, // the graph that reads them
+    node: null,
+    gain: null,
+    timer: null, // the upload clock
+    pending: [], // pieces of PCM not yet uploaded
+    floats: [], // samples not yet resampled, and where the read position sits
+    pos: 0,
+    sending: null, // the upload in flight, so the next one waits for it
+    from: 0, // the context's own rate, which is not always the one asked for
+    holding: false, // a click is mid-flight: do not let go of the microphone
+  };
+
+  // A page on this machine lets nvim record with the machine's microphone; any
+  // other address is a device whose own microphone is the right one. A browser
+  // that cannot capture (an http address, no permission) falls back to the
+  // machine's, which is what it did before. `?mic=browser` / `?mic=server` say
+  // it by hand.
+  function wanted() {
+    const asked = new URLSearchParams(location.search).get('mic');
+    if (asked === 'browser') return true;
+    if (asked === 'server') return false;
+    const host = location.hostname;
+    return !(host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]');
+  }
+
+  function micProblem(err) {
+    const name = (err && err.name) || '';
+    if (name === 'NotAllowedError' || name === 'SecurityError') return 'the browser refused the microphone';
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'this device has no microphone';
+    return name ? `could not open the microphone (${name})` : 'could not open the microphone';
+  }
+
+  // The microphone runs at whatever the device does -- 48 kHz on most phones --
+  // and the server's wav names 16 kHz, so the samples are thinned here. Linear
+  // interpolation is enough for speech; the fractional position is carried
+  // across blocks so the sentence keeps its pitch and its length.
+  function resample(input) {
+    const step = capture.from / PCM_RATE;
+    const held = capture.floats;
+    for (let i = 0; i < input.length; i++) held.push(input[i]);
+    const out = [];
+    let pos = capture.pos;
+    while (pos + 1 < held.length) {
+      const i = Math.floor(pos);
+      const frac = pos - i;
+      out.push(held[i] * (1 - frac) + held[i + 1] * frac);
+      pos += step;
+    }
+    const cut = Math.floor(pos);
+    if (cut > 0) {
+      held.splice(0, cut);
+      pos -= cut;
+    }
+    capture.pos = pos;
+    return out;
+  }
+
+  // floats between -1 and 1, as the 16-bit little-endian samples the wav
+  // holds. Every browser that can run this page is little-endian.
+  function pcm(samples) {
+    const out = new Int16Array(samples.length);
+    for (let i = 0; i < samples.length; i++) {
+      out[i] = Math.max(-1, Math.min(1, samples[i])) * 0x7fff;
+    }
+    return new Uint8Array(out.buffer);
+  }
+
+  // One piece at a time: the server appends what arrives, so two uploads in
+  // flight together could land out of order and shuffle the sentence.
+  function pump() {
+    if (capture.sending) return capture.sending;
+    const run = (async () => {
+      while (capture.pending.length) {
+        const body = new Blob(capture.pending);
+        capture.pending = [];
+        try {
+          await fetch('/api/voice/audio', { method: 'POST', body });
+        } catch (err) {
+          // the nvim behind the page went away; the next poll says so
+          capture.pending = [];
+          break;
+        }
+      }
+    })();
+    capture.sending = run;
+    run.finally(() => {
+      if (capture.sending === run) capture.sending = null;
+    });
+    return run;
+  }
+
+  // Open this page's microphone. Called from the click itself: a browser that
+  // asks permission out of a user gesture refuses it.
+  async function openMic() {
+    if (capture.stream) return true;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    let ctx;
+    try {
+      ctx = new AudioContext({ sampleRate: PCM_RATE });
+    } catch (err) {
+      // an engine that will not be told its rate: the resampler makes up for it
+      ctx = new AudioContext();
+    }
+    await ctx.resume();
+    capture.stream = stream;
+    capture.ctx = ctx;
+    capture.from = ctx.sampleRate;
+    const source = ctx.createMediaStreamSource(stream);
+    // 4096 samples is about 85 ms at 48 kHz: short enough for the meter to
+    // follow, long enough that the page is not woken every few samples
+    const node = ctx.createScriptProcessor(4096, 1, 1);
+    node.onaudioprocess = (ev) => {
+      // the server is still saying its piece, or already reading back: what
+      // the microphone picks up now is not part of the sentence it recorded
+      if (status.phase !== 'listening') return;
+      capture.pending.push(pcm(resample(ev.inputBuffer.getChannelData(0))));
+    };
+    source.connect(node);
+    // a ScriptProcessor only runs while something listens to its output, and
+    // nothing should hear the microphone: a silent gain is the listener
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    node.connect(gain).connect(ctx.destination);
+    capture.node = node;
+    capture.gain = gain;
+    capture.pending = [];
+    capture.floats = [];
+    capture.pos = 0;
+    capture.timer = setInterval(pump, SEND_MS);
+    return true;
+  }
+
+  function closeMic() {
+    clearInterval(capture.timer);
+    capture.timer = null;
+    if (capture.node) capture.node.onaudioprocess = null;
+    if (capture.stream) {
+      for (const track of capture.stream.getTracks()) track.stop();
+    }
+    if (capture.ctx && capture.ctx.state !== 'closed') {
+      capture.ctx.close().catch(() => {});
+    }
+    capture.stream = null;
+    capture.node = null;
+    capture.gain = null;
+    capture.ctx = null;
+    capture.pending = [];
+    capture.floats = [];
+    capture.pos = 0;
   }
 
   // ---------------------------------------------------------------- clicking

@@ -23,7 +23,10 @@
 -- assets/jarvis.js): the click starts a conversation in helpers/org/voice.lua
 -- -- record, report the level and the words so far, transcribe, then an `omp`
 -- pane seeded with the words -- and the page polls the phase, the level and
--- the words it draws from the same route.
+-- the words it draws from the same route. A page running on a device with a
+-- microphone of its own records with it and streams the sound up
+-- (`/api/voice/audio`), so the phone speaks into the phone rather than into
+-- the machine running nvim.
 local M = {}
 
 local actions = require 'helpers.org.web.actions'
@@ -150,9 +153,20 @@ local function handle(req, res)
       return
     end
     -- `entry` is what the list had highlighted: the words become a ticket under
-    -- it, so the run starts pre-selected inside the project the page was on
-    local started = require('helpers.org.voice').converse(body.view, body.entry)
+    -- it, so the run starts pre-selected inside the project the page was on.
+    -- `source` is the page's own microphone (`browser`) when it has one: the
+    -- sound is then streamed up to /api/voice/audio rather than recorded here
+    local started = require('helpers.org.voice').converse(body.view, body.entry, body.source)
     json(res, { started = started, status = require('helpers.org.voice').status() })
+    return
+  end
+
+  -- A page recording with its own microphone streams the sound here, one piece
+  -- at a time (assets/jarvis.js): the body is raw 16 kHz mono PCM, which is
+  -- what the server would have recorded, so the level, the words so far and
+  -- the transcription keep coming from /api/voice unchanged
+  if req.method == 'POST' and path == '/api/voice/audio' then
+    json(res, { bytes = require('helpers.org.voice').chunk(req.body) })
     return
   end
 

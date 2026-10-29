@@ -124,7 +124,9 @@
 --                   column for that screen
 --   voice.lua       the engine behind the recording card on the dashboard
 --                   (helpers/org/web/assets/jarvis.js): a click there is
---                   `POST /api/voice`, which records through PulseAudio while
+--                   `POST /api/voice`, which records through PulseAudio -- or
+--                   through the page's own microphone when the page runs on
+--                   another device, a phone on the tunnel -- while
 --                   reporting the microphone's level and the words heard so
 --                   far, reads the recording back into words and hands them to
 --                   the one talking instance (`ai.open_prompt`, the `talk/one`

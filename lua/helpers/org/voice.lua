@@ -7,6 +7,12 @@
 --
 --   1. listen -- record through PulseAudio and report the level as it goes,
 --      so a machine whose microphone is dead looks dead instead of silent
+--      -- or, when the click came from a page running on a device that has a
+--      microphone of its own (a phone on the ngrok tunnel), from that
+--      microphone: the page captures the sound and streams it up
+--      (`POST /api/voice/audio`), and what lands here is the same raw PCM a
+--      local recorder would have written. Speaking into the computer from
+--      across the room was the one thing this card could not do
 --   2. read the recording back into words -- the sentence so far, a piece at
 --      a time while it is still being said, then all of it at the end. On a
 --      machine whose only transcriber is Windows' own, one recognizer stays
@@ -48,7 +54,11 @@
 --
 --   text -> speech |  piper, espeak-ng, spd-say, or Windows' own voice
 --                  |  (System.Speech, through powershell.exe under WSL)
---   recording     |  parec on PulseAudio (`/mnt/wslg/PulseServer` under WSLg)
+--   recording     |  parec on PulseAudio (`/mnt/wslg/PulseServer` under WSLg),
+--                  |  or the page's own microphone when the page runs on
+--                  |  another device (its sound arrives as raw PCM, so both
+--                  |  halves write one wav and nothing downstream can tell
+--                  |  them apart)
 --   speech -> text |  Handy's own model through transcribe.cpp
 --                  |  (`transcribe-cli`), whisper.cpp (`whisper-cli`),
 --                  |  Windows' own recognizer on the recorded wav, or a
@@ -112,13 +122,16 @@ local opts = {
 --- a moment ago (0 empty, 1 full), `level_db` the raw reading it came from and
 --- `signal` whether any sound at all has arrived in this listen. `partial` is
 --- what the transcriber has made of the recording so far, refreshed while the
---- sentence is still being said.
+--- sentence is still being said. `source` is the half that records: `server`
+--- is this machine's microphone (`parec`), `browser` the page's own, which is
+--- the one a phone should speak into.
 local state = {
   phase = 'idle',
   heard = '',
   partial = '',
   view = '',
   target = nil,
+  source = 'server',
   error = '',
   at = 0,
   level = 0,
@@ -177,6 +190,7 @@ function M.status()
     heard = state.heard,
     partial = state.partial,
     view = state.view,
+    source = state.source,
     error = state.error,
     at = state.at,
     level = state.level,
@@ -1444,10 +1458,14 @@ end
 --- run in an nvim buffer rather than on the page. `entry` (the entry the list
 --- had highlighted, or the headline at point) is the entry the words belong
 --- to; it is what the words hang under when they become a ticket and what
---- decides which run hears them.
+--- decides which run hears them. `source` says which microphone the sound
+--- comes from: `browser` for a page recording its own (a phone on the tunnel),
+--- anything else -- or nothing at all -- this machine's, which is what the
+--- editor's own commands use.
 ---@param view? string
 ---@param entry? { file: string, line?: integer, id?: string, title?: string }
-function M.converse(view, entry)
+---@param source? string
+function M.converse(view, entry, source)
   if state.phase ~= 'idle' and state.phase ~= 'error' and state.phase ~= 'sent' then
     return false
   end
@@ -1457,6 +1475,7 @@ function M.converse(view, entry)
     end)
   end
   state.target = target_of(entry)
+  state.source = source == 'browser' and 'browser' or 'server'
   set_phase('idle', { view = vim.trim(view or ''), heard = '', partial = '', error = '' })
   if not speaks() then
     begin()
@@ -1500,8 +1519,14 @@ function M.stop()
   if state.phase ~= 'listening' then
     return false
   end
-  local handle = job.proc
   drop_timer()
+  if job.finish then
+    -- a recording the page made has no process to signal: the wav is already
+    -- whole, and closing it is the whole of stopping
+    job.finish()
+    return true
+  end
+  local handle = job.proc
   if not handle then
     M.cancel()
     return false
@@ -1513,6 +1538,7 @@ end
 --- Throw the recording away: the card's escape key, and the escape hatch when
 --- a program hangs. Nothing is read back and no run starts.
 function M.cancel()
+  job.finish = nil
   if job.proc then
     local handle = job.proc
     job.proc = nil
