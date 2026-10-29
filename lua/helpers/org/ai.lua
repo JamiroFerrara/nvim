@@ -1225,6 +1225,11 @@ local function open_instance_pane(argv, title, opt, value)
     end
   end
   tmux { 'set-option', '-p', '-t', pane, opt, value }
+  -- what the run was asked and when it started: the little window that says
+  -- what the runs are doing reads these off the pane (helpers/org/runs.lua),
+  -- and every nvim in the session reads the same answer
+  tmux { 'set-option', '-p', '-t', pane, '@omp_run_title', title }
+  tmux { 'set-option', '-p', '-t', pane, '@omp_run_at', tostring(os.time()) }
   tmux { 'select-pane', '-t', cur }
   return pane
 end
@@ -1606,7 +1611,10 @@ end
 --- the orb on the dashboard's voice buddy heard (helpers/org/voice.lua). The
 --- pane carries `@omp_voice` rather than a ticket's `@omp_ticket`: the words
 --- name no ticket, so no run's last act (the skill's pane close) has anything
---- of ours to match.
+--- of ours to match. What it carries is the run's own session key
+--- (`voice/<hrtime>`, under the agent dir): the words start a session of
+--- their own, and naming it is what lets the little runs window follow what
+--- this one is doing (helpers/org/runs.lua).
 ---@param text string
 ---@param title? string
 ---@return string|nil pane the pane the run lives in ('' for a window of its
@@ -1616,13 +1624,14 @@ function M.open_prompt(text, title)
   if msg == '' then
     return nil
   end
-  local argv = { 'omp', msg }
+  local key = 'voice/' .. tostring(vim.uv.hrtime())
+  local argv = { 'omp', '--session-dir', session_dir(key), msg }
   local name = title or ('🤖 ' .. msg:sub(1, 40))
   if not in_tmux() then
     open_window(argv)
     return ''
   end
-  return open_instance_pane(argv, name, '@omp_voice', tostring(vim.uv.hrtime()))
+  return open_instance_pane(argv, name, '@omp_voice', key)
 end
 
 --- The climb up the tree, offered to every run at its end: the ordinary
