@@ -607,8 +607,10 @@ local function text_of(obj)
 end
 
 --- The running child of this listen, so a second click (or `M.cancel`) can
---- cut it short. One listen at a time: the phase is the lock.
-local job = { proc = nil, timer = nil, wav = nil, fd = nil, bytes = 0 }
+--- cut it short. One listen at a time: the phase is the lock. A recording made
+--- by the page's own microphone has no child at all -- `finish` is what ends
+--- it, where `proc` is the process the local recorder is signalled through.
+local job = { proc = nil, timer = nil, wav = nil, fd = nil, bytes = 0, finish = nil, ended = false }
 
 local function drop_timer()
   if job.timer then
@@ -1124,6 +1126,88 @@ local function peek(backend)
   end)
 end
 
+--- Open the wav a listen writes into. Both recording halves start here: the
+--- same file, the same header, the same `job` fields behind it, so whatever
+--- reads it back cannot tell which one filled it.
+---@param done fun(text: string)
+---@return string|nil wav
+local function open_wav(done)
+  local wav = vim.fn.tempname() .. '.wav'
+  local fd = uv.fs_open(wav, 'w', 384)
+  if not fd then
+    set_phase('error', { error = 'could not write the recording' })
+    done ''
+    return nil
+  end
+  job.wav, job.fd, job.bytes, job.ended = wav, fd, 0, false
+  uv.fs_write(fd, wav_header(0), 0)
+  return wav
+end
+
+--- The cap: a listen nobody stops ends here rather than holding the card in
+--- `listening` forever. `stop` is what ends the recording the way its half
+--- needs -- a signal to the recorder, or the wav closed for a page that
+--- streamed its own sound.
+---@param stop fun()
+local function cap(stop)
+  drop_timer()
+  job.timer = uv.new_timer()
+  job.timer:start(opts.listen_seconds * 1000, 0, function()
+    vim.schedule(function()
+      if state.phase == 'listening' then
+        stop()
+      end
+    end)
+  end)
+end
+
+--- Close the recording and read it back: the last step of a listen, whichever
+--- half recorded it. The bytes are on disk in the module's format by now, so
+--- from here on nothing knows the difference. Safe to call twice -- the
+--- second click and the cap can both land here -- because the first call is
+--- what sets `job.ended`.
+---@param backend string|nil
+---@param wav string
+---@param done fun(text: string)
+local function end_recording(backend, wav, done)
+  if job.ended then
+    return
+  end
+  job.ended = true
+  job.finish = nil
+  close_wav()
+  drop_partial()
+  if state.phase ~= 'listening' then
+    pcall(uv.fs_unlink, wav)
+    return
+  end
+  job.proc = nil
+  drop_timer()
+  if vim.fn.filereadable(wav) ~= 1 then
+    heard('', done)
+    return
+  end
+  if not backend then
+    pcall(uv.fs_unlink, wav)
+    job.wav = nil
+    reader_stop()
+    set_phase('error', { error = 'recorded, but no speech-to-text is installed' })
+    done ''
+    return
+  end
+  set_phase 'thinking'
+  if backend == 'windows' and reader.proc and reader.wav == wav then
+    -- the recognizer already has the recording open: asking it again is the
+    -- recognition alone, where a fresh process would pay for its startup
+    reader.final = done
+    if reader_ask 'FINAL' then
+      return
+    end
+    reader.final = nil
+  end
+  transcribe(wav, backend, done)
+end
+
 --- Record until a second click (or the cap), then transcribe. `parec`
 --- streams the microphone as raw PCM instead of writing a file itself, which
 --- is what lets the same bytes become both the wav and the level: an
@@ -1133,52 +1217,14 @@ end
 ---@param backend string|nil
 ---@param done fun(text: string)
 local function start_recording(backend, done)
-  local wav = vim.fn.tempname() .. '.wav'
-  local fd = uv.fs_open(wav, 'w', 384)
-  if not fd then
-    set_phase('error', { error = 'could not write the recording' })
-    done ''
+  local wav = open_wav(done)
+  if not wav then
     return
   end
-  job.wav, job.fd, job.bytes = wav, fd, 0
-  uv.fs_write(fd, wav_header(0), 0)
   if backend == 'windows' then
     -- started with the recording, so PowerShell's own startup is paid for
     -- while the sentence is being said rather than after it
     reader_start(wav)
-  end
-  local function finished()
-    close_wav()
-    drop_partial()
-    if state.phase ~= 'listening' then
-      pcall(uv.fs_unlink, wav)
-      return
-    end
-    job.proc = nil
-    drop_timer()
-    if vim.fn.filereadable(wav) ~= 1 then
-      heard('', done)
-      return
-    end
-    if not backend then
-      pcall(uv.fs_unlink, wav)
-      job.wav = nil
-      reader_stop()
-      set_phase('error', { error = 'recorded, but no speech-to-text is installed' })
-      done ''
-      return
-    end
-    set_phase 'thinking'
-    if backend == 'windows' and reader.proc and reader.wav == wav then
-      -- the recognizer already has the recording open: asking it again is the
-      -- recognition alone, where a fresh process would pay for its startup
-      reader.final = done
-      if reader_ask 'FINAL' then
-        return
-      end
-      reader.final = nil
-    end
-    transcribe(wav, backend, done)
   end
   local function on_stdout(_, data)
     if not data or data == '' or not job.fd then
@@ -1196,7 +1242,9 @@ local function start_recording(backend, done)
     '--latency-msec=100',
     '--raw',
   }, { env = audio_env(), stdout = on_stdout }, function()
-    vim.schedule(finished)
+    vim.schedule(function()
+      end_recording(backend, wav, done)
+    end)
   end)
   if not ok then
     close_wav()
@@ -1207,33 +1255,89 @@ local function start_recording(backend, done)
     return
   end
   job.proc = handle
-  job.timer = uv.new_timer()
-  job.timer:start(opts.listen_seconds * 1000, 0, function()
-    vim.schedule(function()
-      if state.phase == 'listening' and job.proc then
-        pcall(handle.kill, handle, 'sigint')
-      end
-    end)
+  cap(function()
+    if job.proc then
+      pcall(handle.kill, handle, 'sigint')
+    end
   end)
   peek(backend)
 end
 
---- Listen once and hand the words to `done`: record through PulseAudio, show
---- the level while it records, then read the file back. Recording comes first
---- even when no transcriber is installed, because a silent level is the
---- answer to "is the microphone working at all".
+--- Record from the page's own microphone: the browser captures the sound and
+--- streams it here one piece at a time (`M.chunk`), and this half is what
+--- `parec` is on the machine -- a wav growing on disk, the level measured as
+--- the bytes land, a recognizer reading it while it grows. There is no
+--- process, so `job.finish` is what ends it where the local recorder gets a
+--- signal.
+---@param backend string|nil
+---@param done fun(text: string)
+local function start_stream(backend, done)
+  local wav = open_wav(done)
+  if not wav then
+    return
+  end
+  if backend == 'windows' then
+    reader_start(wav)
+  end
+  job.finish = function()
+    end_recording(backend, wav, done)
+  end
+  cap(job.finish)
+  peek(backend)
+end
+
+--- One piece of the page's recording, as it lands: `data` is raw PCM at the
+--- module's format (`POST /api/voice/audio`). The bytes a local recorder would
+--- have written become the wav and the level here, so the card draws a page's
+--- microphone exactly the way it draws this machine's. A piece that arrives
+--- when nothing is listening is dropped: the page can lose a race with the cap
+--- or a cancel, and a stray chunk is not a reason to fail a request.
+---@param data any
+---@return integer bytes this listen holds
+function M.chunk(data)
+  if type(data) ~= 'string' or not job.fd or state.phase ~= 'listening' or state.source ~= 'browser' then
+    return job.bytes or 0
+  end
+  -- a piece cut mid-sample would shift every sample after it by a byte
+  data = data:sub(1, #data - (#data % 2))
+  if data == '' then
+    return job.bytes
+  end
+  pcall(uv.fs_write, job.fd, data, 44 + job.bytes)
+  job.bytes = job.bytes + #data
+  level_of(data)
+  return job.bytes
+end
+
+--- Listen once and hand the words to `done`: record through PulseAudio, or
+--- through the page's own microphone when the click came from a device that
+--- has one, show the level while it records, then read the file back.
+--- Recording comes first even when no transcriber is installed, because a
+--- silent level is the answer to "is the microphone working at all" -- on this
+--- machine. A page's recording is only made when there is something to read it
+--- back with.
 ---@param done fun(text: string)
 local function listen(done)
+  -- Handy can be given a different model between two listens, and the one it
+  -- names then is the one this should read with: look it up again rather than
+  -- keep the first answer for the life of the session
+  handy.src, handy.model = nil, nil
+  if state.source == 'browser' then
+    if not stt_backend() then
+      set_phase('error', { error = 'no speech-to-text is installed to read the recording' })
+      done ''
+      return
+    end
+    set_phase('listening', { level = 0, level_db = nil, signal = false, partial = '', heard = '' })
+    start_stream(stt_backend(), done)
+    return
+  end
   if not exe 'parec' then
     set_phase('error', { error = 'no recorder: parec (pulseaudio-utils) is not installed' })
     done ''
     return
   end
   set_phase('listening', { level = 0, level_db = nil, signal = false, partial = '', heard = '' })
-  -- Handy can be given a different model between two listens, and the one it
-  -- names then is the one this should read with: look it up again rather than
-  -- keep the first answer for the life of the session
-  handy.src, handy.model = nil, nil
   start_recording(stt_backend(), done)
 end
 
