@@ -210,6 +210,14 @@ local TALK_KEY = 'talk/one'
 --- last lines said, which outlive the editor (Open_Prompt's own note).
 local SPECS_KEPT = 200
 
+--- How long a line waits for the talking instance to file it before the editor
+--- files it itself (`net`). One command and one line of reply is a handful of
+--- seconds of work; this is the leash on the turn, not a deadline for it. Long
+--- enough that an instance still on its way never races the editor, short
+--- enough that a line the instance dropped is a ticket while the user is still
+--- at the keyboard.
+local FILE_GRACE = 45
+
 --- What the talking instance is told once, as its system prompt. It is a
 --- router and nothing else: answer a line, or file the words and start their
 --- run (`M.talk`) with one command. Every word here that opens a door -- the
@@ -1978,6 +1986,38 @@ local function say_to_run(target, words, view)
   return pane
 end
 
+--- The net under the talking instance, armed once per line: `path` is the spec
+--- the words were written to, and the instance was handed a message telling it
+--- to file them. Its one silent failure is a reply without the write -- the
+--- words read as a continuation of the last line, the instance talked out of
+--- the command -- and then the words are gone with the turn, which is the
+--- "sometimes it does not create tickets" the launch says out loud.
+---
+--- So the spec is read back after `FILE_GRACE`, and a spec still without its
+--- `filed` mark is filed here, by the instance's own act (`M.talk`): the write,
+--- the drawer, the launch, the pane. That act settles a repeat by itself, so
+--- the two can never make two tickets -- an instance that got there first has
+--- stamped the spec and this returns without reading further, and one that
+--- gets there later is told the words are already a ticket.
+---
+--- Nothing in the instance's rules mentions this: a net it knows about is a
+--- net it leans on.
+---@param path string the spec file the words were written to
+local function net(path)
+  vim.defer_fn(function()
+    local ok, spec = pcall(function()
+      return vim.json.decode(table.concat(vim.fn.readfile(vim.fn.expand(path)), '\n'))
+    end)
+    if not (ok and type(spec) == 'table') then
+      return
+    end
+    if type(spec.filed) == 'string' and spec.filed ~= '' then
+      return
+    end
+    pcall(M.talk, path)
+  end, FILE_GRACE * 1000)
+end
+
 --- Hand words that came from outside the board to the one talking instance
 --- (`TALK_KEY`): the dashboard's voice card (helpers/org/voice.lua), and the
 --- `:OrgVoice` / `:OrgVoiceSay` commands that speak the same way. Nothing is
@@ -1999,6 +2039,12 @@ end
 --- project's own, the one this nvim is working in (`home_board`), so the
 --- spec always names a destination. The instance reads the spec when it files
 --- them (`M.talk`), so no quote of them has to survive a shell or a prompt.
+---
+--- The spec is also the editor's last word on the line: once the words are the
+--- instance's, a timer reads it back and files it here if the turn ended without
+--- any (`net`), so "I said it and nothing appeared" cannot happen -- an instance
+--- that answered instead of filing is a line with an answer and a ticket, never
+--- a line that vanished.
 ---@param text string the words themselves
 ---@param target? { file: string, line?: integer, id?: string } what the
 --- renderer had highlighted, when it had anything
@@ -2063,12 +2109,14 @@ function M.open_prompt(text, target, view)
   )
   if not in_tmux() then
     open_window(talk_argv(msg))
+    net(path)
     return ''
   end
   local pane, delivered = open_talk(msg)
   if not pane then
     return nil
   end
+  net(path)
   notify(delivered and 'org ai: handed the words to the talking instance' or ('org ai: talking instance in pane ' .. pane))
   return pane
 end
@@ -2144,6 +2192,12 @@ end
 --- one ticket however many times the instance runs the command: a second run
 --- says which ticket they already are and writes nothing. One message is one
 --- piece of work, and an agent that retried the command has not said it twice.
+---
+--- The editor calls the same act when a line's turn ends without a write (`net`,
+--- `M.open_prompt`): whether the words became a ticket is not left to a reply,
+--- so a turn that answered instead of filing costs the user nothing but a run
+--- they did not need -- and the stamp above is what keeps the two from filing
+--- the same words twice.
 ---@param spec_path string path of the spec JSON
 ---@param file? string the org file to file the words in, when the spec names none
 ---@return integer|nil lnum the headline's line, or nil when nothing was filed
