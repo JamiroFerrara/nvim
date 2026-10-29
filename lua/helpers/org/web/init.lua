@@ -395,11 +395,22 @@ local function broadcast()
   end)
 end
 
+--- The port every session listens on. Fixed, so a reload, a bookmark and a
+--- tab left open across a restart of nvim all keep working; only a port
+--- something else already holds falls back to one the system picks.
+local PORT = 7313
+
 local function start()
   if state.server then
     return state.server
   end
-  local ok, server = pcall(http.listen, { host = '127.0.0.1', port = 0 }, handle)
+  local ok, server = pcall(http.listen, { host = '127.0.0.1', port = PORT }, handle)
+  if not ok or not server then
+    ok, server = pcall(http.listen, { host = '127.0.0.1', port = 0 }, handle)
+    if ok and server then
+      vim.notify(('org web: port %d is taken, listening on %d instead'):format(PORT, server.port), vim.log.levels.WARN)
+    end
+  end
   if not ok or not server then
     error('org web: could not start the server: ' .. tostring(server))
   end
