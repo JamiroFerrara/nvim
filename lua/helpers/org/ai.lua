@@ -2422,18 +2422,23 @@ function M.talk(spec_path, file)
     return nil
   end
   -- where the words go, best first: a file the instance gave, a board it named
-  -- instead of a path ('ing', the project's title), a board the words name, the
+  -- instead of a path ('ing', the project's title), a board the words name --
+  -- unless they hang under an entry, which is the board they are about -- the
   -- file the editor wrote into the spec, and the board this shell stands in.
   -- The instance cannot read the vault, so a name it half-remembers still lands
   -- in the right board here rather than in whatever file it happened to type.
+  local under = type(spec.under) == 'string' and spec.under ~= '' and spec.under or nil
   local own = type(spec.file) == 'string' and spec.file or ''
   local given = type(file) == 'string' and vim.trim(file) or ''
-  local dest = (is_file(given) and vim.fn.expand(given)) or named_board(given) or named_board(words) or (is_file(own) and vim.fn.expand(own)) or home_board()
+  local dest = (is_file(given) and vim.fn.expand(given)) or named_board(given)
+  if not dest and not under then
+    dest = named_board(words)
+  end
+  dest = dest or (is_file(own) and vim.fn.expand(own)) or home_board()
   if type(dest) ~= 'string' or dest == '' then
     say 'nowhere to file the words: this shell stands in no project'
     return nil
   end
-  local under = type(spec.under) == 'string' and spec.under ~= '' and spec.under or nil
   local preset = preset_ticket(words, { file = vim.fn.expand(dest), id = under })
   if not preset then
     say('no org file at ' .. dest .. ' the agenda reads')
