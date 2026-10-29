@@ -8,7 +8,9 @@
 --              tag, the untagged rest, Done (most recently closed first)
 --   agenda     the `§` agenda -- the current week day by day, Monday first,
 --              with what is overdue above it and the weeks either side of it
---              below (the dates on SCHEDULED and DEADLINE)
+--              below, drawn from org.nvim's own agenda finder: the dates on
+--              SCHEDULED and DEADLINE, the plain and inactive timestamps of
+--              a date tree, diary lines
 --   open       the `o` list, one section per project file
 --   flight     the `f` list -- NEXT, TEST and WARN, one section per
 --              classification tag (the bug / feat / chore sections, the
@@ -119,6 +121,9 @@ end
 
 local cache
 local cached_at = 0
+-- the agenda sections, cached beside the entries: the finder walks every file
+-- of the selection, and the page asks for the payload on every entry it opens
+local agenda_cache = { key = false }
 
 local function collect()
   local files = require('org.files').agenda_file_paths()
@@ -195,6 +200,7 @@ end
 
 function M.invalidate()
   cache = nil
+  agenda_cache.key = false
 end
 
 --- One entry of the current list, by file and line (or `:ID:`).
@@ -439,11 +445,12 @@ local function flight(entries)
   return sections
 end
 
--- The `§` agenda over the week the editor draws, Monday to Sunday: the days
--- already past included, where the closed work of the week sits, and the
--- dated work a week alone would hide -- what ran past its date above the
--- week, the days still ahead of it and the weeks behind it below. A day
--- lists its entries in the order of their time, priority settling the ties.
+-- The `§` week, drawn from org.nvim's own finder (org/agenda/items.lua's
+-- `M.agenda`) rather than from the entries above: the editor's agenda lists
+-- the appointments of a date tree, a plain timestamp, a scheduled or deadline
+-- date and a diary line, and most of those carry no TODO keyword at all --
+-- the entry walk only keeps the headlines that do. Going through the finder
+-- is what makes the two views the same week, with the same times.
 local function by_at(a, b)
   local aa, ab = a.at or math.huge, b.at or math.huge
   if aa ~= ab then
@@ -452,72 +459,150 @@ local function by_at(a, b)
   return by_priority(a, b)
 end
 
-local function agenda(entries)
+--- "9:00-9:15" (org-agenda's `%t`), or "" for an item with no time of day.
+---@param item org.AgendaItem
+---@return string
+local function time_label(item)
+  local function hm(m)
+    local h, mm = math.floor(m / 60), m % 60
+    if h > 24 or (h == 24 and mm > 0) then
+      return ('+%d:%02d'):format(h - 24, mm)
+    end
+    return ('%d:%02d'):format(h, mm)
+  end
+  if not item.time then
+    return ''
+  end
+  if item.end_time and item.end_time > item.time then
+    return hm(item.time) .. '-' .. hm(item.end_time)
+  end
+  return hm(item.time)
+end
+
+--- One row of the agenda. An item that comes from a headline reuses the entry
+--- the walk above made of it, so the row keeps its project, its run button and
+--- its live dot; an item no headline carries (a diary line) gets a bare row.
+---@param item org.AgendaItem
+---@param day integer
+---@param entries_by_line table<string, table>
+---@return table
+local function agenda_row(item, day, entries_by_line)
+  local entry = item.filename and entries_by_line[item.filename .. '#' .. tostring(item.lnum)] or nil
+  local row = entry or {
+    file = item.filename or '',
+    rel = item.filename and relative(item.filename) or '',
+    line = item.lnum,
+    project = item.filename and require('helpers.org.project').file_title(item.filename) or (item.category or ''),
+    ancestors = {},
+  }
+  local merged = vim.tbl_extend('force', row, {
+    title = item.display_title or item.title or '',
+    todo = item.todo,
+    priority = item.priority,
+    done = item.done == true,
+    tags = item.tags or {},
+    day = day,
+    agenda = { time = time_label(item), type = item.type },
+  })
+  -- the entry a row reuses carries the day of its planning date, not the time
+  -- of this item: the agenda line's time is the item's own, and an item with
+  -- no time of day keeps a nil there so the client sorts it last
+  merged.at = item.time
+  return merged
+end
+
+--- The sections of the agenda view: what ran past its date above the week,
+--- the seven days of it (a header each, entries or not), then the week ahead
+--- and the week behind it below.
+---@param file string|nil the selected project (`nil` or 'all' = every file)
+---@param entries_by_line table<string, table>
+---@return table[]
+local function agenda(file, entries_by_line)
   local date = require 'org.date'
+  local org_files = require 'org.files'
   local start = date.today()
   local today = start:days()
   local monday = today - (start:weekday() - 1)
   local sunday = monday + 6
+  -- the fringe: the week behind this one and the week after it -- enough for
+  -- the "Later" and "Earlier" sections, and no wider, so a daily appointment
+  -- does not fill them with its own repeats a month out
+  local from, to = monday - 7, sunday + 7
+  local list = {}
+  for _, path in ipairs(org_files.agenda_file_paths()) do
+    if not file or file == '' or file == 'all' or path == file then
+      local ok, f = pcall(org_files.get, path)
+      if ok and f then
+        list[#list + 1] = f
+      end
+    end
+  end
+  local ok, by_day = pcall(require('org.agenda.items').agenda, list, from, to, { today = today })
+  if not ok then
+    by_day = {}
+  end
+  local rows = {}
+  for d = from, to do
+    for _, item in ipairs(by_day[d] or {}) do
+      rows[#rows + 1] = agenda_row(item, d, entries_by_line)
+    end
+  end
   local sections = {}
   -- the board's Done list cap: a bucket that would run past it says how much
   -- it left out instead of growing without limit
-  local function section(title, icon, items, newest_first)
-    table.sort(items, newest_first and function(a, b)
+  local function section(title, icon, items, opts)
+    opts = opts or {}
+    -- a day of the week keeps its header even with nothing under it: the
+    -- week reads as a week, the way the editor's agenda reads
+    if #items == 0 and not opts.day then
+      return
+    end
+    table.sort(items, opts.newest and function(a, b)
       return by_at(b, a)
     end or by_at)
     local shown = vim.list_slice(items, 1, 100)
-    if #shown > 0 then
-      sections[#sections + 1] = {
-        title = title,
-        icon = icon,
-        items = indent(shown),
-        note = #items > #shown and ('%d more'):format(#items - #shown) or nil,
-      }
-    end
+    sections[#sections + 1] = {
+      title = title,
+      icon = icon,
+      items = indent(shown),
+      note = #items > #shown and ('%d more'):format(#items - #shown) or nil,
+      label = opts.label,
+      day = opts.day,
+      today = opts.today or nil,
+      -- the current minute: the client draws a "now" line among today's rows
+      now = opts.now,
+    }
   end
 
-  section(
-    'Overdue',
-    '!',
-    pick(entries, function(e)
-      return e.day and e.day < today and not e.done
-    end)
-  )
+  -- what is late: an item that carries a keyword and is still open, its date
+  -- behind it. A past appointment is not late, it just happened, and it stays
+  -- on its own day where the week lists it
+  section('Overdue', '!', pick(rows, function(e)
+    return e.day < today and not e.done and e.todo ~= nil
+  end))
+  local now = date.now()
+  local now_at = (now.hour or 0) * 60 + (now.min or 0)
   for d = monday, sunday do
-    local label = date.from_days(d):strftime '%a %d %b'
-    local title = label
-    if d == today then
-      title = 'Today, ' .. label
-    elseif d == today + 1 then
-      title = 'Tomorrow, ' .. label
-    end
+    local day = date.from_days(d)
     -- a day gone by lists what was closed on it; its open work is Overdue,
     -- one section above, and a second copy here would say nothing new
-    section(
-      title,
-      '◷',
-      pick(entries, function(e)
-        return e.day == d and (d >= today or e.done)
-      end)
-    )
+    section(day:strftime '%A %d %B %Y', '◷', pick(rows, function(e)
+      return e.day == d and (d >= today or e.done)
+    end), {
+      day = d,
+      today = d == today,
+      now = d == today and now_at or nil,
+      label = { dow = day:strftime '%A', date = day:strftime '%d %B %Y' },
+    })
   end
-  section(
-    'Later',
-    '›',
-    pick(entries, function(e)
-      return e.day and e.day > sunday
-    end)
-  )
+  section('Next week', '›', pick(rows, function(e)
+    return e.day > sunday
+  end))
   -- the weeks behind the one on screen, latest first: the closed work that
   -- would otherwise leave the agenda for good
-  section(
-    'Earlier',
-    '‹',
-    pick(entries, function(e)
-      return e.day and e.day < monday and e.done
-    end),
-    true
-  )
+  section('Earlier', '‹', pick(rows, function(e)
+    return e.day < monday and e.done
+  end), { newest = true })
   return sections
 end
 
@@ -637,13 +722,26 @@ function M.payload(file)
   end
   local instances = M.instances()
   local views = {}
+  local by_line = {}
+  for _, entry in ipairs(entries) do
+    by_line[entry.file .. '#' .. tostring(entry.line)] = entry
+  end
+  local selection = file and file ~= '' and file or 'all'
+  local agenda_sections
+  local now_ms = (vim.uv or vim.loop).hrtime() / 1e6
+  if agenda_cache.key == selection and now_ms - agenda_cache.at < 2000 then
+    agenda_sections = agenda_cache.sections
+  else
+    agenda_sections = agenda(selection, by_line)
+    agenda_cache = { key = selection, at = now_ms, sections = agenda_sections }
+  end
   for _, view in ipairs(VIEWS) do
     local sections
     local count
     if view.key == 'board' then
       sections = board(scoped)
     elseif view.key == 'agenda' then
-      sections = agenda(scoped)
+      sections = agenda_sections
     elseif view.key == 'open' then
       sections = by_project(scoped, projects)
     elseif view.key == 'flight' then

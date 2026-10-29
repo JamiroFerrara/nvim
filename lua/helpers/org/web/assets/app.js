@@ -167,6 +167,92 @@ function entryRow(entry) {
   return li;
 }
 
+// One line of the agenda: the time it starts at on the left, then the keyword
+// and the priority, the headline, its tags and the project -- org's own agenda
+// line, in columns, with the row's run button kept. An item no headline
+// carries (a diary line) draws the same row with nothing to click.
+function agendaRow(entry) {
+  const time = entry.agenda && entry.agenda.time;
+  const live = !!entry.file && entry.line != null;
+  const li = el('li', 'entry agenda-row' + (entry.done ? ' done-entry' : ''));
+  if (live) {
+    li.dataset.file = entry.file;
+    li.dataset.line = entry.line;
+  }
+
+  const at = el('span', 'at', time || '');
+  if (entry.agenda && entry.agenda.type) at.title = entry.agenda.type;
+  li.append(at);
+
+  if (entry.todo) {
+    const chip = el('button', 'state ' + entry.todo, entry.todo);
+    chip.title = 'Change state';
+    chip.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      openStateMenu(chip, entry);
+    });
+    li.append(chip);
+  } else {
+    li.append(el('span', 'state none', '·'));
+  }
+
+  li.append(el('span', 'prio', entry.priority || ''));
+
+  const title = el('span', 'title');
+  if (runKey(entry)) title.append(el('span', 'live-dot', '●'));
+  title.append(document.createTextNode(entry.title || ''));
+  if (live) title.title = entry.rel + ':' + entry.line;
+  li.append(title);
+
+  const base = ((entry.rel || '').split('/').pop() || '').replace(/\.org$/, '').toLowerCase();
+  const tags = el('span', 'tags');
+  for (const tag of entry.tags || []) {
+    const lower = tag.toLowerCase();
+    if (lower === base || lower === (entry.project || '').toLowerCase()) continue;
+    tags.append(el('span', '', tag));
+  }
+  li.append(tags);
+
+  li.append(el('span', 'project', state.selection === 'all' ? entry.project || '' : ''));
+
+  if (entry.id) {
+    const doButton = el('button', 'do');
+    doButton.type = 'button';
+    paintDo(doButton, entry);
+    doButton.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      launchEntry(entry, !!runKey(entry));
+    });
+    li.append(doButton);
+  } else {
+    li.append(el('span', ''));
+  }
+
+  const key = runKey(entry);
+  if (key) {
+    li.classList.add('running');
+    li.append(el('span', 'live-line', state.live.activity[key] || ''));
+  }
+
+  li._entry = entry;
+  if (live) {
+    title.addEventListener('click', () => selectEntry(entry));
+    li.addEventListener('click', () => selectEntry(entry));
+  }
+  return li;
+}
+
+// The line the current time falls on inside today's section, the way org's
+// agenda marks the moment: the time, then a rule across the row.
+function nowLine(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = String(minutes % 60).padStart(2, '0');
+  const li = el('li', 'agenda-now');
+  li.append(el('span', 'at', `${h}:${m}`));
+  li.append(el('span', 'rule', 'now'));
+  return li;
+}
+
 function deadlineClass(deadline) {
   if (!deadline) return '';
   const m = deadline.match(/(\d{4})-(\d{2})-(\d{2})/);
@@ -418,7 +504,7 @@ function renderViews() {
   let drawn = 0;
   for (const section of view.sections) {
     const items = section.items.filter(matches);
-    if (items.length === 0) continue;
+    if (items.length === 0 && section.day == null) continue;
     const shown = [];
     const foldedDepths = [];
     for (let i = 0; i < items.length; i++) {
@@ -431,19 +517,36 @@ function renderViews() {
       shown.push(entry);
       if (entry._children && state.folded.has(foldKey(entry))) foldedDepths.push(entry.depth);
     }
-    if (shown.length === 0) continue;
+    if (shown.length === 0 && section.day == null) continue;
     drawn += shown.length;
-    const box = el('section', 'view-section' + (section.rule ? ' rule' : ''));
+    const box = el('section', 'view-section' + (section.rule ? ' rule' : '') + (section.today ? ' today' : ''));
+    if (section.day != null && shown.length === 0) box.classList.add('empty-day');
     const head = el('h2');
-    head.append(el('span', '', (section.icon ? section.icon + ' ' : '') + section.title));
-    head.append(el('span', 'n', String(items.length)));
+    // a day of the agenda names its weekday and date, the way org's agenda
+    // header does; every other view keeps its own title
+    if (section.label) {
+      head.append(el('span', 'dow', section.label.dow));
+      head.append(el('span', 'day-date', section.label.date));
+    } else {
+      head.append(el('span', '', (section.icon ? section.icon + ' ' : '') + section.title));
+    }
+    if (section.day == null || items.length > 0) head.append(el('span', 'n', String(items.length)));
     if (section.note) head.append(el('span', 'note', section.note));
     box.append(head);
-    const list = el('ul', 'entries');
-    for (const entry of shown) {
-      list.append(entryRow(entry));
-      visibleEntries.push(entry);
+    const list = el('ul', 'entries' + (view.key === 'agenda' ? ' agenda' : ''));
+    // where today's "now" line goes: before the first entry still to come,
+    // and after the last one when the day is over
+    let nowAt = -1;
+    if (section.now != null) {
+      nowAt = shown.findIndex((entry) => entry.at != null && entry.at > section.now);
+      if (nowAt === -1) nowAt = shown.length;
     }
+    shown.forEach((entry, i) => {
+      if (i === nowAt) list.append(nowLine(section.now));
+      list.append(view.key === 'agenda' ? agendaRow(entry) : entryRow(entry));
+      visibleEntries.push(entry);
+    });
+    if (nowAt === shown.length) list.append(nowLine(section.now));
     box.append(list);
     container.append(box);
   }
