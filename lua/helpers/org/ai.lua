@@ -82,7 +82,10 @@
 -- quotes the launcher's one line back. One instance keeps one conversation,
 -- which is what lets "that one too" mean anything, and the org write lands
 -- before the run is dispatched, so the board shows the work started as soon as
--- the words are filed.
+-- the words are filed. It is also the one instance that speaks: its argv
+-- carries a speech overlay (`talk_config_path`) and the audio socket WSLg
+-- holds the machine's speakers on (`audio_env`), so the reply to a spoken
+-- line is heard as well as read.
 --
 -- The words carry the selection: the dashboard's highlighted entry, or the
 -- headline at point when the command ran in the editor (`M.entry_at_point`). A
@@ -273,6 +276,9 @@ local function talk_rules()
     'write nothing.',
     '',
     "Reply short: the command's line, or the answer, and nothing around it.",
+    '',
+    'Your reply is read out loud to me. Say it the way you would say it across a table: whole',
+    'sentences, no markdown, no lists, no code blocks, no file paths, no ids, no symbols.',
   }, '\n')
 end
 
@@ -1144,8 +1150,56 @@ local function talk_rules_path()
   return path
 end
 
+--- The speech the talking instance runs under: omp's own engine (Kokoro, on
+--- this machine) reading each turn's last message aloud, so a line said into
+--- the renderer comes back as an answer heard, not only read. `yield` is that
+--- last message alone -- the router's one line, not its thinking or the
+--- command it ran -- and `enhanced` stays off, because rewriting three plain
+--- sentences through a second model costs a model call per line for prose the
+--- talking rules already keep short.
+---
+--- The switch is an overlay on this instance's argv, not a setting the agent
+--- directory carries: only the instance that is talked to speaks. Every other
+--- run is a worker whose replies are read on the board, and a machine that
+--- narrates its own work is one the user turns off. Written to a file for the
+--- reason the rules are (`talk_rules_path`): the argv is shellescaped into the
+--- pane's script, and a newline in an argument would end it there.
+---@return string
+local function talk_config_path()
+  local path = vim.fs.dirname(session_dir(TALK_KEY)) .. '/speech.yml'
+  pcall(vim.fn.mkdir, vim.fs.dirname(path), 'p')
+  pcall(vim.fn.writefile, {
+    'speech:',
+    '  enabled: true',
+    '  mode: yield',
+    '  enhanced: false',
+  }, path)
+  return path
+end
+
+--- Where sound comes out, when the machine has to be told. WSL has no sound
+--- card of its own: the speakers are Windows', and WSLg hands them over on a
+--- PulseAudio socket that nothing points at by default -- so the engine
+--- synthesizes the reply and then has nowhere to play it, which is silence
+--- that looks like a feature that does not work. A pane takes the environment
+--- its tmux server started with, not the one nvim holds now, so the socket
+--- goes on the command line of the pane that speaks. `nil` when the socket is
+--- absent (not WSL) or the environment already names a server.
+---@return string|nil
+local function audio_env()
+  if vim.env.PULSE_SERVER and vim.env.PULSE_SERVER ~= '' then
+    return nil
+  end
+  local socket = '/mnt/wslg/PulseServer'
+  if not vim.uv.fs_stat(socket) then
+    return nil
+  end
+  return 'PULSE_SERVER=unix:' .. socket
+end
+
 --- The omp argv of the talking instance: its one session, the talking rules
---- (written out first, `talk_rules_path`), and the words. `--continue` resumes
+--- (written out first, `talk_rules_path`), the speech overlay
+--- (`talk_config_path`), and the words. `--continue` resumes
 --- the same session on every later line, which is what makes it one instance
 --- with one conversation instead of one per utterance. A nil `message` opens
 --- the session alone.
@@ -1161,7 +1215,8 @@ end
 ---@return string[]
 local function talk_argv(message)
   local dir = session_dir(TALK_KEY)
-  local argv = { 'omp', '--session-dir', dir }
+  local env = audio_env()
+  local argv = env and { 'env', env, 'omp', '--session-dir', dir } or { 'omp', '--session-dir', dir }
   if has_session(dir) then
     argv[#argv + 1] = '--continue'
   end
@@ -1171,6 +1226,8 @@ local function talk_argv(message)
     '--no-rules',
     '--no-context-files',
     '--thinking=off',
+    '--config',
+    talk_config_path(),
     '--system-prompt',
     talk_rules_path(),
   })
@@ -2222,7 +2279,9 @@ function M.talk(spec_path, file)
     return nil
   end
   if type(spec.filed) == 'string' and spec.filed ~= '' then
-    say('already filed as :ID: ' .. spec.filed .. ' -- nothing written')
+    -- also a line the user hears, so it names no uuid: the ticket it already
+    -- is is on the board, and the instance's rules have it say so and stop
+    say 'those words are already a ticket on the board -- nothing written'
     return nil
   end
   local dest = (file and file ~= '') and file or spec.file
@@ -2248,8 +2307,12 @@ function M.talk(spec_path, file)
   local ticket = tickets[1]
   spec.filed = ticket.id
   pcall(vim.fn.writefile, { vim.json.encode(spec) }, vim.fn.expand(spec_path))
-  local pane = in_tmux() and running_pane(ticket.id) or nil
-  say(('filed "%s" as :ID: %s in %s:%d'):format(ticket.title, ticket.id, ticket.file, ticket.lnum) .. (pane and (', run in pane ' .. pane) or ''))
+  -- This line is the reply the user hears: the talking instance speaks its
+  -- turn aloud (`talk_config_path`), so it says what a person would say --
+  -- where the words went and that the run is under way -- and leaves the
+  -- :ID:, the path and the pane to the board, where they are read letter by
+  -- letter and a voice reads them as noise.
+  say(('filed "%s" on the %s board, and the run is going'):format(ticket.title, vim.fs.stem(ticket.file)))
   return preset.lnum
 end
 
