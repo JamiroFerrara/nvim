@@ -20,6 +20,20 @@
         <span>＋ capture</span><span class="key">c</span>
       </button>
       <nav id="projects"></nav>
+      <section id="share" hidden>
+        <button id="share-toggle" type="button" title="Show the QR and the phone link">
+          <span id="share-label">◲ phone</span>
+        </button>
+        <div id="share-body">
+          <div id="share-qr"></div>
+          <a id="share-url" target="_blank" rel="noopener"></a>
+          <p id="share-note"></p>
+          <div class="row">
+            <button id="share-copy" type="button">copy link</button>
+            <button id="share-off" type="button">stop</button>
+          </div>
+        </div>
+      </section>
       <footer id="totals"></footer>
     </aside>
     <main>

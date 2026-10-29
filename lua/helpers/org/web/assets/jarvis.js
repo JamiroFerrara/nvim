@@ -184,7 +184,7 @@
       const res = await fetch('/api/voice', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ view: viewTitle() }),
+        body: JSON.stringify({ view: viewTitle(), entry: highlighted() }),
       });
       const out = await res.json();
       if (out.status) apply(out.status);
@@ -226,6 +226,19 @@
     if (typeof state === 'undefined' || !state || !state.data) return '';
     const view = (state.data.views || []).find((v) => v.key === state.view);
     return view ? view.title : '';
+  }
+
+  // What the list has highlighted: the words become a ticket under it, so the
+  // run is pre-selected inside the project the page is showing. A page with
+  // nothing highlighted sends none, and the run works the words out itself.
+  // Only the identity travels -- the file, the line, the :ID: and the title --
+  // and nvim resolves it against the vault (helpers/org/web/actions.lua), so a
+  // page cannot name a headline it did not draw.
+  function highlighted() {
+    if (typeof state === 'undefined' || !state || !state.selectedEntry) return null;
+    const entry = state.selectedEntry;
+    if (!entry || !entry.file) return null;
+    return { file: entry.file, line: entry.line, id: entry.id || '', title: entry.title || '' };
   }
 
   // ------------------------------------------------------------------- loop

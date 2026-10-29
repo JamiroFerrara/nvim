@@ -58,6 +58,21 @@ local function entry_lines(ts, note)
   return lines
 end
 
+--- The block a turn is written as: `[<timestamp>] <rule>` over the text, one
+--- line per line of it. `hl` is the entry the block lands under (its own place
+--- decides "now", like every note does). The capture that creates an entry and
+--- the note that answers one share this shape, so a caller writing a whole
+--- entry -- the voice card's ticket, helpers/org/ai.lua -- writes the same
+--- header a capture does.
+---@param hl org.Headline
+---@param text string
+---@return string[]
+function M.block(hl, text)
+  local date = require 'org.date'
+  local ts = date.effective_now(hl):clone({ active = false }):to_string()
+  return entry_lines(ts, text)
+end
+
 --- Append `lines` at the end of `hl`'s body -- after the last non-blank body
 --- line, so a new note reads after the older ones and the subtree stays a
 --- chronological log (the capture that created the entry first, then the
@@ -114,9 +129,7 @@ function M.store(bufnr, hl, note)
   if not (note and vim.trim(note) ~= '') then
     return nil
   end
-  local date = require 'org.date'
-  local ts = date.effective_now(hl):clone({ active = false }):to_string()
-  local first = append_block(bufnr, hl, entry_lines(ts, note))
+  local first = append_block(bufnr, hl, M.block(hl, note))
   require('org.edit').note_stored(bufnr, first, hl.line)
   return first
 end

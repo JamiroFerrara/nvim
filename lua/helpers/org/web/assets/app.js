@@ -199,6 +199,7 @@ function renderSidebar() {
   all.addEventListener('click', () => {
     state.selection = 'all';
     load();
+loadShare();
   });
   nav.append(all);
   for (const project of state.data.projects) {
@@ -1498,6 +1499,83 @@ $('#search').addEventListener('input', (ev) => {
   renderViews();
 });
 
+// ---- phone door ---------------------------------------------------------
+
+// The tunnel's address and the QR of it. It starts beside the server, so the
+// first fetch usually has it; while the agent is still coming up the page asks
+// again instead of showing nothing.
+let shareTimer = null;
+
+function renderShare(share) {
+  const card = $('#share');
+  if (!card) return;
+  card.hidden = false;
+  const label = $('#share-label');
+  const body = $('#share-body');
+  const note = $('#share-note');
+  const link = $('#share-url');
+
+  if (shareTimer) {
+    clearInterval(shareTimer);
+    shareTimer = null;
+  }
+
+  if (share.status === 'up' && share.url) {
+    label.textContent = '◲ phone ready';
+    card.classList.add('on');
+    const qrBox = $('#share-qr');
+    if (share.qr && !qrBox.childElementCount) qrBox.innerHTML = share.qr;
+    link.href = share.url;
+    link.textContent = share.url.replace(/^https?:\/\//, '');
+    note.textContent = 'Scan with your phone camera, or open the link.';
+    body.hidden = false;
+    return;
+  }
+
+  card.classList.remove('on');
+  label.textContent = '◲ phone';
+  body.hidden = false;
+  link.removeAttribute('href');
+  link.textContent = '';
+  if (share.status === 'starting') {
+    note.textContent = 'putting a public address up…';
+    shareTimer = setInterval(loadShare, 1200);
+  } else if (share.status === 'error') {
+    note.textContent = 'no public address: ' + (share.error || 'ngrok failed');
+  } else {
+    note.textContent = 'sharing is off';
+  }
+}
+
+async function loadShare() {
+  try {
+    renderShare(await api('/api/share'));
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+$('#share-toggle').addEventListener('click', () => {
+  $('#share').classList.toggle('open');
+  if ($('#share').classList.contains('open')) loadShare();
+});
+
+$('#share-copy').addEventListener('click', async () => {
+  const link = $('#share-url');
+  if (!link.href) return;
+  await copyText(link.href);
+  showToast('link copied');
+});
+
+$('#share-off').addEventListener('click', async () => {
+  try {
+    renderShare(await api('/api/share', { method: 'POST', body: JSON.stringify({ on: false }) }));
+    showToast('phone door closed');
+  } catch (err) {
+    showToast('could not close it');
+  }
+});
+
 // ---- live reload --------------------------------------------------------
 
 const live = new EventSource('/events');
@@ -1509,3 +1587,4 @@ live.addEventListener('open', () => $('#live').classList.add('on'));
 live.addEventListener('error', () => $('#live').classList.remove('on'));
 
 load();
+loadShare();

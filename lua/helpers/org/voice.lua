@@ -17,6 +17,13 @@
 --      inside the org system, the buddy only carries the words -- and the
 --      card keeps saying what became of that run (`M.status().run`)
 --
+-- The click also carries what the dashboard had highlighted (`state.target`):
+-- the entry under the cursor in the list. The words then become a ticket under
+-- that entry first, and the ordinary ticket launch works it, so the run opens
+-- on a command already filed in the project the user was reading. A listen
+-- with nothing highlighted carries no target, and the run works the words out
+-- for itself.
+--
 -- A click while listening stops the recording and reads it back (`M.stop`);
 -- throwing it away is `M.cancel`, the card's escape key.
 --
@@ -30,15 +37,17 @@
 --   text -> speech |  piper, espeak-ng, spd-say, or Windows' own voice
 --                  |  (System.Speech, through powershell.exe under WSL)
 --   recording     |  parec on PulseAudio (`/mnt/wslg/PulseServer` under WSLg)
---   speech -> text |  whisper.cpp (`whisper-cli`), Windows' own recognizer on
---                  |  the recorded wav, or a command of the user's
+--   speech -> text |  Handy's own model through transcribe.cpp
+--                  |  (`transcribe-cli`), whisper.cpp (`whisper-cli`),
+--                  |  Windows' own recognizer on the recorded wav, or a
+--                  |  command of the user's
 --
 -- Overrides, when the detection guesses wrong: `OMP_VOICE_TTS` (a shell
 -- command, the words on stdin), `OMP_VOICE_STT` (a shell command, the wav
--- path as `$1`), `OMP_VOICE_WHISPER_MODEL`, `OMP_VOICE_LANG`,
--- `OMP_VOICE_PIPER_MODEL`, `OMP_VOICE_LISTEN_SECONDS`, `OMP_VOICE_SPEAK`,
--- `OMP_VOICE_PARTIAL` (seconds between two reads of a sentence being said;
--- `0` turns them off).
+-- path as `$1`), `OMP_VOICE_HANDY_MODEL` (a gguf path), `OMP_VOICE_WHISPER_MODEL`,
+-- `OMP_VOICE_LANG`, `OMP_VOICE_PIPER_MODEL`, `OMP_VOICE_LISTEN_SECONDS`,
+-- `OMP_VOICE_SPEAK`, `OMP_VOICE_PARTIAL` (seconds between two reads of a
+-- sentence being said; `0` turns them off).
 --
 -- The browser polls `GET /api/voice` for `M.status()`: the phase is what the
 -- card draws (idle, speaking, listening, thinking, sent, error), `partial` the
@@ -81,6 +90,7 @@ local opts = {
   tts = nil,
   stt = nil,
   whisper_model = nil,
+  handy_model = nil,
   speak = false,
 }
 
@@ -96,12 +106,29 @@ local state = {
   heard = '',
   partial = '',
   view = '',
+  target = nil,
   error = '',
   at = 0,
   level = 0,
   level_db = nil,
   signal = false,
 }
+
+--- What the dashboard had highlighted when the mic was clicked: the entry the
+--- list's cursor sits on (`{ file, line, id, title }`, as helpers/org/web/
+--- data.lua draws it). Kept as sent, minus anything that is not a file path
+--- and a line -- a request from a page cannot write the vault through it, but
+--- a malformed one should not be carried into a launch either.
+---@param entry any
+---@return { file: string, line: integer|nil, id: string|nil, title: string|nil }|nil
+local function target_of(entry)
+  if type(entry) ~= 'table' or type(entry.file) ~= 'string' or entry.file == '' then
+    return nil
+  end
+  local id = type(entry.id) == 'string' and entry.id ~= '' and entry.id or nil
+  local title = type(entry.title) == 'string' and entry.title ~= '' and entry.title or nil
+  return { file = entry.file, line = tonumber(entry.line), id = id, title = title }
+end
 
 --- The run the last words started: the pane it lives in, what the pane was
 --- called and when it was opened. The card draws what became of it, so the
@@ -131,6 +158,7 @@ function M.status()
     heard = state.heard,
     partial = state.partial,
     view = state.view,
+    target = state.target,
     error = state.error,
     at = state.at,
     level = state.level,
@@ -311,13 +339,139 @@ local function whisper_peek_model()
   return peek_model ~= '' and peek_model or nil
 end
 
---- The listening half's transcriber: whisper.cpp when the machine has both
---- the binary and a model (better dictation, and no desktop session
---- involved), else Windows' own recognizer on the recorded wav.
+--- Handy is the dictation app the user runs on the Windows side, and the model
+--- it transcribes with is a gguf read by `transcribe-cli` -- the command line
+--- of transcribe.cpp, the engine Handy ships. Handy keeps its models in the
+--- Windows profile's Hugging Face cache and names the one in use in its
+--- settings, so sharing the model is a matter of reading that name: whichever
+--- model is picked in Handy is the one this reads with.
+local HANDY_SETTINGS = '/AppData/Roaming/com.pais.handy/settings_store.json'
+local HANDY_MODELS = '/AppData/Roaming/com.pais.handy/models'
+local HANDY_CACHE = '~/.cache/omp/voice'
+
+--- A whole file as a string, read through libuv so the same call works on
+--- either side of the Windows share.
+---@param path string
+---@return string|nil
+local function slurp(path)
+  local fd = uv.fs_open(path, 'r', 384)
+  if not fd then
+    return nil
+  end
+  local stat = uv.fs_fstat(fd)
+  local data = stat and stat.size > 0 and uv.fs_read(fd, stat.size, 0) or nil
+  uv.fs_close(fd)
+  return type(data) == 'string' and data or nil
+end
+
+--- Handy's model as the Windows drive names it, or nil when Handy is not on
+--- this machine. `selected_model` reads `org/repo/file.gguf`; the cache spells
+--- the repo `models--org--repo` and puts the file in a snapshot directory of
+--- its own, and an older Handy kept them under its own models directory.
+--- `src` is that path once it has been looked for: nil until then, empty when
+--- there is none, so a machine without Handy is not searched twice.
+local handy = { src = nil, model = nil, copying = false, warned = false }
+
+---@return string|nil
+local function handy_source()
+  if handy.src ~= nil then
+    return handy.src ~= '' and handy.src or nil
+  end
+  for _, path in ipairs { opts.handy_model, vim.env.OMP_VOICE_HANDY_MODEL } do
+    if path and path ~= '' and uv.fs_stat(path) then
+      handy.src = path
+      return handy.src
+    end
+  end
+  for _, user in ipairs(vim.fn.glob('/mnt/c/Users/*', false, true)) do
+    local found = {}
+    local selected = (slurp(user .. HANDY_SETTINGS) or ''):match('"selected_model"%s*:%s*"([^"]+)"')
+    local org, repo, file = (selected or ''):match '^([^/]+)/([^/]+)/(.+)$'
+    if org then
+      vim.list_extend(found, vim.fn.glob(('%s/.cache/huggingface/hub/models--%s--%s/snapshots/*/%s'):format(user, org, repo, file), false, true))
+      found[#found + 1] = ('%s%s/%s/%s'):format(user, HANDY_MODELS, org, repo, file)
+    end
+    if #found == 0 then
+      -- no settings to read, or a selection whose file is gone: any model
+      -- Handy itself downloaded is still a better read than none
+      vim.list_extend(found, vim.fn.glob(user .. '/.cache/huggingface/hub/models--handy-computer--*/snapshots/*/*.gguf', false, true))
+    end
+    for _, path in ipairs(found) do
+      if uv.fs_stat(path) then
+        handy.src = path
+        return handy.src
+      end
+    end
+  end
+  handy.src = ''
+  return nil
+end
+
+--- Handy's model, readable from this side. A model read straight off the
+--- Windows drive is memory-mapped through the 9p share, and that is the whole
+--- difference between a sentence taking a second and taking half a minute: the
+--- file is copied across once, into the Linux cache, and read from there after
+--- that. Until the copy lands there is nothing to read with, so the listen
+--- falls back to the transcriber that was there before.
+---@return string|nil
+local function handy_model()
+  if handy.model then
+    return handy.model
+  end
+  local src = handy_source()
+  if not src then
+    return nil
+  end
+  if src:sub(1, 5) ~= '/mnt/' then
+    handy.model = src
+    return src
+  end
+  local dir = vim.fn.expand(HANDY_CACHE)
+  vim.fn.mkdir(dir, 'p')
+  local dst = dir .. '/' .. vim.fn.fnamemodify(src, ':t')
+  local there, here = uv.fs_stat(src), uv.fs_stat(dst)
+  if there and here and there.size == here.size then
+    handy.model = dst
+    return dst
+  end
+  if not handy.copying then
+    handy.copying = true
+    -- a copy that lands half way is worse than none: it goes beside the file
+    -- and is renamed over it only once it is whole, and it is detached so
+    -- quitting nvim does not cut it in the middle
+    pcall(vim.system, {
+      'sh',
+      '-c',
+      'cp -f "$1" "$2.part" && mv -f "$2.part" "$2"',
+      'sh',
+      src,
+      dst,
+    }, { detach = true }, function(obj)
+      handy.copying = false
+      if obj and (obj.code or 1) == 0 then
+        handy.model = dst
+      elseif not handy.warned then
+        handy.warned = true
+        vim.schedule(function()
+          notify('voice: could not copy Handy\'s model to ' .. dir, vim.log.levels.WARN)
+        end)
+      end
+    end)
+  end
+  return nil
+end
+
+--- The listening half's transcriber: Handy's model through `transcribe-cli`
+--- (the dictation the user already trusts, and the model they already have),
+--- then whisper.cpp when the machine has both the binary and a model, else
+--- Windows' own recognizer on the recorded wav.
 ---@return string|nil backend
 function stt_backend()
   if opts.stt and opts.stt ~= '' then
     return 'custom'
+  end
+  if exe 'transcribe-cli' and handy_model() then
+    return 'handy'
   end
   if (exe 'whisper-cli' or exe 'main') and whisper_model() then
     return 'whisper'
@@ -526,15 +680,16 @@ local function whisper_threads()
 end
 
 --- Read `wav` back into words: the user's own command (`OMP_VOICE_STT`, the
---- wav path as `$1`), Windows' recognizer on the file, or whisper.cpp. A
---- `quiet` read is the words of a sentence still being said: it hands them to
---- `done` and leaves the listen alone. Only the final read ends it.
+--- wav path as `$1`), Windows' recognizer on the file, Handy's model through
+--- `transcribe-cli`, or whisper.cpp. A `quiet` read is the words of a sentence
+--- still being said: it hands them to `done` and leaves the listen alone. Only
+--- the final read ends it.
 ---@param wav string
 ---@param backend string
 ---@param done fun(text: string)
 ---@param quiet? boolean
 local function transcribe(wav, backend, done, quiet)
-  local cmd, env
+  local cmd, env, out
   if backend == 'custom' then
     cmd = { 'sh', '-c', opts.stt .. ' "$1"', 'sh', wav }
     env = audio_env()
@@ -556,6 +711,32 @@ local function transcribe(wav, backend, done, quiet)
       return (win:gsub("'", "''"))
     end)
     cmd = { 'powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script }
+  elseif backend == 'handy' then
+    local model = handy_model()
+    if not model then
+      pcall(uv.fs_unlink, wav)
+      vim.schedule(function()
+        if not quiet then
+          set_phase('error', { error = 'Handy\'s model is not readable' })
+        end
+        done ''
+      end)
+      return
+    end
+    -- the words come back in a file: the command prints the model it loaded
+    -- and the timings beside them, and the file holds the sentence alone
+    out = vim.fn.tempname() .. '.txt'
+    cmd = {
+      'transcribe-cli',
+      '-q',
+      '--threads',
+      whisper_threads(),
+      '-m',
+      model,
+      '-o',
+      out,
+      wav,
+    }
   else
     local model = (quiet and whisper_peek_model()) or whisper_model()
     cmd = {
@@ -578,6 +759,10 @@ local function transcribe(wav, backend, done, quiet)
   local started, handle = pcall(vim.system, cmd, { text = true, env = env }, function(obj)
     pcall(uv.fs_unlink, wav)
     local text = text_of(obj)
+    if out then
+      text = slurp(out) or ''
+      pcall(uv.fs_unlink, out)
+    end
     if backend == 'whisper' then
       text = spoken(text)
     end
@@ -1027,6 +1212,10 @@ local function listen(done)
     return
   end
   set_phase('listening', { level = 0, level_db = nil, signal = false, partial = '', heard = '' })
+  -- Handy can be given a different model between two listens, and the one it
+  -- names then is the one this should read with: look it up again rather than
+  -- keep the first answer for the life of the session
+  handy.src, handy.model = nil, nil
   start_recording(stt_backend(), done)
 end
 
@@ -1083,11 +1272,19 @@ end
 --- the run decides what to do with them inside the org system, the buddy only
 --- carries them and says which view they came from -- and the card goes on
 --- saying whether that run is still working.
+---
+--- With the dashboard's highlight in hand (`state.target`) the words become a
+--- ticket under it before the run starts (`open_prompt` writes it and launches
+--- the ordinary ticket run), so the run opens reading its own entry and no
+--- preamble is needed. Without one, the run gets the context it cannot find
+--- anywhere else with the words -- that they were spoken, on which view, and
+--- where the vault is -- and works out what they are.
 ---@param text string
 local function launch(text)
   if text == '' then
     return
   end
+  local target = state.target
   local org_dir = vim.fn.expand '~/org'
   pcall(function()
     local cfg = require('org.config').opts
@@ -1096,7 +1293,7 @@ local function launch(text)
     end
   end)
   local view = state.view ~= '' and state.view or 'dashboard'
-  local message = ('Spoken to the org dashboard (%s view): "%s". '):format(view, text)
+  local context = ('Spoken to the org dashboard (%s view): "%s". '):format(view, text)
     .. ('The vault is at %s; read %s/WORKFLOW.org first, it is the shape this vault runs on. '):format(org_dir, org_dir)
     .. 'The words are one of three things: a question (answer it here), a ticket (write it as a TODO headline '
     .. ('in the project file under %s/projects that it belongs to, with its :ID:, and say which file), '):format(org_dir)
@@ -1105,7 +1302,7 @@ local function launch(text)
   local title = '🤖 ' .. text:sub(1, 40)
   local pane
   local ok, err = pcall(function()
-    pane = require('helpers.org.ai').open_prompt(message, title)
+    pane = require('helpers.org.ai').open_prompt(text, title, target, context)
   end)
   if not ok or not pane then
     local why = ok and 'could not open a pane for the words' or tostring(err)
@@ -1127,10 +1324,12 @@ end
 
 --- The whole conversation: listen, read the words back, hand them to a run.
 --- The click is acknowledged out loud only when the voice is on. `view` names
---- what the dashboard had open when the mic was clicked, so the run is told
---- where the words came from.
+--- what the dashboard had open when the mic was clicked, and `entry` (the
+--- entry the list had highlighted) is what the words become a ticket under;
+--- the run is told neither, it reads the ticket (`launch`).
 ---@param view? string
-function M.converse(view)
+---@param entry? { file: string, line?: integer, id?: string, title?: string }
+function M.converse(view, entry)
   if state.phase ~= 'idle' and state.phase ~= 'error' and state.phase ~= 'sent' then
     return false
   end
@@ -1139,13 +1338,15 @@ function M.converse(view)
       M._said(text)
     end)
   end
+  state.target = target_of(entry)
   set_phase('idle', { view = vim.trim(view or ''), heard = '', partial = '', error = '' })
   if not speaks() then
     begin()
     return true
   end
   set_phase 'speaking'
-  speak(state.view ~= '' and ('Listening on ' .. state.view) or 'Listening', function()
+  local where = state.target and state.target.title or state.view
+  speak(where ~= '' and ('Listening on ' .. where) or 'Listening', function()
     if state.phase == 'speaking' then
       begin()
     end
@@ -1213,9 +1414,12 @@ function M.cancel()
 end
 
 --- `:OrgVoiceSay {text}`: the run without the microphone -- the same path the
---- card takes once it has words, so it is also what a test drives.
+--- card takes once it has words, so it is also what a test drives. `entry` is
+--- the dashboard highlight a click would have carried; a command line has none.
 ---@param text string
-function M.say(text)
+---@param entry? { file: string, line?: integer, id?: string, title?: string }
+function M.say(text, entry)
+  state.target = target_of(entry)
   M._said(text)
 end
 
@@ -1259,6 +1463,10 @@ function M.setup(user)
   vim.api.nvim_create_user_command('OrgVoiceStop', function()
     M.stop()
   end, { desc = 'voice: stop recording and read it back' })
+  -- Handy's model is copied into the Linux side on first use and that copy
+  -- takes a few seconds: start it now, so the first click does not have to
+  -- fall back to whisper while it lands
+  handy_model()
 end
 
 return M

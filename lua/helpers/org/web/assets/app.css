@@ -1019,3 +1019,201 @@ li.entry .live-line {
 .run-box.asking .run-state {
   color: var(--yellow);
 }
+
+/* ---- the phone door ---------------------------------------------------- */
+
+/* The tunnel's address and its QR: the rail's last block, above the totals.
+   The QR is white on purpose -- a camera needs the contrast, not the theme. */
+#share {
+  margin: 2px 2px 8px;
+  border-top: 1px solid var(--surface);
+  padding: 9px 6px 0;
+}
+
+#share-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--overlay);
+}
+
+#share-toggle:hover,
+#share.on #share-toggle {
+  color: var(--mauve);
+}
+
+#share.on #share-toggle::after {
+  content: '●';
+  margin-left: auto;
+  font-size: 8px;
+  color: var(--green);
+}
+
+#share-body {
+  display: none;
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+
+#share.open #share-body {
+  display: grid;
+}
+
+#share-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+#share-url {
+  font-size: 11px;
+  color: var(--blue);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#share-url:hover {
+  text-decoration: underline;
+}
+
+#share-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--overlay);
+}
+
+#share .row {
+  display: flex;
+  gap: 6px;
+}
+
+#share .row button {
+  font-size: 10px;
+  color: var(--overlay);
+  border: 1px solid var(--surface);
+  border-radius: 5px;
+  padding: 3px 8px;
+}
+
+#share .row button:hover {
+  color: var(--text);
+  border-color: var(--surface1);
+}
+
+/* The rail is wide enough for the code; a phone is not, so there it folds
+   away until it is asked for. */
+@media (min-width: 721px) {
+  #share-body {
+    display: grid;
+  }
+}
+
+/* ---- a phone ----------------------------------------------------------- */
+
+/* One column: the rail becomes a bar across the top, the list gets the width,
+   and the detail pane covers the screen instead of squeezing beside it. */
+@media (max-width: 720px) {
+  body,
+  body.detail-open {
+    display: block;
+    overflow: auto;
+  }
+
+  #sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 8px 8px 6px;
+    border-right: 0;
+    border-bottom: 1px solid var(--surface);
+    max-height: none;
+  }
+
+  #sidebar h1 {
+    margin: 0 0 6px 4px;
+    font-size: 13px;
+  }
+
+  #search {
+    width: 100%;
+    margin-bottom: 6px;
+  }
+
+  #projects {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    flex: none;
+  }
+
+  #projects button {
+    flex: 0 0 auto;
+  }
+
+  #totals {
+    padding: 6px 4px;
+  }
+
+  #share {
+    margin: 4px 0 0;
+    padding: 6px 4px 0;
+  }
+
+  main {
+    min-height: 60vh;
+  }
+
+  #tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px 10px 0;
+  }
+
+  #tabs button {
+    flex: 0 0 auto;
+  }
+
+  #views {
+    padding: 12px 10px 60px;
+  }
+
+  li.entry {
+    grid-template-columns: 46px 12px 12px minmax(0, 1fr);
+    gap: 6px;
+    padding: 7px 4px;
+  }
+
+  li.entry .tags,
+  li.entry .meta,
+  li.entry .project {
+    display: none;
+  }
+
+  li.entry .title {
+    white-space: normal;
+    text-overflow: clip;
+    line-height: 1.35;
+  }
+
+  #detail {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    width: auto;
+    border-left: 0;
+    background: var(--mantle);
+    overflow-y: auto;
+  }
+}

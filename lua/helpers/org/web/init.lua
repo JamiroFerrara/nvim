@@ -26,6 +26,7 @@ local data = require 'helpers.org.web.data'
 local http = require 'helpers.org.web.http'
 local page = require 'helpers.org.web.page'
 local roam = require 'helpers.org.web.roam'
+local share = require 'helpers.org.web.share'
 
 local state = {
   server = nil,
@@ -143,14 +144,16 @@ local function handle(req, res)
       json(res, require('helpers.org.voice').status())
       return
     end
-    local started = require('helpers.org.voice').converse(body.view)
+    -- `entry` is what the list had highlighted: the words become a ticket under
+    -- it, so the run starts pre-selected inside the project the page was on
+    local started = require('helpers.org.voice').converse(body.view, body.entry)
     json(res, { started = started, status = require('helpers.org.voice').status() })
     return
   end
 
   if req.method == 'POST' and path == '/api/voice/say' then
     local body = payload_of(req)
-    require('helpers.org.voice').say(body.text or '')
+    require('helpers.org.voice').say(body.text or '', body.entry)
     json(res, require('helpers.org.voice').status())
     return
   end
@@ -191,6 +194,23 @@ local function handle(req, res)
   end
 
   -- the states a page may offer, without walking the files
+  -- the phone door: the ngrok address of this server and the QR of it
+  if req.method == 'GET' and path == '/api/share' then
+    json(res, share.payload())
+    return
+  end
+
+  if req.method == 'POST' and path == '/api/share' then
+    local body = payload_of(req)
+    if body.on == false then
+      share.stop()
+    elseif state.port then
+      share.start(state.port)
+    end
+    json(res, share.payload())
+    return
+  end
+
   if req.method == 'GET' and path == '/api/keywords' then
     json(res, { keywords = keyword_lists() })
     return
@@ -438,6 +458,12 @@ local function start()
   -- edited, and both are cheap
   require('helpers.org.watch').start(root, broadcast)
 
+  -- and the tunnel the phone reaches it through, unless `g:org_web_share` is
+  -- off: it starts beside the server, so the address exists as soon as a page
+  share.start(server.port, function(url)
+    vim.notify('org web: on your phone at ' .. url, vim.log.levels.INFO)
+  end)
+
   return state.server
 end
 
@@ -539,6 +565,29 @@ function M.roam()
   return url
 end
 
+--- Put the dashboard on a public address and hand it over: the ngrok URL is
+--- copied and the page that draws its QR opens in the browser (the
+--- `:OrgWebShare` command). Wait a moment for the agent to come up.
+---@return string|nil url
+function M.share()
+  local url = M.url '/'
+  start()
+  local deadline = uv.now() + 8000
+  while not share.url() and uv.now() < deadline do
+    vim.wait(100)
+  end
+  local public = share.url()
+  if public then
+    pcall(vim.fn.setreg, '+', public)
+    vim.notify('org web: on your phone at ' .. public .. ' (copied)', vim.log.levels.INFO)
+  else
+    local payload = share.payload()
+    vim.notify('org web: no public address yet (' .. tostring(payload.error or payload.status) .. ')', vim.log.levels.WARN)
+  end
+  open_url(url)
+  return public
+end
+
 --- Stop the server and drop the watchers.
 function M.stop()
   if state.timer then
@@ -549,6 +598,7 @@ function M.stop()
   pcall(vim.api.nvim_del_augroup_by_name, 'OrgWebViews')
   require('helpers.org.watch').unsubscribe(broadcast)
   require('helpers.org.web.live').stop()
+  share.stop()
   if state.server then
     state.server.stop()
   end

@@ -506,13 +506,17 @@ end
 --- orchestrator's, and its :OMP_SESSION: is that session's key rather than its
 --- own :ID: -- a key the run that worked it before had set is replaced,
 --- because the property names the session that works the ticket now.
+---
+--- `origin` is who fired the launch, for the message the run opens with
+--- (`prompt`): `<leader>ai` unless a caller says otherwise.
 ---@param bufnr integer
 ---@param lnum integer
 ---@param mutate boolean
 ---@param claim? boolean
 ---@param link? string the session key to link the ticket to
+---@param origin? string
 ---@return OrgTicket|nil
-local function ticket_at(bufnr, lnum, mutate, claim, link)
+local function ticket_at(bufnr, lnum, mutate, claim, link, origin)
   local file = require('org.files').get_buffer(bufnr)
   local hl = file:headline_on(lnum)
   if not hl then
@@ -625,6 +629,7 @@ local function ticket_at(bufnr, lnum, mutate, claim, link)
     state = state,
     claimed = claimed,
     note = note,
+    origin = origin,
     file = vim.fs.normalize(path),
     title = hl:plain_title(),
   }
@@ -849,7 +854,7 @@ end
 local function prompt(ticket)
   local state = ticket.state and ('`' .. ticket.state .. '`') or 'none'
   local parts = {
-    'Org ticket launched by nvim <leader>ai.',
+    'Org ticket launched by ' .. (ticket.origin or 'nvim <leader>ai') .. '.',
     'File: ' .. ticket.file .. '.',
     'ID: ' .. ticket.id .. ' (permanent: the knowledge base links this ticket by it; never remove it).',
     'Title: ' .. ticket.title .. '.',
@@ -1469,11 +1474,15 @@ end
 ---
 --- `claim` is handed to ticket_at: the caller has read the state of what it
 --- launches and knows it was answered, so the launch stamps `NEXT` over it.
---- Returns how many tickets the launch found.
+--- `origin` says who fired it, for the message the run opens with (the voice
+--- card when the words, not a key, started it).
+--- Returns how many tickets the launch found, and the tickets themselves.
 ---@param targets { bufnr: integer, lnum: integer }[]
 ---@param claim? boolean
----@return integer
-local function launch_targets(targets, claim)
+---@param origin? string
+---@return integer launched
+---@return OrgTicket[]
+local function launch_targets(targets, claim, origin)
   table.sort(targets, function(a, b)
     if a.bufnr == b.bufnr then
       return a.lnum > b.lnum
@@ -1488,7 +1497,7 @@ local function launch_targets(targets, claim)
 
   local tickets = {}
   for _, target in ipairs(targets) do
-    local ticket = ticket_at(target.bufnr, target.lnum, true, claim, batch and batch.key)
+    local ticket = ticket_at(target.bufnr, target.lnum, true, claim, batch and batch.key, origin)
     if ticket then
       checkpoint(ticket)
       tickets[#tickets + 1] = ticket
@@ -1496,7 +1505,7 @@ local function launch_targets(targets, claim)
   end
 
   if #tickets == 0 then
-    return 0
+    return 0, tickets
   end
   if in_tmux() then
     if #tickets == 1 then
@@ -1510,7 +1519,7 @@ local function launch_targets(targets, claim)
     local project = project_of(tickets[1].file, tickets[1].lnum)
     open_window(orchestrator_argv(project.key, batch_prompt(tickets, project)))
   end
-  return #tickets
+  return #tickets, tickets
 end
 
 --- Report a multi-ticket launch: one instance is the ordinary case and says
@@ -1607,26 +1616,93 @@ function M.deliver_note(bufnr, lnum, note)
   return true
 end
 
---- A pane running `omp` on a message that came from outside the board: what
---- the orb on the dashboard's voice buddy heard (helpers/org/voice.lua). The
---- pane carries `@omp_voice` rather than a ticket's `@omp_ticket`: the words
---- name no ticket, so no run's last act (the skill's pane close) has anything
---- of ours to match. What it carries is the run's own session key
---- (`voice/<hrtime>`, under the agent dir): the words start a session of
---- their own, and naming it is what lets the little runs window follow what
---- this one is doing (helpers/org/runs.lua).
+--- The words as a ticket, under the entry the dashboard had highlighted: a
+--- child headline, last in that entry's subtree, its body the words under the
+--- capture header -- so the command sits on the board as a ticket the user can
+--- read before any run touches it. The title is the words themselves, clipped
+--- at a word so the headline stays one line.
+---
+--- `target` is what the page sent with the click (`{ file, line, id }`), and it
+--- is resolved the way every request from the page is (helpers/org/web/
+--- actions.lua): the :ID: wins, the line is the fallback. nil when it names
+--- nothing in the vault -- the caller then leaves the run to work it out.
 ---@param text string
+---@param target { file: string, line?: integer, id?: string }
+---@return { bufnr: integer, lnum: integer }|nil
+local function preset_ticket(text, target)
+  local ok, r = pcall(require('helpers.org.web.actions').resolve, target)
+  if not (ok and r and r.hl) then
+    return nil
+  end
+  local hl = r.hl
+  local lines = require('org.files').get_buffer(r.bufnr).lines
+  local at = math.min(hl.end_line or hl.line, #lines)
+  while at > hl.line and (lines[at] or ''):match '^%s*$' do
+    at = at - 1
+  end
+  local title = text:gsub('%s+', ' ')
+  if #title > 100 then
+    title = vim.trim(title:sub(1, 100):gsub('%s+%S*$', '')) .. '…'
+  end
+  local out = {
+    require('org.edit').build_headline { level = hl.level + 1, todo = 'TODO', title = title },
+  }
+  for _, line in ipairs(require('helpers.org.notes').block(hl, text)) do
+    out[#out + 1] = '  ' .. line
+  end
+  vim.api.nvim_buf_set_lines(r.bufnr, at, at, false, out)
+  return { bufnr = r.bufnr, lnum = at + 1 }
+end
+
+--- A pane running `omp` on a message that came from outside the board: what
+--- the orb on the dashboard's voice buddy heard (helpers/org/voice.lua).
+---
+--- With a `target` -- the entry the dashboard had highlighted when the mic was
+--- clicked -- the words are not handed to a run at large: they first become a
+--- ticket under that entry (`preset_ticket`), and the ordinary launch works it
+--- (`launch_targets`: the :ID: / :OMP_SESSION: / :OMP_LAUNCH: drawer, the claim
+--- to `NEXT`, the project checkpoint, its own pane). The run is thus
+--- pre-selected: it opens on a ticket already filed in the project the user was
+--- reading, instead of working out from the words alone which project they
+--- meant. Without one -- a listen with nothing highlighted, `:OrgVoice`, a
+--- `:OrgVoiceSay` -- the words start a run of their own on `context`, the
+--- message the caller wrote for a run that has to work out what the words are:
+--- no ticket names them, so the pane carries `@omp_voice` rather than a
+--- ticket's `@omp_ticket` and no run's last act (the skill's pane close) has
+--- anything of ours to match. What it carries is the run's own session key
+--- (`voice/<hrtime>`, under the agent dir): the words start a session of their
+--- own, and naming it is what lets the little runs window follow what this one
+--- is doing (helpers/org/runs.lua).
+---@param text string the words themselves
 ---@param title? string
+---@param target? { file: string, line?: integer, id?: string }
+---@param context? string the message for a run no target preselects
 ---@return string|nil pane the pane the run lives in ('' for a window of its
 --- own, when this is not tmux), or nil when nothing could be started
-function M.open_prompt(text, title)
-  local msg = one_line(text)
-  if msg == '' then
+function M.open_prompt(text, title, target, context)
+  local words = one_line(text)
+  if words == '' then
     return nil
+  end
+  local preset = target and preset_ticket(words, target)
+  if preset then
+    local launched, tickets = launch_targets({ preset }, nil, 'the voice card on the org dashboard')
+    M.sync()
+    if launched == 0 then
+      return nil
+    end
+    if not in_tmux() then
+      return ''
+    end
+    return running_pane(tickets[1].id)
+  end
+  local msg = one_line(context or '')
+  if msg == '' then
+    msg = words
   end
   local key = 'voice/' .. ('%d'):format(vim.uv.hrtime())
   local argv = { 'omp', '--session-dir', session_dir(key), msg }
-  local name = title or ('🤖 ' .. msg:sub(1, 40))
+  local name = title or ('🤖 ' .. words:sub(1, 40))
   if not in_tmux() then
     open_window(argv)
     return ''
