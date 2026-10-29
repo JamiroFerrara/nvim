@@ -130,6 +130,41 @@ function M.pane(key)
   return r.tickets[key] or r.sessions[key]
 end
 
+--- Cancel the run in `pane`: the pane goes, and the omp inside it with it.
+---
+--- The launcher's mark is the guard -- a pane carrying neither `@omp_ticket`
+--- nor `@omp_orchestrator` is the user's own shell, and is left alone. What
+--- the run wrote stays on disk, so a later launch resumes its session
+--- (`helpers/org/ai.lua`), and the ticket a cancelled run held goes on to
+--- whatever the next launch makes of it.
+---@param pane string
+---@return boolean ok, string|nil error
+function M.cancel(pane)
+  if type(pane) ~= 'string' or not pane:match '^%%%d+$' then
+    return false, 'no such run'
+  end
+  local r = M.runs()
+  local marked = false
+  for _, table_of_panes in ipairs { r.tickets, r.sessions } do
+    for _, id in pairs(table_of_panes) do
+      if id == pane then
+        marked = true
+      end
+    end
+  end
+  if not marked then
+    return false, 'that pane is not a run'
+  end
+  vim.fn.system { 'tmux', 'kill-pane', '-t', pane }
+  if vim.v.shell_error ~= 0 then
+    return false, 'tmux did not take the kill'
+  end
+  -- the next look is a fresh one: the cancelled row goes as soon as the page
+  -- asks for the list again, rather than a cached answer behind it
+  runs.at = 0
+  return true
+end
+
 --- The newest transcript of `key`'s session: a resumed run writes a new file
 --- beside the old ones, and the page wants the one being written now.
 ---@param key string

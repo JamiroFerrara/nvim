@@ -211,6 +211,14 @@ local function handle(req, res)
     return
   end
 
+  -- the `✕` of a Runs row: the pane the run is in goes, and the run with it
+  if req.method == 'POST' and path == '/api/cancel' then
+    local body = payload_of(req)
+    local ok, err = require('helpers.org.web.live').cancel(body.pane)
+    json(res, { ok = ok and true or false, error = err })
+    return
+  end
+
   if req.method == 'GET' and path == '/api/live/stream' then
     local key = req.query.key or ''
     if not key:match '%S' then
