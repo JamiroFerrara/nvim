@@ -407,13 +407,39 @@ local function has_session(dir)
   return #vim.fn.glob(dir .. '/*.jsonl', false, true) > 0
 end
 
+--- The board written to most recently under the project directory: the second
+--- answer `home_board` gives, for a directory that is in no project at all (a
+--- line said from `~`, a shell in `/tmp`). Weak, and kept only because the
+--- alternative is worse for a spoken line -- losing the words -- where a board
+--- the user did not mean is said in the reply and one sentence away from being
+--- moved.
+---@return string|nil
+local function last_board()
+  local dir = vim.fs.normalize '~/org/projects'
+  local newest, at
+  local ok, it = pcall(vim.fs.dir, dir)
+  if not ok or not it then
+    return nil
+  end
+  for name, kind in it do
+    if kind == 'file' and name:sub(-4) == '.org' then
+      local path = dir .. '/' .. name
+      local st = vim.uv.fs_stat(path)
+      if st and (not at or st.mtime.sec > at) then
+        newest, at = path, st.mtime.sec
+      end
+    end
+  end
+  return newest
+end
+
 --- The board a line with no destination of its own belongs in: the project
 --- file the working directory is in (helpers/org/project.lua's claim, or the
 --- repo's own board when it claims nothing) -- the same project a capture
---- started there would file against. The talking instance is told a file every
---- time, so the one thing it never has to do is ask which one; nil when the
---- directory belongs to no project, or the board it names is a file no one has
---- written yet, and the caller says so in a line instead.
+--- started there would file against -- else the board touched last. The talking
+--- instance is told a file every time, so the one thing it never has to do is
+--- ask which one; nil only when there is no board to name at all, and the
+--- caller says that in a line.
 ---@return string|nil
 local function home_board()
   local ok, project = pcall(function()
@@ -423,7 +449,7 @@ local function home_board()
   if type(file) == 'string' and file ~= '' and vim.uv.fs_stat(file) then
     return vim.fs.normalize(file)
   end
-  return nil
+  return last_board()
 end
 
 ---@class OrgTicket

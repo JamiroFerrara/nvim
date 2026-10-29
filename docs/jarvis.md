@@ -131,12 +131,13 @@ a half.
 
    The instance never asks a question back. A listen with nothing highlighted
    carries no entry, and the spec then names the board nvim is working in —
-   where a capture from that directory would go — so the words are filed the
-   first time they are said; a line that leaves something open is read the
-   plainest way, and the one line it prints says where the work went and what
-   was taken. A question from the bot would cost the user a whole second
-   listen, and a wrong board is one sentence away from being corrected. The
-   card says which entry the words will hang under —
+   where a capture from that directory would go, or, when that directory is in
+   no project, the board written to last — so the words are filed the first
+   time they are said; a line that leaves something open is read the plainest
+   way, and the one line it prints says where the work went and what was
+   taken. A question from the bot would cost the user a whole second listen,
+   and a wrong board is one sentence away from being corrected. The card says
+   which entry the words will hang under —
    `ticket under “…” — click the mic to speak`.
 
    The card's part ends when the words reach the instance: it says where they

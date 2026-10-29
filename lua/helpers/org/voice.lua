@@ -18,7 +18,12 @@
 --      machine whose only transcriber is Windows' own, one recognizer stays
 --      open for the whole listen (`reader_start`), because starting it costs
 --      more than reading a few seconds of audio does
---   3. hand the words to the one talking instance
+--   3. hold the words on the card until the button under them is clicked
+--      (`M.send`): a transcript read back is a transcript a wrong word cannot
+--      send, and the recording is gone by now, so what waits is one line of
+--      text and nothing else. Escape throws it away (`M.cancel`); clicking the
+--      mic throws it away and listens again
+--   4. hand the words to the one talking instance
 --      (`helpers.org.ai.open_prompt`, the session `talk/one`): that instance
 --      decides what they are inside the org system -- an answer here, or work
 --      it files as a ticket and starts the run on -- and the buddy only
@@ -78,9 +83,10 @@
 -- sentence being said; `0` turns them off).
 --
 -- The browser polls `GET /api/voice` for `M.status()`: the phase is what the
--- card draws (idle, speaking, listening, thinking, sent, error), `partial` the
--- words it has made of a sentence still being said, `heard` the words the
--- finished recording produced, and `run` the pane the words went to and
+-- card draws (idle, speaking, listening, thinking, review, sent, error),
+-- `partial` the words it has made of a sentence still being said, `heard` the
+-- words the finished recording produced -- and, in `review`, the words the
+-- approve button would send -- and `run` the pane the words went to and
 -- whether it is still working.
 
 local M = {}
