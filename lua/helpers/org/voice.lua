@@ -1,18 +1,19 @@
--- The voice buddy's engine: what sits behind the orb on the org dashboard
--- (lua/helpers/org/web/assets/jarvis.js, served by helpers/org/web/).
+-- The voice buddy's engine: what sits behind the recording card on the org
+-- dashboard (lua/helpers/org/web/assets/jarvis.js, served by helpers/org/web/).
 --
--- The orb is UI and lives in the browser; this is the part that needs the
+-- The card is UI and lives in the browser; this is the part that needs the
 -- machine. A click comes in as `POST /api/voice` (helpers/org/web/init.lua)
 -- and the conversation runs here:
 --
 --   1. listen -- record through PulseAudio and report the level as it goes,
 --      so a machine whose microphone is dead looks dead instead of silent
---   2. read the recording back into words
+--   2. read the recording back into words -- the sentence so far, a piece at
+--      a time while it is still being said, then all of it at the end
 --   3. hand the words to an `omp` instance in a tmux pane
 --      (`helpers.org.ai.open_prompt`): that run decides what to do with them
 --      inside the org system, the buddy only carries the words
 --
--- The orb is silent: speaking is off unless asked for (`OMP_VOICE_SPEAK=1`,
+-- The card is silent: speaking is off unless asked for (`OMP_VOICE_SPEAK=1`,
 -- or `speak = true` in setup), because the voice was getting in the way of
 -- the conversation. `:OrgVoiceSpeak` still says a line on demand.
 --
@@ -28,11 +29,14 @@
 -- Overrides, when the detection guesses wrong: `OMP_VOICE_TTS` (a shell
 -- command, the words on stdin), `OMP_VOICE_STT` (a shell command, the wav
 -- path as `$1`), `OMP_VOICE_WHISPER_MODEL`, `OMP_VOICE_LANG`,
--- `OMP_VOICE_PIPER_MODEL`, `OMP_VOICE_LISTEN_SECONDS`, `OMP_VOICE_SPEAK`.
+-- `OMP_VOICE_PIPER_MODEL`, `OMP_VOICE_LISTEN_SECONDS`, `OMP_VOICE_SPEAK`,
+-- `OMP_VOICE_PARTIAL` (seconds between two reads of a sentence being said;
+-- `0` turns them off).
 --
--- The browser polls `GET /api/voice` for `M.status()` while the orb is open:
--- the phase is what it draws (idle, speaking, listening, thinking, error) and
--- `heard` is the words it puts on the panel.
+-- The browser polls `GET /api/voice` for `M.status()`: the phase is what the
+-- card draws (idle, speaking, listening, thinking, error), `partial` the words
+-- it has made of a sentence still being said, and `heard` the words the
+-- finished recording produced.
 
 local M = {}
 
@@ -64,6 +68,7 @@ local tts_backend, stt_backend
 
 local opts = {
   listen_seconds = 10,
+  partial_seconds = 1.5,
   lang = nil,
   tts = nil,
   stt = nil,
@@ -71,14 +76,17 @@ local opts = {
   speak = false,
 }
 
---- What the orb draws. `phase` is the state machine's, `heard` the words the
+--- What the card draws. `phase` is the state machine's, `heard` the words the
 --- last listen produced, `view` the dashboard view the click came from and
 --- `error` what went wrong, if anything. `level` is the microphone's loudness
 --- a moment ago (0 empty, 1 full), `level_db` the raw reading it came from and
---- `signal` whether any sound at all has arrived in this listen.
+--- `signal` whether any sound at all has arrived in this listen. `partial` is
+--- what the transcriber has made of the recording so far, refreshed while the
+--- sentence is still being said.
 local state = {
   phase = 'idle',
   heard = '',
+  partial = '',
   view = '',
   error = '',
   at = 0,
@@ -102,6 +110,7 @@ function M.status()
   return {
     phase = state.phase,
     heard = state.heard,
+    partial = state.partial,
     view = state.view,
     error = state.error,
     at = state.at,
@@ -319,7 +328,7 @@ local function wav_header(bytes)
     .. u32(bytes)
 end
 
---- The loudness of one chunk of the recording, as the orb draws it: the RMS
+--- The loudness of one chunk of the recording, as the card draws it: the RMS
 --- of the samples turned into dBFS, then squashed into 0..1 between
 --- `METER_FLOOR` and full scale. Digital silence stays at zero, which is what
 --- makes a dead microphone visible.
@@ -381,6 +390,20 @@ local function drop_timer()
   end
 end
 
+--- The words of the sentence so far, read again every `partial_seconds` while
+--- the recording runs, so the screen can show what was heard while it is still
+--- being said. One read at a time: a transcriber slower than the clock skips a
+--- turn instead of piling up behind itself.
+local partial = { timer = nil, busy = false }
+
+local function drop_partial()
+  if partial.timer then
+    pcall(partial.timer.stop, partial.timer)
+    pcall(partial.timer.close, partial.timer)
+    partial.timer = nil
+  end
+end
+
 --- Close the listen and hand `text` (empty when nothing was heard) to `done`,
 --- once. Every way out -- the recognizer answering, the recorder stopped, the
 --- cap firing, a program failing -- comes through here, so the phase always
@@ -391,10 +414,12 @@ end
 ---@param done fun(text: string)
 local function heard(text, done)
   drop_timer()
+  drop_partial()
   job.proc = nil
   job.wav = nil
   state.level = 0
   state.level_db = nil
+  state.partial = ''
   local said = vim.trim((text or ''):gsub('%s+', ' '))
   if said == '' and not state.signal then
     set_phase('error', { heard = '', error = 'the microphone delivered no sound' })
@@ -406,11 +431,14 @@ local function heard(text, done)
 end
 
 --- Read `wav` back into words: the user's own command (`OMP_VOICE_STT`, the
---- wav path as `$1`), Windows' recognizer on the file, or whisper.cpp.
+--- wav path as `$1`), Windows' recognizer on the file, or whisper.cpp. A
+--- `quiet` read is the words of a sentence still being said: it hands them to
+--- `done` and leaves the listen alone. Only the final read ends it.
 ---@param wav string
 ---@param backend string
 ---@param done fun(text: string)
-local function transcribe(wav, backend, done)
+---@param quiet? boolean
+local function transcribe(wav, backend, done, quiet)
   local cmd, env
   if backend == 'custom' then
     cmd = { 'sh', '-c', opts.stt .. ' "$1"', 'sh', wav }
@@ -422,7 +450,9 @@ local function transcribe(wav, backend, done)
     if win == '' then
       pcall(uv.fs_unlink, wav)
       vim.schedule(function()
-        set_phase('error', { error = 'could not hand the recording to Windows' })
+        if not quiet then
+          set_phase('error', { error = 'could not hand the recording to Windows' })
+        end
         done ''
       end)
       return
@@ -443,7 +473,11 @@ local function transcribe(wav, backend, done)
     pcall(uv.fs_unlink, wav)
     local text = text_of(obj)
     vim.schedule(function()
-      heard(text, done)
+      if quiet then
+        done(text)
+      else
+        heard(text, done)
+      end
     end)
   end)
 end
@@ -462,11 +496,71 @@ local function close_wav()
   job.fd = nil
 end
 
+--- What has been recorded so far, as a wav a transcriber can read while the
+--- recording goes on. The file the recorder writes carries sizes that are only
+--- patched when it stops, so a reader would have to guess its length; this copy
+--- carries the real ones, which is what lets the words show up as they are
+--- said instead of after the fact.
+---@return string|nil path
+local function snapshot()
+  if not job.wav or not job.bytes or job.bytes == 0 then
+    return nil
+  end
+  local src = uv.fs_open(job.wav, 'r', 384)
+  if not src then
+    return nil
+  end
+  local data = uv.fs_read(src, job.bytes, 44)
+  uv.fs_close(src)
+  if type(data) ~= 'string' or data == '' then
+    return nil
+  end
+  local path = vim.fn.tempname() .. '.wav'
+  local fd = uv.fs_open(path, 'w', 384)
+  if not fd then
+    return nil
+  end
+  uv.fs_write(fd, wav_header(#data), 0)
+  uv.fs_write(fd, data, 44)
+  uv.fs_close(fd)
+  return path
+end
+
+--- Read the words of the recording so far, again and again, until the
+--- recording stops: this is the text the screen shows while the sentence is
+--- still being said.
+---@param backend string|nil
+local function peek(backend)
+  if not backend or (opts.partial_seconds or 0) <= 0 then
+    return
+  end
+  partial.timer = uv.new_timer()
+  partial.timer:start(opts.partial_seconds * 1000, opts.partial_seconds * 1000, function()
+    vim.schedule(function()
+      if state.phase ~= 'listening' or partial.busy then
+        return
+      end
+      local path = snapshot()
+      if not path then
+        return
+      end
+      partial.busy = true
+      transcribe(path, backend, function(text)
+        partial.busy = false
+        local words = vim.trim((text or ''):gsub('%s+', ' '))
+        if state.phase == 'listening' and words ~= '' then
+          state.partial = words
+        end
+      end, true)
+    end)
+  end)
+end
+
 --- Record until a second click (or the cap), then transcribe. `parec`
 --- streams the microphone as raw PCM instead of writing a file itself, which
 --- is what lets the same bytes become both the wav and the level: an
 --- encoded recorder buffers its output and the meter would only arrive when
---- the recording ended. Every chunk is measured for the orb and appended to
+--- the recording ended. Every chunk is measured for the card and appended to
 --- the wav; stopping closes the file before anything reads it.
 ---@param backend string|nil
 ---@param done fun(text: string)
@@ -482,6 +576,7 @@ local function start_recording(backend, done)
   uv.fs_write(fd, wav_header(0), 0)
   local function finished()
     close_wav()
+    drop_partial()
     if state.phase ~= 'listening' then
       pcall(uv.fs_unlink, wav)
       return
@@ -537,6 +632,7 @@ local function start_recording(backend, done)
       end
     end)
   end)
+  peek(backend)
 end
 
 --- Listen once and hand the words to `done`: record through PulseAudio, show
@@ -550,7 +646,7 @@ local function listen(done)
     done ''
     return
   end
-  set_phase('listening', { level = 0, level_db = nil, signal = false })
+  set_phase('listening', { level = 0, level_db = nil, signal = false, partial = '', heard = '' })
   start_recording(stt_backend(), done)
 end
 
@@ -587,8 +683,8 @@ local function launch(text)
   set_phase 'idle'
 end
 
---- Does the orb say anything at all? Off by default: the orb is a microphone
---- and a run, not a speaker, and the voice was getting in the way. `speak =
+--- Does the card say anything at all? Off by default: it is a microphone and
+--- a run, not a speaker, and the voice was getting in the way. `speak =
 --- true` in setup, or `OMP_VOICE_SPEAK=1`, brings it back.
 local function speaks()
   return opts.speak and tts_backend() ~= nil
@@ -596,7 +692,7 @@ end
 
 --- The whole conversation: listen, read the words back, hand them to a run.
 --- The click is acknowledged out loud only when the voice is on. `view` names
---- what the dashboard had open when the orb was clicked, so the run is told
+--- what the dashboard had open when the mic was clicked, so the run is told
 --- where the words came from.
 ---@param view? string
 function M.converse(view)
@@ -608,7 +704,7 @@ function M.converse(view)
       M._said(text)
     end)
   end
-  set_phase('idle', { view = vim.trim(view or ''), heard = '', error = '' })
+  set_phase('idle', { view = vim.trim(view or ''), heard = '', partial = '', error = '' })
   if not speaks() then
     begin()
     return true
@@ -641,7 +737,7 @@ function M._said(text)
   end
 end
 
---- Stop whatever is running: the second click on a listening orb, and the
+--- Stop whatever is running: the second click on a listening mic, and the
 --- escape hatch when a program hangs.
 function M.cancel()
   if job.proc then
@@ -650,6 +746,7 @@ function M.cancel()
     pcall(handle.kill, handle, 'sigterm')
   end
   drop_timer()
+  drop_partial()
   if job.fd then
     close_wav()
     if job.wav then
@@ -657,11 +754,11 @@ function M.cancel()
       job.wav = nil
     end
   end
-  set_phase('idle', { heard = '', level = 0, level_db = nil })
+  set_phase('idle', { heard = '', partial = '', level = 0, level_db = nil })
 end
 
 --- `:OrgVoiceSay {text}`: the run without the microphone -- the same path the
---- orb takes once it has words, so it is also what a test drives.
+--- card takes once it has words, so it is also what a test drives.
 ---@param text string
 function M.say(text)
   M._said(text)
@@ -678,6 +775,9 @@ function M.setup(user)
   opts = vim.tbl_extend('force', opts, user or {})
   if vim.env.OMP_VOICE_LISTEN_SECONDS then
     opts.listen_seconds = tonumber(vim.env.OMP_VOICE_LISTEN_SECONDS) or opts.listen_seconds
+  end
+  if vim.env.OMP_VOICE_PARTIAL then
+    opts.partial_seconds = tonumber(vim.env.OMP_VOICE_PARTIAL) or opts.partial_seconds
   end
   if vim.env.OMP_VOICE_SPEAK and vim.env.OMP_VOICE_SPEAK ~= '' then
     local v = vim.env.OMP_VOICE_SPEAK:lower()

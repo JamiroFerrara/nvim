@@ -111,17 +111,17 @@
 --                   by-state, priority and wayfinder lists, sectioned and
 --                   sorted like the views above -- as a page whose clicks
 --                   come back into nvim (a state change, opening an entry)
---   voice.lua       the engine behind the orb on the dashboard
+--   voice.lua       the engine behind the recording card on the dashboard
 --                   (helpers/org/web/assets/jarvis.js): a click there is
 --                   `POST /api/voice`, which records through PulseAudio while
---                   reporting the microphone's level, reads the recording back
---                   into words and hands them to a fresh `omp` pane
---                   (`ai.open_prompt`) -- that run decides what to do with them
---                   inside the org system. The orb stays silent unless the
---                   voice is turned on (`OMP_VOICE_SPEAK=1`); dictation is
---                   local: whisper.cpp, Windows' own recognizer through
---                   powershell.exe when nvim runs under WSL, or a command of
---                   the user's
+--                   reporting the microphone's level and the words heard so
+--                   far, reads the recording back into words and hands them to
+--                   a fresh `omp` pane (`ai.open_prompt`) -- that run decides
+--                   what to do with them inside the org system. The card stays
+--                   silent unless the voice is turned on (`OMP_VOICE_SPEAK=1`);
+--                   dictation is local: whisper.cpp, Windows' own recognizer
+--                   through powershell.exe when nvim runs under WSL, or a
+--                   command of the user's
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'

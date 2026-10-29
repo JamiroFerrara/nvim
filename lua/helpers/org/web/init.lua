@@ -14,11 +14,11 @@
 -- refetches. The server listens on the loopback address only, the way
 -- markdown-preview.nvim's does.
 --
--- The dashboard carries the voice orb (`/api/voice`, drawn by
+-- The dashboard carries the voice card (`/api/voice`, drawn by
 -- assets/jarvis.js): the click starts a conversation in helpers/org/voice.lua
--- -- record, report the level, transcribe, then an `omp` pane seeded with the
--- words -- and the page polls the phase and the level it draws from the same
--- route.
+-- -- record, report the level and the words so far, transcribe, then an `omp`
+-- pane seeded with the words -- and the page polls the phase, the level and
+-- the words it draws from the same route.
 local M = {}
 
 local actions = require 'helpers.org.web.actions'
@@ -122,7 +122,7 @@ local function handle(req, res)
     return
   end
 
-  -- The orb on the page is UI; what it needs from the machine -- a voice, a
+  -- The card on the page is UI; what it needs from the machine -- a voice, a
   -- microphone, a tmux pane for the run -- lives in helpers/org/voice.lua.
   -- The click starts the conversation and returns at once (it takes as long
   -- as speaking and listening do); the page polls the state it draws.
