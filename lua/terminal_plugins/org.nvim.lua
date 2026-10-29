@@ -30,6 +30,9 @@
 --   tagging.lua     one-key tag/priority toggles (B/F/C, <M-a>/<M-b>/<M-c>)
 --                   in org buffers and, via agenda.lua, in the view
 --   decorations.lua checkbox icons (conceal, like the markdown config)
+--   links.lua       a `file:` link's description shows the name of the file
+--                   it ends in (`AgentListener.php:51`), its directories
+--                   concealed, the link's target left whole in the file
 --   mappings.lua    buffer-local <CR> (normal/insert): follow the link
 --                   under the cursor, else toggle/make a checkbox or
 --                   fold a headline; dd-on-headline, `c`-on-headline
@@ -1363,6 +1366,7 @@ return {
     require('helpers.org.callouts').setup()
     require('helpers.org.blocks').setup()
     require('helpers.org.decorations').setup()
+    require('helpers.org.links').setup()
     require('helpers.org.wrap').setup()
     -- the group view's `changed-down` sorting strategy: it reads the same
     -- last-changed date the column shows (helpers/org/changed.lua), so it

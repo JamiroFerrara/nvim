@@ -1,5 +1,5 @@
 -- Post-processing of org.nvim's decorations (wired in
--- lua/terminal_plugins/org.nvim.lua). One wrapper, four concerns, because
+-- lua/terminal_plugins/org.nvim.lua). One wrapper, three concerns, because
 -- org.ui.decorations has a single `compute` slot to replace:
 --
 --   * Checkbox rendering, like the markdown config: `- [ ] text` shows as
@@ -31,11 +31,6 @@
 --     and holds no Org table: a markdown table in a `#+begin_src markdown`
 --     block is left to the markdown plugin, which renders the body as the
 --     injected markdown tree `queries/org/injections.scm` gives it.
---   * Link descriptions: a `file:` link whose description names a path
---     shows just the file name it ends in --
---     `[[file:...::51][module/Agent/src/Listener/AgentListener.php:51]]`
---     reads `AgentListener.php:51` -- the directory part concealed, the
---     file untouched. Org text only, same as the tables.
 --
 -- The wrapper is installed when org.ui.decorations first loads, so the
 -- renderer stays out of startup.
@@ -393,67 +388,6 @@ local function tables(bufnr, first, last, rows)
   end
 end
 
---- Shorten the description of a `file:` link to the name of the file it
---- ends in: the directory part is concealed, so
---- `[[file:~/repo/x/AgentListener.php::51][module/Agent/src/Listener/AgentListener.php:51]]`
---- reads `AgentListener.php:51`. Nothing is written, so the whole path is
---- still there for a search, a copy or another program, and only the link
---- whose description names a path changes -- a headline name, a word, an
---- `https:` URL reads as typed. Org text only: a block body is code the
---- markdown plugin draws, and org.nvim conceals no link in it.
----@param bufnr integer
----@param first integer
----@param last integer
----@param rows table
-local function links(bufnr, first, last, rows)
-  local ui = require('org.config').opts.ui or {}
-  local on = ui.conceal_links ~= false
-  local descriptive = vim.b[bufnr].org_link_descriptive
-  if descriptive ~= nil then
-    on = descriptive and true or false
-  end
-  if not on then
-    return
-  end
-  local decorations = require 'org.ui.decorations'
-  local blocked = block_open(bufnr, first)
-  for row = first, last do
-    local line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1]
-    if not line then
-      return
-    end
-    local b = decorations.block_line(line)
-    if b ~= nil then
-      blocked = b
-    elseif not blocked then
-      local init = 1
-      while true do
-        local s, e, target, desc = line:find('%[%[([^%]]*)%]%[([^%]]*)%]%]', init)
-        if not s then
-          break
-        end
-        init = e + 1
-        local kind = target:match '^([%a][%w+.-]*):'
-        -- the last `/` of the description, when something follows it
-        local slash
-        for p in desc:gmatch '()/' do
-          slash = p
-        end
-        if kind and kind:lower() == 'file' and slash and slash < #desc then
-          -- the description starts right after the `][` of the link
-          local start = line:find('][', s, true) + 2
-          local r = rows[row]
-          if not r then
-            r = {}
-            rows[row] = r
-          end
-          r[#r + 1] = { start - 1, { end_col = start - 1 + slash, conceal = '' } }
-        end
-      end
-    end
-  end
-end
-
 function M.setup()
   -- Agent note blocks: any colorscheme can repaint them (catppuccin's
   -- custom_highlights does, in terminal_plugins/theme_catpuccin.lua); these
@@ -487,7 +421,6 @@ function M.setup()
       local hi = math.min(n - 1, last or n - 1)
       note_headers(bufnr, lo, hi, rows)
       tables(bufnr, lo, hi, rows)
-      links(bufnr, lo, hi, rows)
       return rows
     end
     -- A table row's marks depend on the revealed row (see `revealed_row`),
