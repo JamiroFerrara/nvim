@@ -128,7 +128,9 @@
 --                   through the page's own microphone when the page runs on
 --                   another device, a phone on the tunnel -- while
 --                   reporting the microphone's level and the words heard so
---                   far, reads the recording back into words and hands them to
+--                   far, reads the recording back into words and holds them on
+--                   the card for its send button -- nothing reaches a run that
+--                   was not read back first -- then hands them to
 --                   the one talking instance (`ai.open_prompt`, the `talk/one`
 --                   session) -- it answers a question, or files work as a
 --                   ticket and starts the run on it, so the board shows the
@@ -137,8 +139,10 @@
 --                   instead: the words are typed into it and written into the
 --                   ticket's body -- `:OrgVoice` / `:OrgVoiceSay` run in an org
 --                   buffer or the agenda take the headline at point the same
---                   way a click takes the page's highlight. A second
---                   click ends the recording and keeps what it heard (Escape
+--                   way a click takes the page's highlight (`:OrgVoiceSay`
+--                   sends at once: the words were typed, not heard). A second
+--                   click ends the recording and keeps what it heard, and the
+--                   send button (`:OrgVoiceSend`) is what releases it (Escape
 --                   throws it away). The card stays silent unless the voice is
 --                   turned on (`OMP_VOICE_SPEAK=1`); dictation is local:
 --                   whisper.cpp, Windows' own recognizer through

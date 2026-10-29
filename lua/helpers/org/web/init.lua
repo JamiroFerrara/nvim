@@ -152,6 +152,13 @@ local function handle(req, res)
       json(res, require('helpers.org.voice').status())
       return
     end
+    -- the approve button under the words a listen ended on: from here they are
+    -- the talking instance's, and the card says where they went
+    if body.send then
+      require('helpers.org.voice').send()
+      json(res, require('helpers.org.voice').status())
+      return
+    end
     -- `entry` is what the list had highlighted: the words become a ticket under
     -- it, so the run starts pre-selected inside the project the page was on.
     -- `source` is the page's own microphone (`browser`) when it has one: the

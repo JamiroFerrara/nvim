@@ -8,6 +8,10 @@
 //                                the level of the microphone, and the words
 //                                it has made of the sentence so far, so they
 //                                can be read while they are still being said.
+//   3. the send button         -- under the words a listen ended on. Nothing
+//                                leaves for a run until it is clicked: a
+//                                transcript is read once before it is a
+//                                command, and Escape throws it away.
 //
 // Nothing here is invented: the phase, the level and the words all come from
 // `GET /api/voice` (helpers/org/voice.lua). The card shows itself while a
@@ -25,7 +29,7 @@
 // and is not.
 
 (() => {
-  const PHASES = ['idle', 'speaking', 'listening', 'thinking', 'sent', 'error'];
+  const PHASES = ['idle', 'speaking', 'listening', 'thinking', 'review', 'sent', 'error'];
   // the phases a capture still belongs to: a spoken ack is the same listen
   const HELD = ['speaking', 'listening'];
   const LINGER = 5000; // how long the finished words stay on screen
@@ -40,6 +44,7 @@
       <div class="jv-head"><span class="jv-dot"></span><span class="jv-state">idle</span></div>
       <div class="jv-meter"><span class="jv-meter-fill"></span></div>
       <div class="jv-text"></div>
+      <div class="jv-send-row" hidden><button class="jv-send" type="button">send</button></div>
       <div class="jv-run" hidden></div>
       <div class="jv-hint"></div>
     </div>
@@ -55,6 +60,8 @@
   const card = root.querySelector('.jv-card');
   const stateLabel = root.querySelector('.jv-state');
   const textLine = root.querySelector('.jv-text');
+  const sendRow = root.querySelector('.jv-send-row');
+  const sendButton = root.querySelector('.jv-send');
   const runLine = root.querySelector('.jv-run');
   const hintLine = root.querySelector('.jv-hint');
   const meter = root.querySelector('.jv-meter');
@@ -84,6 +91,7 @@
     speaking: 'speaking',
     listening: 'listening',
     thinking: 'reading it back',
+    review: 'check it',
     sent: 'with the run',
     error: 'could not listen',
   };
@@ -94,6 +102,8 @@
         return s.partial || (s.signal ? '…' : 'say something');
       case 'thinking':
         return s.heard || s.partial;
+      case 'review':
+        return s.heard;
       case 'sent':
         return s.heard;
       case 'error':
@@ -112,6 +122,7 @@
       return 'click the mic to stop and keep the words';
     }
     if (s.phase === 'thinking') return 'reading it back';
+    if (s.phase === 'review') return 'press send, or Escape to throw it away';
     if (s.phase === 'sent') return 'click the mic to say more';
     if (s.phase === 'error') return 'click the mic to try again';
     if (s.stt === false) return 'no microphone on this machine';
@@ -138,6 +149,9 @@
     stateLabel.textContent = WORDS[phase] || phase;
     textLine.textContent = words(status) || '';
     hintLine.textContent = hint(status);
+    // the approve button: only over words that are waiting, and never over a
+    // listen that is still running
+    sendRow.hidden = phase !== 'review';
 
     const run = runText(status);
     runLine.hidden = !shown || run === '';
@@ -153,7 +167,9 @@
         ? 'click to stop and keep the words'
         : phase === 'thinking' || phase === 'speaking'
           ? 'still working'
-          : 'click to speak';
+          : phase === 'review'
+            ? 'click to say it again'
+            : 'click to speak';
     mic.setAttribute('aria-pressed', phase === 'listening' ? 'true' : 'false');
 
     // the words sit at the bottom of a box that grows: keep the newest line
@@ -262,6 +278,23 @@
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ stop: true }),
+      });
+      const out = await res.json();
+      if (out.status) apply(out.status);
+    } catch (err) {
+      // the poll will say what happened
+    }
+  }
+
+  // the approve button: the words waiting on the card are the ones it sends.
+  // Nothing is edited here -- the text is what was heard, and a line that came
+  // back wrong is one Escape away from being said again
+  async function send() {
+    try {
+      const res = await fetch('/api/voice', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ send: true }),
       });
       const out = await res.json();
       if (out.status) apply(out.status);
@@ -506,6 +539,8 @@
 
   // ---------------------------------------------------------------- clicking
 
+  sendButton.addEventListener('click', send);
+
   mic.addEventListener('click', () => {
     const phase = status.phase;
     if (phase === 'listening') {
@@ -522,7 +557,9 @@
   window.addEventListener(
     'keydown',
     (ev) => {
-      if (ev.key !== 'Escape' || status.phase !== 'listening') return;
+      if (ev.key !== 'Escape') return;
+      // escape is the way out of a listen, and of the words it ended on
+      if (status.phase !== 'listening' && status.phase !== 'review') return;
       ev.stopPropagation();
       ev.preventDefault();
       cancel();

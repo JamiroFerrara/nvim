@@ -1464,10 +1464,13 @@ local function speaks()
   return opts.speak and tts_backend() ~= nil
 end
 
---- The whole conversation: listen, read the words back, hand them to the
---- talking instance -- or to the run already on the ticket the selection names
---- (`launch`, `ai.open_prompt`'s own route). The click is acknowledged out loud
---- only when the voice is on. `view` names what was open when the listen
+--- The whole conversation: listen, read the words back, and hold them for the
+--- approve button (`M.send`), which hands them to the talking instance -- or
+--- to the run already on the ticket the selection names (`launch`,
+--- `ai.open_prompt`'s own route). A click while words wait in `review` starts
+--- the listen over and the unapproved line goes with it, which is what the
+--- mic's own hint says it does. The click is acknowledged out loud only when
+--- the voice is on. `view` names what was open when the listen
 --- started: the dashboard's view title, or `editor` for the commands, which
 --- run in an nvim buffer rather than on the page. `entry` (the entry the list
 --- had highlighted, or the headline at point) is the entry the words belong
@@ -1480,7 +1483,8 @@ end
 ---@param entry? { file: string, line?: integer, id?: string, title?: string }
 ---@param source? string
 function M.converse(view, entry, source)
-  if state.phase ~= 'idle' and state.phase ~= 'error' and state.phase ~= 'sent' then
+  local open = { idle = true, error = true, sent = true, review = true }
+  if not open[state.phase] then
     return false
   end
   local function begin()
@@ -1505,8 +1509,12 @@ function M.converse(view, entry, source)
   return true
 end
 
---- What was heard: hand it to the talking instance, saying it back first when
---- the voice is on.
+--- What was heard: hold it on the card until the approve button is clicked
+--- (`M.send`). Speech is the one input the user cannot check on the way in --
+--- a word misheard reaches a run as an instruction nobody gave -- so the
+--- transcript stops here for one look, and the recording behind it is already
+--- gone: what waits is a line of text, not a wav. The voice, when it is on,
+--- says the line back while it waits.
 ---@param text string
 function M._said(text)
   local said = vim.trim((text or ''):gsub('%s+', ' '))
@@ -1514,19 +1522,30 @@ function M._said(text)
     set_phase('idle', { heard = '' })
     return
   end
-  set_phase('thinking', { heard = said })
+  set_phase('review', { heard = said })
   if speaks() then
-    speak(said, function()
-      launch(said)
-    end)
-  else
-    launch(said)
+    speak(said)
   end
 end
 
+--- Send the words the card is holding: the approve button (`POST /api/voice`
+--- with `{send: true}`), and `:OrgVoiceSend` from the editor. Only the words
+--- of a listen that ended and is still waiting go on -- a second click, or a
+--- card whose words were thrown away, is a race the page lost rather than a
+--- sentence said twice.
+---@return boolean sent
+function M.send()
+  if state.phase ~= 'review' or state.heard == '' then
+    return false
+  end
+  launch(state.heard)
+  return state.phase == 'sent'
+end
+
 --- Stop the recording and read the words back: the second click on the mic.
---- The click that ends a sentence is the one that wants the sentence, so this
---- closes the recording the way the cap does and lets the transcription run;
+--- The click that ends a sentence is the one that wants the sentence read, so
+--- this closes the recording the way the cap does and lets the transcription
+--- run -- into `review`, where the words wait for the approve button;
 --- `M.cancel` is the other way out, which throws the recording away.
 ---@return boolean stopping
 function M.stop()
@@ -1550,7 +1569,9 @@ function M.stop()
 end
 
 --- Throw the recording away: the card's escape key, and the escape hatch when
---- a program hangs. Nothing is read back and no run starts.
+--- a program hangs. Nothing is read back and no run starts. In `review` it
+--- throws the words away instead -- the one way out of a line the user does
+--- not want said.
 function M.cancel()
   job.finish = nil
   if job.proc then
@@ -1571,8 +1592,9 @@ function M.cancel()
   set_phase('idle', { heard = '', partial = '', level = 0, level_db = nil })
 end
 
---- `:OrgVoiceSay {text}`: the words without the microphone -- the same path the
---- card takes once it has them, so it is also what a test drives. `entry` is
+--- `:OrgVoiceSay {text}`: the words without the microphone, sent as given --
+--- there is nothing to approve when the user typed them, so this skips the
+--- card's `review` and is also what a test drives. `entry` is
 --- the selection a click would have carried: the dashboard's highlight, or the
 --- headline at point when the command was run from the editor (`M.converse`'s
 --- `entry`, helpers/org/ai.lua's `entry_at_point`). `view` is what was open
@@ -1582,9 +1604,14 @@ end
 ---@param entry? { file: string, line?: integer, id?: string, title?: string }
 ---@param view? string
 function M.say(text, entry, view)
+  local said = vim.trim((text or ''):gsub('%s+', ' '))
+  if said == '' then
+    return
+  end
   state.view = vim.trim(view or '')
   state.target = target_of(entry)
-  M._said(text)
+  set_phase('thinking', { heard = said })
+  launch(said)
 end
 
 --- `:OrgVoiceSpeak {text}`: just the speaking half.
@@ -1635,6 +1662,11 @@ function M.setup(user)
   vim.api.nvim_create_user_command('OrgVoiceStop', function()
     M.stop()
   end, { desc = 'voice: stop recording and read it back' })
+  vim.api.nvim_create_user_command('OrgVoiceSend', function()
+    if not M.send() then
+      notify('voice: no words waiting to be sent', vim.log.levels.WARN)
+    end
+  end, { desc = 'voice: send the words the card is holding' })
   -- Handy's model is copied into the Linux side on first use and that copy
   -- takes a few seconds: start it now, so the first click does not have to
   -- fall back to whisper while it lands

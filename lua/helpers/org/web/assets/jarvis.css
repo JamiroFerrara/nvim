@@ -96,6 +96,40 @@
   transition: transform 0.12s linear;
 }
 
+/* the approve button: one click and the words above it are the run's. It sits
+   where they end so it is read as part of the sentence, not as a toolbar, and
+   it is the only control on the card besides the mic */
+#jarvis .jv-send-row {
+  margin-top: 9px;
+}
+
+#jarvis .jv-send-row[hidden] {
+  display: none;
+}
+
+#jarvis .jv-send {
+  padding: 5px 14px;
+  border: 1px solid color-mix(in srgb, var(--jv-a) 55%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--jv-a) 16%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#jarvis .jv-send:hover {
+  border-color: var(--jv-a);
+  background: color-mix(in srgb, var(--jv-a) 28%, transparent);
+}
+
+#jarvis .jv-send:focus-visible {
+  outline: 1px solid var(--jv-a);
+  outline-offset: 2px;
+}
+
 /* the words: what has been heard of the sentence so far, then what it came to */
 #jarvis .jv-text {
   margin-top: 9px;
@@ -197,6 +231,12 @@
 
 #jarvis.phase-thinking {
   --jv-a: var(--yellow);
+}
+
+/* the words are waiting on the send button: the amber of a read still on the
+   card, a shade apart from the mauve of the voice saying them back */
+#jarvis.phase-review {
+  --jv-a: var(--peach);
 }
 
 #jarvis.phase-sent {

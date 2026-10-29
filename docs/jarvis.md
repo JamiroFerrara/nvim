@@ -40,10 +40,13 @@ that), hidden until a listen runs. It holds, top to bottom:
 | Dot | the phase colour; it blinks while a listen runs (`steps(2)`), and does not move at all under `prefers-reduced-motion` | `phase` |
 | Meter | one 3 px bar, the microphone's own loudness (RMS of each ~100 ms chunk, 0 at −55 dBFS, 1 at full scale) | `level`, `level_db` |
 | Words | the sentence as it is being transcribed, then the words it came to | `partial`, `heard` |
-| Hint | `click the mic to stop`, `no sound from the microphone`, `handing it to a run`, `click the mic to try again` | `signal`, `at`, `phase`, `stt` |
+| Send | the approve button, drawn under the words and only while they wait (`phase: 'review'`); a click is `POST /api/voice` with `{send: true}` | `phase` |
+| Hint | `click the mic to stop`, `no sound from the microphone`, `press send, or Escape to throw it away`, `click the mic to try again` | `signal`, `at`, `phase`, `stt` |
 
-The card stays up for five seconds after a listen ends, so the last words can be
-read, then folds back into the button. An error stays until the next click.
+The words a listen ends on stay on the card until they are sent or thrown
+away: `review` is not a phase the card folds out of. Once they are sent (`sent`)
+or a listen fails (`error`), it stays up for five seconds so the last words can
+be read, then folds back into the button.
 
 **The words while you speak** are the point of the card. While a listen runs,
 nvim re-reads the recording every 1.5 s and publishes what it has made of it so
@@ -52,9 +55,18 @@ visible while the sentence is still being said — stop the listen and say it
 again instead of watching the wrong words start a run. One read at a time: a
 transcriber slower than the clock skips a turn rather than stacking up.
 
+**Nothing is sent unseen.** A listen ends in `review`: the transcript sits on
+the card with a `send` button under it, and it stays there until that button is
+clicked (`M.send`, `:OrgVoiceSend`). Speech is the one input the user cannot
+check on the way in — a word misheard reaches a run as an instruction nobody
+gave — so the transcript is read once before it is a command. The recording is
+already deleted at that point, so what waits is one line of text; Escape throws
+it away (`M.cancel`), and a click on the mic listens again over it.
+
 Colours follow the phase — sky while listening, amber while the words are read,
-mauve while the voice speaks, red on a failure — and come from the dashboard's
-own palette (`org.css`).
+peach while they wait on the button, mauve while the voice speaks, green once
+they are the run's, red on a failure — and come from the dashboard's own palette
+(`org.css`).
 
 ## 3. Voice and sound feedback
 
@@ -76,10 +88,11 @@ installed; the module does not ship one.
 
 | Gesture | Result |
 |---|---|
-| Click the button while idle or failed | a listen starts (`POST /api/voice` with the view's title) |
+| Click the button while idle, failed, sent or holding words | a listen starts (`POST /api/voice` with the view's title); words held in `review` are dropped with it |
 | Click the button while listening | the listen is cancelled (`{cancel: true}`); the recording is dropped |
 | Click the button while speaking (voice on) or transcribing | a toast: "still working — one moment" |
-| `Escape` while listening | the same cancel; at any other time the key is left to the page |
+| Click `send` while words wait | they go to the talking instance (`{send: true}`) |
+| `Escape` while listening | the same cancel; in `review` it throws the waiting words away |
 | `Tab` / `Enter` | the button is a `<button>`, so the page's own focus order reaches it |
 
 Polling is 300 ms while a listen runs and 1.5 s while idle, so a listen started
@@ -101,7 +114,9 @@ a half.
 4. When the listening window ends (or a second click stops it), the whole wav
    goes to Handy's own model, to whisper.cpp, to a command of the user's, or to
    Windows' own recognizer run on the file. The transcript is the words the run
-   receives. whisper.cpp reads the finished sentence with the best English
+   will receive, and it stops here: the phase is `review` until the send button
+   (or `:OrgVoiceSend`) releases it. `:OrgVoiceSay` skips that step — the words
+   were typed, so there is nothing to approve. whisper.cpp reads the finished sentence with the best English
    model on the machine (`ggml-small.en.bin` before `ggml-base.en.bin`, and so
    on up to `ggml-medium.en.bin`; `OMP_VOICE_WHISPER_MODEL` or
    `whisper_model` in setup overrides), and the sentence while it is still
@@ -110,8 +125,8 @@ a half.
    the words on the card come from the quick model and the words that start a
    run come from the accurate one. A read of a sentence takes a few seconds on
    a CPU; it is the only slow part of a listen.
-5. The words go to the talking instance (`helpers/org/ai.lua`'s
-   `open_prompt`): one `omp`, in its own session (`talk/one`) and one pane, that
+5. The words the send button released go to the talking instance
+   (`helpers/org/ai.lua`'s `open_prompt`): one `omp`, in its own session (`talk/one`) and one pane, that
    every line from the card, `:OrgVoice` and `:OrgVoiceSay` reaches. A later
    line is typed into that instance rather than starting another one, so "that
    one too" arrives in the conversation the first line started. The words ride
