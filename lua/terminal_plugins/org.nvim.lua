@@ -124,9 +124,10 @@
 --                   `POST /api/voice`, which records through PulseAudio while
 --                   reporting the microphone's level and the words heard so
 --                   far, reads the recording back into words and hands them to
---                   a fresh `omp` pane (`ai.open_prompt`) -- that run decides
---                   what to do with them inside the org system, and the card
---                   goes on showing whether it is still working. A second
+--                   the one talking instance (`ai.open_prompt`, the `talk/one`
+--                   session) -- it answers a question, or files work as a
+--                   ticket and starts the run on it, so the board shows the
+--                   work started as soon as the words are filed. A second
 --                   click ends the recording and keeps what it heard (Escape
 --                   throws it away). The card stays silent unless the voice is
 --                   turned on (`OMP_VOICE_SPEAK=1`); dictation is local:
@@ -135,7 +136,8 @@
 --                   the user's
 --   runs.lua        the little window that says what the runs are doing
 --                   (`<leader>ov`, `:OrgRuns`): every marked tmux pane --
---                   a ticket's, a project's orchestrator, a voice run -- with
+--                   a ticket's, a project's orchestrator, the talking
+--                   instance (`talk/one`) -- with
 --                   what it was asked, how long it has been going, and the
 --                   step it is on now (the run's own transcript, through
 --                   helpers/org/web/live.lua). It never opens on its own: it

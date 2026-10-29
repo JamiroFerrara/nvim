@@ -69,6 +69,19 @@
 -- a second time. Splits and windows are created detached (`-d`): the launch
 -- never moves the active pane or window off nvim, so the cursor stays put.
 --
+-- Talk is the other way in, and it gets one instance: words that come from
+-- outside the board -- the voice card on the dashboard, `:OrgVoice`,
+-- `:OrgVoiceSay` -- are handed to a single talking instance (`TALK_KEY`, its
+-- own session, marked `@omp_orchestrator` like a project's batch and found by
+-- that mark the same way). It is a router, not a worker: it answers what is a
+-- question, and for work it files a ticket and starts the run on it (`M.talk`
+-- -- the same `preset_ticket` write and `launch_targets` dispatch a keypress
+-- gets, so a spoken ticket is the ordinary ticket on the board), then quotes
+-- the launcher's one line back. One instance keeps one conversation, which is
+-- what lets "that one too" mean anything, and the org write lands before the
+-- run is dispatched, so the board shows the work started as soon as the words
+-- are filed.
+--
 -- The pane runs `nvim "+terminal sh <script>"`, the same shape as the tmux
 -- default-command (`nvim +terminal`) every other pane uses, so the instance
 -- lives in an nvim terminal buffer and navigates like the rest of the session
@@ -172,6 +185,78 @@ local SKILL = vim.fn.expand '~/.agents/skills/omp-org-ticket/SKILL.md'
 -- the skill appended instead when a launch covers several tickets: the same
 -- rules applied to subagents, one omp process for the whole batch
 local ORCHESTRATOR = vim.fn.expand '~/.agents/skills/omp-orchestrator/SKILL.md'
+
+--- The session key of the talking instance: the one omp every line spoken
+--- into the renderer is handed to (the dashboard's voice card,
+--- `helpers/org/voice.lua`; `:OrgVoice`; `:OrgVoiceSay  {text}`). Its own key,
+--- apart from both kinds a launch already names -- a ticket's (`tickets/<id>`)
+--- and a project's batch orchestrator (`orchestrators/<project>`) -- so a
+--- speech never starts a second instance and no launch can look one up by
+--- mistake. The slash puts its session under `<agent dir>/talk/one`, where the
+--- runs window reads its transcript like any other run's.
+local TALK_KEY = 'talk/one'
+
+--- How many of the talking instance's spec files are kept: the words of the
+--- last lines said, which outlive the editor (Open_Prompt's own note).
+local SPECS_KEPT = 200
+
+--- What the talking instance is told once, as its system prompt: it is the
+--- one instance the renderer's words reach, and its whole job is to sort them
+--- -- answer a question here, file work as a ticket and start that ticket's
+--- run (`M.talk`), which is the feedback the user wants as soon as they stop
+--- talking. It never does the work itself: the run the ticket starts does.
+--- The vault path is read from the config at the time the instance opens, so
+--- the rules name the vault this nvim is looking at.
+---@return string
+local function talk_rules()
+  local org_dir = '~/org'
+  pcall(function()
+    local cfg = require('org.config').opts
+    if cfg and cfg.org_directory then
+      org_dir = cfg.org_directory
+    end
+  end)
+  org_dir = vim.fn.expand(org_dir)
+  return table.concat({
+    'You are the talking instance of the org renderer: the one omp that every line spoken or typed into it',
+    'is handed to (the voice card on the dashboard, :OrgVoice, :OrgVoiceSay). There is one of you, and there',
+    'stays one: the launcher hands a new line to this session instead of starting another.',
+    '',
+    'You do not work tickets, and you never close this pane. A run does the work; your job is to sort what',
+    'the user said and get work onto the board immediately, so that the board shows it started as soon as',
+    'they stop talking.',
+    '',
+    'The vault is at ' .. org_dir .. ', and its rules are in ' .. org_dir .. '/WORKFLOW.org.',
+    '',
+    'Each message is one thing the user said: the words, the view they were said on, and the path of a spec',
+    'file holding the same words as JSON. Sort the words into one of these, and act in the same turn:',
+    '',
+    '- A question: answer it here, in two or three lines. No file, no run.',
+    '- A remark to you: say what you take from it, one line, and stop.',
+    '- Work: file it and start it, in that order, with one command --',
+    '',
+    "    nvim --headless -c \"lua require('helpers.org.ai').talk('<spec path>')\" -c 'qa!'",
+    '',
+    '  The spec already names the org file the words belong to, and -- when the dashboard had an entry',
+    '  highlighted -- the entry they hang under, by its :ID:. When the spec names no file, the words did not',
+    '  say where they belong: pick the project file they belong to (the WORKFLOW rules say how a project is',
+    '  filed) and pass it as the second argument --',
+    '',
+    "    nvim --headless -c \"lua require('helpers.org.ai').talk('<spec path>', '<file>')\" -c 'qa!'",
+    '',
+    '  The command writes the words as a ticket -- the headline, its :ID:, its body, then the launch every',
+    '  other launch is: the state to NEXT, the session link, the checkpoint, a pane of its own -- and prints',
+    '  one line saying what it wrote and where the run lives. Nobody writes org text by hand here: the',
+    '  command is the write, and the run it starts is what reads it.',
+    '',
+    '  Words that are plainly two jobs are two tickets: run the command for each, one after the other.',
+    '  Never do the work the words ask for: the run the command starts is the worker, and you are not.',
+    '',
+    'Reply short. When the command printed its line, quote that line and nothing else; when you answered a',
+    'question, the answer is the whole reply. You keep the conversation, so a later "that one too" or "no,',
+    'the other project" is answered from what came before -- the spec files are the record of what was said.',
+  }, '\n')
+end
 
 -- every write of a ticket file goes through it: the file is written by the
 -- agents of the tickets already running too (helpers/org/write.lua)
@@ -952,17 +1037,59 @@ end
 ---@param message string|nil
 ---@return string[]
 local function orchestrator_argv(key, message)
+  return session_argv(key, ORCHESTRATOR, message)
+end
+
+--- The argv of an instance that lives in `key`'s session under `rules`: the
+--- session directory (`--continue` where it exists, so a later message lands
+--- in what the instance already knows), the rules appended to its system
+--- prompt, and the message.
+---@param key string the session key
+---@param rules string the system prompt appended
+---@param message string|nil
+---@return string[]
+local function session_argv(key, rules, message)
   local dir = session_dir(key)
   local argv = { 'omp', '--session-dir', dir }
   if has_session(dir) then
     argv[#argv + 1] = '--continue'
   end
   argv[#argv + 1] = '--append-system-prompt'
-  argv[#argv + 1] = ORCHESTRATOR
+  argv[#argv + 1] = rules
   if message then
     argv[#argv + 1] = message
   end
   return argv
+end
+
+local function orchestrator_argv(key, message)
+  return session_argv(key, ORCHESTRATOR, message)
+end
+
+--- The file the talking rules are written to before an instance reads them.
+--- `--append-system-prompt` takes a path (a single-line value that names a
+--- file is read as that file), and it has to: the argv is shellescaped into
+--- the pane's script, and a newline in an argument becomes a NUL there, which
+--- ends the argument at the first stanza -- omp would get one mangled line of
+--- the rules and none of the rest. So the rules are a file, rewritten from
+--- `talk_rules` on every open, and the argv only ever carries its path.
+---@return string
+local function talk_rules_path()
+  local path = vim.fs.dirname(session_dir(TALK_KEY)) .. '/rules.md'
+  pcall(vim.fn.mkdir, vim.fs.dirname(path), 'p')
+  pcall(vim.fn.writefile, vim.split(talk_rules(), '\n', { plain = true }), path)
+  return path
+end
+
+--- The omp argv of the talking instance: its one session, the talking rules
+--- (written out first, `talk_rules_path`), and the words. `--continue` resumes
+--- the same session on every later line, which is what makes it one instance
+--- with one conversation instead of one per utterance. A nil `message` opens
+--- the session alone.
+---@param message string|nil
+---@return string[]
+local function talk_argv(message)
+  return session_argv(TALK_KEY, talk_rules_path(), message)
 end
 
 local function omp_argv(ticket)
@@ -1258,6 +1385,30 @@ local function start_orchestrator(project, message)
     return running, true
   end
   local pane = open_instance_pane(orchestrator_argv(project.key, message), '🤖 ' .. project.name, '@omp_orchestrator', project.key)
+  return pane, false
+end
+
+--- Hand `message` to the talking instance: the one pane carrying `TALK_KEY`
+--- in `@omp_orchestrator`, or a new one -- the right-hand split while that
+--- column is free, its own window once it is taken. One instance, whatever
+--- the renderer said and however many times: the same lookup a project's
+--- orchestrator uses, keyed on the talking session instead, so the second
+--- line of the day is typed into the conversation the first one started.
+--- Returns the pane and whether the message went to the instance already
+--- running rather than opening one; nil when nothing could be reached (the
+--- failure is notified already).
+---@param message string
+---@return string|nil pane
+---@return boolean delivered
+local function open_talk(message)
+  local running = orchestrator_pane(TALK_KEY)
+  if running then
+    if not deliver(running, message) then
+      return nil, false
+    end
+    return running, true
+  end
+  local pane = open_instance_pane(talk_argv(message), '🤖 talk', '@omp_orchestrator', TALK_KEY)
   return pane, false
 end
 
@@ -1616,98 +1767,205 @@ function M.deliver_note(bufnr, lnum, note)
   return true
 end
 
---- The words as a ticket, under the entry the dashboard had highlighted: a
---- child headline, last in that entry's subtree, its body the words under the
---- capture header -- so the command sits on the board as a ticket the user can
---- read before any run touches it. The title is the words themselves, clipped
---- at a word so the headline stays one line.
+--- The words as a ticket: a headline in `target.file`, last under the entry
+--- `target` names when it names one (a child headline, so the words hang off
+--- what the user had highlighted), at the end of the file at the project
+--- level when it names none. The body is the words under the capture header --
+--- so the words sit on the board as a ticket the user can read before any run
+--- touches it. The title is the words themselves, clipped at a word so the
+--- headline stays one line.
 ---
---- `target` is what the page sent with the click (`{ file, line, id }`), and it
---- is resolved the way every request from the page is (helpers/org/web/
---- actions.lua): the :ID: wins, the line is the fallback. nil when it names
---- nothing in the vault -- the caller then leaves the run to work it out.
+--- `target` is `{ file, line?, id? }` -- what the page sent with the click, or
+--- the spec the talking instance filed (`M.talk`) -- and it is resolved the way
+--- every request from the page is (helpers/org/web/actions.lua): the :ID: wins,
+--- the line is the fallback, and neither leaves the end of the file. nil when
+--- it names no file the agenda reads.
 ---@param text string
 ---@param target { file: string, line?: integer, id?: string }
 ---@return { bufnr: integer, lnum: integer }|nil
 local function preset_ticket(text, target)
   local ok, r = pcall(require('helpers.org.web.actions').resolve, target)
-  if not (ok and r and r.hl) then
+  if not (ok and r) then
     return nil
   end
   local hl = r.hl
-  local lines = require('org.files').get_buffer(r.bufnr).lines
-  local at = math.min(hl.end_line or hl.line, #lines)
-  while at > hl.line and (lines[at] or ''):match '^%s*$' do
-    at = at - 1
+  local file = require('org.files').get_buffer(r.bufnr)
+  local lines = file.lines
+  local level, at
+  if hl then
+    level = hl.level + 1
+    at = math.min(hl.end_line or hl.line, #lines)
+    while at > hl.line and (lines[at] or ''):match '^%s*$' do
+      at = at - 1
+    end
+  else
+    -- no entry named: the ticket joins the file's project at the end of it,
+    -- one level under the project headline when the file has one
+    local head = (file.headlines or {})[1]
+    level = (head and head.level == 1) and 2 or 1
+    at = #lines
+    while at > 0 and (lines[at] or ''):match '^%s*$' do
+      at = at - 1
+    end
   end
   local title = text:gsub('%s+', ' ')
   if #title > 100 then
     title = vim.trim(title:sub(1, 100):gsub('%s+%S*$', '')) .. '…'
   end
   local out = {
-    require('org.edit').build_headline { level = hl.level + 1, todo = 'TODO', title = title },
+    require('org.edit').build_headline { level = level, todo = 'TODO', title = title },
   }
   for _, line in ipairs(require('helpers.org.notes').block(hl, text)) do
     out[#out + 1] = '  ' .. line
   end
-  vim.api.nvim_buf_set_lines(r.bufnr, at, at, false, out)
-  return { bufnr = r.bufnr, lnum = at + 1 }
+  if hl then
+    vim.api.nvim_buf_set_lines(r.bufnr, at, at, false, out)
+  else
+    vim.api.nvim_buf_set_lines(r.bufnr, at, at, false, vim.list_extend({ '' }, out))
+  end
+  return { bufnr = r.bufnr, lnum = at + (hl and 1 or 2) }
 end
 
---- A pane running `omp` on a message that came from outside the board: what
---- the orb on the dashboard's voice buddy heard (helpers/org/voice.lua).
+--- Hand words that came from outside the board to the one talking instance
+--- (`TALK_KEY`): the dashboard's voice card (helpers/org/voice.lua), and the
+--- `:OrgVoice` / `:OrgVoiceSay` commands that speak the same way. Nothing is
+--- filed here and no run starts here: the words go to the instance, and it is
+--- what answers, files and starts a run (`M.talk`) -- one conversation for
+--- every line the user says, whatever the view said them on.
 ---
---- With a `target` -- the entry the dashboard had highlighted when the mic was
---- clicked -- the words are not handed to a run at large: they first become a
---- ticket under that entry (`preset_ticket`), and the ordinary launch works it
---- (`launch_targets`: the :ID: / :OMP_SESSION: / :OMP_LAUNCH: drawer, the claim
---- to `NEXT`, the project checkpoint, its own pane). The run is thus
---- pre-selected: it opens on a ticket already filed in the project the user was
---- reading, instead of working out from the words alone which project they
---- meant. Without one -- a listen with nothing highlighted, `:OrgVoice`, a
---- `:OrgVoiceSay` -- the words start a run of their own on `context`, the
---- message the caller wrote for a run that has to work out what the words are:
---- no ticket names them, so the pane carries `@omp_voice` rather than a
---- ticket's `@omp_ticket` and no run's last act (the skill's pane close) has
---- anything of ours to match. What it carries is the run's own session key
---- (`voice/<hrtime>`, under the agent dir): the words start a session of their
---- own, and naming it is what lets the little runs window follow what this one
---- is doing (helpers/org/runs.lua).
+--- The words ride along as a spec file, written beside the message: the words
+--- themselves, the view they were said on, and -- when the dashboard had an
+--- entry highlighted -- the file and the entry's :ID:, which is where the
+--- ticket they become will hang. The instance reads the spec when it files
+--- them (`M.talk`), so no quote of them has to survive a shell or a prompt.
 ---@param text string the words themselves
----@param title? string
----@param target? { file: string, line?: integer, id?: string }
----@param context? string the message for a run no target preselects
----@return string|nil pane the pane the run lives in ('' for a window of its
---- own, when this is not tmux), or nil when nothing could be started
-function M.open_prompt(text, title, target, context)
+---@param target? { file: string, line?: integer, id?: string } what the
+--- renderer had highlighted, when it had anything
+---@param view? string the view they were said on
+---@return string|nil pane the talking instance's pane ('' for a window of its
+--- own, when this is not tmux), or nil when nothing could be reached
+function M.open_prompt(text, target, view)
   local words = one_line(text)
   if words == '' then
     return nil
   end
-  local preset = target and preset_ticket(words, target)
-  if preset then
-    local launched, tickets = launch_targets({ preset }, nil, 'the voice card on the org dashboard')
-    M.sync()
-    if launched == 0 then
-      return nil
-    end
-    if not in_tmux() then
-      return ''
-    end
-    return running_pane(tickets[1].id)
+  local spec = { text = words, view = view and view ~= '' and view or 'dashboard' }
+  if target then
+    spec.file = target.file
+    spec.under = target.id
   end
-  local msg = one_line(context or '')
-  if msg == '' then
-    msg = words
+  -- the words are written down where they outlive this nvim: the talking
+  -- instance reads the spec when it files them, and the specs of a day are what
+  -- the conversation was, so a temp file (gone when the editor exits) would be
+  -- the wrong place for them
+  local dir = vim.fs.dirname(session_dir(TALK_KEY)) .. '/specs'
+  pcall(vim.fn.mkdir, dir, 'p')
+  local path = ('%s/%d.json'):format(dir, vim.uv.hrtime())
+  vim.fn.writefile({ vim.json.encode(spec) }, path)
+  -- a spec is a few dozen bytes but every line of the day writes one: only the
+  -- newest `SPECS_KEPT` stay, so the record is readable and the directory does
+  -- not grow forever
+  local kept = vim.fn.glob(dir .. '/*.json', true, true)
+  if #kept > SPECS_KEPT then
+    table.sort(kept, function(a, b)
+      return vim.fn.fnamemodify(a, ':t') > vim.fn.fnamemodify(b, ':t')
+    end)
+    for i = SPECS_KEPT + 1, #kept do
+      pcall(vim.fn.delete, kept[i])
+    end
   end
-  local key = 'voice/' .. ('%d'):format(vim.uv.hrtime())
-  local argv = { 'omp', '--session-dir', session_dir(key), msg }
-  local name = title or ('🤖 ' .. words:sub(1, 40))
+  local msg =
+    one_line(('Words said on the org %s view: "%s". Spec: %s. Answer them, or file the work and start it, as your rules say.'):format(spec.view, words, path))
   if not in_tmux() then
-    open_window(argv)
+    open_window(talk_argv(msg))
     return ''
   end
-  return open_instance_pane(argv, name, '@omp_voice', key)
+  local pane, delivered = open_talk(msg)
+  if not pane then
+    return nil
+  end
+  notify(delivered and 'org ai: handed the words to the talking instance' or ('org ai: talking instance in pane ' .. pane))
+  return pane
+end
+
+--- The talking instance's one act: the words in a spec file become a ticket,
+--- and the ticket's run starts -- the write first, the run after, in that
+--- order, so the board shows the work the moment the words are filed and the
+--- dispatch is what takes the time.
+---
+--- Nothing is written by hand and nothing is invented here: the ticket is the
+--- words (`preset_ticket`), and the launch is the ordinary one
+--- (`launch_targets`: the :ID: / :OMP_SESSION: / :OMP_LAUNCH: drawer, the claim
+--- to `NEXT`, the project checkpoint, a pane of its own) -- so a ticket spoken
+--- into the renderer is indistinguishable on the board from one launched with
+--- `<leader>ai`.
+---
+--- The spec carries the words, the file they belong to and the :ID: of the
+--- entry they hang under (`M.open_prompt` writes it). `file` is the one thing
+--- the talking instance may have to supply, as its second argument, when the
+--- spec names none: a listen with nothing highlighted does not say which
+--- project the words belong to, and the instance is what reads the vault.
+---
+--- This is called by the talking instance, from the shell of a headless nvim
+--- (`nvim --headless -c "lua require('helpers.org.ai').talk('<spec>')" -c
+--- 'qa!'`), so what it did is written to stdout as one line -- the instance
+--- quotes it back to the user, and that line is the feedback the write exists
+--- for.
+---
+--- The spec is marked with the `:ID:` it was filed as, so the same words are
+--- one ticket however many times the instance runs the command: a second run
+--- says which ticket they already are and writes nothing. One message is one
+--- piece of work, and an agent that retried the command has not said it twice.
+---@param spec_path string path of the spec JSON
+---@param file? string the org file to file the words in, when the spec names none
+---@return integer|nil lnum the headline's line, or nil when nothing was filed
+function M.talk(spec_path, file)
+  local say = function(msg)
+    vim.api.nvim_out_write('org ai: ' .. msg .. '\n')
+    notify('org ai: ' .. msg)
+  end
+  local raw = {}
+  local ok_read, read = pcall(vim.fn.readfile, vim.fn.expand(spec_path))
+  if ok_read then
+    raw = read
+  end
+  local ok, spec = pcall(vim.json.decode, table.concat(raw, '\n'))
+  if not (ok and type(spec) == 'table') then
+    say('could not read the spec at ' .. spec_path)
+    return nil
+  end
+  local words = one_line(spec.text or '')
+  if words == '' then
+    say('the spec at ' .. spec_path .. ' carries no words')
+    return nil
+  end
+  if type(spec.filed) == 'string' and spec.filed ~= '' then
+    say('already filed as :ID: ' .. spec.filed .. ' -- nothing written')
+    return nil
+  end
+  local dest = (file and file ~= '') and file or spec.file
+  if type(dest) ~= 'string' or dest == '' then
+    say 'no org file for the words: pass one as the second argument'
+    return nil
+  end
+  local under = type(spec.under) == 'string' and spec.under ~= '' and spec.under or nil
+  local preset = preset_ticket(words, { file = vim.fn.expand(dest), id = under })
+  if not preset then
+    say('no org file at ' .. dest .. ' the agenda reads')
+    return nil
+  end
+  local launched, tickets = launch_targets({ preset }, nil, 'the talking instance of the org renderer')
+  M.sync()
+  if launched == 0 or #tickets == 0 then
+    say('could not start a run on "' .. words:sub(1, 60) .. '" (see the notification)')
+    return nil
+  end
+  local ticket = tickets[1]
+  spec.filed = ticket.id
+  pcall(vim.fn.writefile, { vim.json.encode(spec) }, vim.fn.expand(spec_path))
+  local pane = in_tmux() and running_pane(ticket.id) or nil
+  say(('filed "%s" as :ID: %s in %s:%d'):format(ticket.title, ticket.id, ticket.file, ticket.lnum) .. (pane and (', run in pane ' .. pane) or ''))
+  return preset.lnum
 end
 
 --- The climb up the tree, offered to every run at its end: the ordinary

@@ -1,10 +1,11 @@
 -- The little window that says what the omp runs are doing, wherever you are.
 --
 -- Every run the launcher opens is a tmux pane, and the pane carries who it is
--- for: `@omp_ticket` (a ticket's :ID:), `@omp_orchestrator` (a project's
--- session key), or `@omp_voice` (words that came from the voice card). It now
--- carries what it was asked and when it started too (`@omp_run_title`,
--- `@omp_run_at`), which is all a window needs to draw the run.
+-- for: `@omp_ticket` (a ticket's :ID:) or `@omp_orchestrator` (a project's
+-- session key, and the talking instance's -- `talk/one`, helpers/org/ai.lua).
+-- It now carries what it was asked and when it started too
+-- (`@omp_run_title`, `@omp_run_at`), which is all a window needs to draw the
+-- run.
 --
 -- What it is doing now comes from the run's own transcript
 -- (helpers/org/web/live.lua): the step the agent just said, the tool it picked
@@ -102,22 +103,21 @@ local function panes()
     'list-panes',
     '-a',
     '-F',
-    '#{pane_id}\t#{@omp_ticket}\t#{@omp_orchestrator}\t#{@omp_voice}\t#{@omp_run_title}\t#{@omp_run_at}\t#{pane_dead}',
+    '#{pane_id}\t#{@omp_ticket}\t#{@omp_orchestrator}\t#{@omp_run_title}\t#{@omp_run_at}\t#{pane_dead}',
   }
   if vim.v.shell_error ~= 0 then
     return out
   end
   for line in vim.gsplit(raw or '', '\n', { plain = true }) do
-    local pane, ticket, orchestrator, voice, title, at, dead = line:match '^(%%%d+)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t(%d)$'
+    local pane, ticket, orchestrator, title, at, dead = line:match '^(%%%d+)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t(%d)$'
     if pane and dead == '0' then
-      local key = ticket ~= '' and ticket or (orchestrator ~= '' and orchestrator or voice)
+      local key = ticket ~= '' and ticket or orchestrator
       if key and key ~= '' then
         out[pane] = {
           pane = pane,
           key = key,
           title = title ~= '' and title or key,
           at = tonumber(at) or nil,
-          voice = voice ~= '',
           ticket = ticket ~= '',
         }
       end

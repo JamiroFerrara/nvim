@@ -64,7 +64,8 @@ end
 --- the note that answers one share this shape, so a caller writing a whole
 --- entry -- the voice card's ticket, helpers/org/ai.lua -- writes the same
 --- header a capture does.
----@param hl org.Headline
+---@param hl org.Headline|nil the entry the block lands under; nil for "now",
+--- with no entry's own scheduling in play
 ---@param text string
 ---@return string[]
 function M.block(hl, text)

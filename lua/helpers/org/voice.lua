@@ -12,17 +12,18 @@
 --      machine whose only transcriber is Windows' own, one recognizer stays
 --      open for the whole listen (`reader_start`), because starting it costs
 --      more than reading a few seconds of audio does
---   3. hand the words to an `omp` instance in a tmux pane
---      (`helpers.org.ai.open_prompt`): that run decides what to do with them
---      inside the org system, the buddy only carries the words -- and the
---      card keeps saying what became of that run (`M.status().run`)
+--   3. hand the words to the one talking instance
+--      (`helpers.org.ai.open_prompt`, the session `talk/one`): that instance
+--      decides what they are inside the org system -- an answer here, or work
+--      it files as a ticket and starts the run on -- and the buddy only
+--      carries them. There is one instance and one conversation, so "that one
+--      too" reaches what the last line said
 --
 -- The click also carries what the dashboard had highlighted (`state.target`):
--- the entry under the cursor in the list. The words then become a ticket under
--- that entry first, and the ordinary ticket launch works it, so the run opens
--- on a command already filed in the project the user was reading. A listen
--- with nothing highlighted carries no target, and the run works the words out
--- for itself.
+-- the entry under the cursor in the list. The talking instance is told, and
+-- the ticket it files hangs under that entry, so a spoken command lands in the
+-- project the user was reading. A listen with nothing highlighted carries no
+-- target, and the instance picks the project the words belong to.
 --
 -- A click while listening stops the recording and reads it back (`M.stop`);
 -- throwing it away is `M.cancel`, the card's escape key.
@@ -130,10 +131,17 @@ local function target_of(entry)
   return { file = entry.file, line = tonumber(entry.line), id = id, title = title }
 end
 
---- The run the last words started: the pane it lives in, what the pane was
---- called and when it was opened. The card draws what became of it, so the
---- words do not vanish into a pane the user cannot see.
+--- Where the last words went: the pane of the talking instance, what it stands
+--- for and when the words reached it. The card says that much and no more --
+--- the instance outlives the words, so the card stops asking after `SETTLE`
+--- seconds instead of waiting for a pane that is meant to stay.
 local run = { pane = '', title = '', at = 0 }
+
+--- How long the card keeps asking about the words' pane, in seconds. The
+--- talking instance answers and files within a turn or two; after that the
+--- card has nothing to add, and the run the words became is the runs window's
+--- (helpers/org/runs.lua).
+local SETTLE = 20
 
 --- Asked of tmux, once the words have gone (the run section below).
 local run_alive
@@ -1241,8 +1249,12 @@ function run_alive(pane)
   return alive
 end
 
---- Watch the run until its pane is gone, then let the card fold away: the
---- words are the run's now, and the card has said where they went.
+--- Watch the words' pane until it is gone, then let the card fold away: the
+--- words are out of the card's hands, and it has said where they went. The
+--- pane is the talking instance's, which outlives the words on purpose -- it
+--- stays up for the next line -- so the card also folds once the words have
+--- been in its hands for `SETTLE` seconds: the run they become is dispatched
+--- from there, and `helpers/org/runs.lua` is where its progress is watched.
 local function watch_run()
   local function drop()
     if run_timer then
@@ -1259,7 +1271,7 @@ local function watch_run()
         drop()
         return
       end
-      if not run_alive(run.pane) then
+      if not run_alive(run.pane) or (run.settle and os.time() >= run.settle) then
         drop()
         set_phase 'idle'
       end
@@ -1267,49 +1279,36 @@ local function watch_run()
   end)
 end
 
---- Hand the heard words to a fresh `omp` instance in a tmux pane: from here on
---- the run decides what to do with them inside the org system, the buddy only
---- carries them and says which view they came from -- and the card goes on
---- saying whether that run is still working.
+--- Hand the heard words to the talking instance (`helpers.org.ai.open_prompt`):
+--- it is the one omp the renderer's words reach, and it is what sorts them --
+--- answering a question, or filing the work as a ticket and starting the run on
+--- it. The card carries the words and the view they were said on, and nothing
+--- else: the rules the instance works to are its own system prompt.
 ---
---- With the dashboard's highlight in hand (`state.target`) the words become a
---- ticket under it before the run starts (`open_prompt` writes it and launches
---- the ordinary ticket run), so the run opens reading its own entry and no
---- preamble is needed. Without one, the run gets the context it cannot find
---- anywhere else with the words -- that they were spoken, on which view, and
---- where the vault is -- and works out what they are.
+--- With the dashboard's highlight in hand (`state.target`) the instance is told
+--- which entry the words hang under, so a spoken command lands in the project
+--- the user was reading. Without one the words name no destination, and the
+--- instance picks the project they belong to.
 ---@param text string
 local function launch(text)
   if text == '' then
     return
   end
-  local target = state.target
-  local org_dir = vim.fn.expand '~/org'
-  pcall(function()
-    local cfg = require('org.config').opts
-    if cfg and cfg.org_directory then
-      org_dir = vim.fn.expand(cfg.org_directory)
-    end
-  end)
   local view = state.view ~= '' and state.view or 'dashboard'
-  local context = ('Spoken to the org dashboard (%s view): "%s". '):format(view, text)
-    .. ('The vault is at %s; read %s/WORKFLOW.org first, it is the shape this vault runs on. '):format(org_dir, org_dir)
-    .. 'The words are one of three things: a question (answer it here), a ticket (write it as a TODO headline '
-    .. ('in the project file under %s/projects that it belongs to, with its :ID:, and say which file), '):format(org_dir)
-    .. 'or a piece of work (do it now, the way that workflow says). '
-    .. 'If the words do not say which project they mean and the vault does not either, ask.'
   local title = '🤖 ' .. text:sub(1, 40)
   local pane
   local ok, err = pcall(function()
-    pane = require('helpers.org.ai').open_prompt(text, title, target, context)
+    pane = require('helpers.org.ai').open_prompt(text, state.target, view)
   end)
   if not ok or not pane then
-    local why = ok and 'could not open a pane for the words' or tostring(err)
+    local why = ok and 'could not reach the talking instance' or tostring(err)
     set_phase('error', { error = why })
     notify('voice: ' .. why, vim.log.levels.ERROR)
     return
   end
-  run = { pane = pane, title = title, at = os.time() }
+  -- the words are the talking instance's now; the card says where they went
+  -- and folds, rather than waiting on a pane that stays up for the next line
+  run = { pane = pane, title = title, at = os.time(), settle = os.time() + SETTLE }
   set_phase('sent', { heard = text })
   watch_run()
 end
@@ -1321,11 +1320,11 @@ local function speaks()
   return opts.speak and tts_backend() ~= nil
 end
 
---- The whole conversation: listen, read the words back, hand them to a run.
---- The click is acknowledged out loud only when the voice is on. `view` names
---- what the dashboard had open when the mic was clicked, and `entry` (the
---- entry the list had highlighted) is what the words become a ticket under;
---- the run is told neither, it reads the ticket (`launch`).
+--- The whole conversation: listen, read the words back, hand them to the
+--- talking instance. The click is acknowledged out loud only when the voice is
+--- on. `view` names what the dashboard had open when the mic was clicked, and
+--- `entry` (the entry the list had highlighted) is the entry the words hang
+--- under when they become a ticket; the instance is told both (`launch`).
 ---@param view? string
 ---@param entry? { file: string, line?: integer, id?: string, title?: string }
 function M.converse(view, entry)
@@ -1353,8 +1352,8 @@ function M.converse(view, entry)
   return true
 end
 
---- What was heard: start the run from it, saying it back first when the voice
---- is on.
+--- What was heard: hand it to the talking instance, saying it back first when
+--- the voice is on.
 ---@param text string
 function M._said(text)
   local said = vim.trim((text or ''):gsub('%s+', ' '))
@@ -1412,8 +1411,8 @@ function M.cancel()
   set_phase('idle', { heard = '', partial = '', level = 0, level_db = nil })
 end
 
---- `:OrgVoiceSay {text}`: the run without the microphone -- the same path the
---- card takes once it has words, so it is also what a test drives. `entry` is
+--- `:OrgVoiceSay {text}`: the words without the microphone -- the same path the
+--- card takes once it has them, so it is also what a test drives. `entry` is
 --- the dashboard highlight a click would have carried; a command line has none.
 ---@param text string
 ---@param entry? { file: string, line?: integer, id?: string, title?: string }
@@ -1449,10 +1448,10 @@ function M.setup(user)
   end
   vim.api.nvim_create_user_command('OrgVoice', function()
     M.converse()
-  end, { desc = 'voice: say a line, listen, start a run from the words' })
+  end, { desc = 'voice: say a line, listen, hand the words to the talking instance' })
   vim.api.nvim_create_user_command('OrgVoiceSay', function(args)
     M.say(args.args)
-  end, { nargs = '+', desc = 'voice: start a run from the words, without the microphone' })
+  end, { nargs = '+', desc = 'voice: hand the words to the talking instance, without the microphone' })
   vim.api.nvim_create_user_command('OrgVoiceSpeak', function(args)
     M.speak(args.args)
   end, { nargs = '+', desc = 'voice: just say it' })
