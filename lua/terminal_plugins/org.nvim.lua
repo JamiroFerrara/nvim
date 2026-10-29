@@ -142,6 +142,9 @@
 --                   step it is on now (the run's own transcript, through
 --                   helpers/org/web/live.lua). It never opens on its own: it
 --                   is down until asked for, and down again once closed.
+--                   The same list is `7` in the views below, drawn by the
+--                   module itself into the window it takes over (a run is a
+--                   tmux pane, not a headline the agenda can list).
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'

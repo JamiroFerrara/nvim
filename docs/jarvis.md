@@ -132,8 +132,9 @@ a half.
 
    The card's part ends when the words reach the instance: it says where they
    went and folds, because the instance stays up for the next line; the run the
-   words became is watched in the runs window (`<leader>ov`). When the voice is
-   on, the transcript is spoken back first.
+   words became is watched in the runs window (`<leader>ov`) or in `7`, the
+   view that lists every running instance in the window it takes over. When
+   the voice is on, the transcript is spoken back first.
 
 A recording that never rose above the meter's floor is an error, not a listen:
 a transcriber asked about silence still answers — whisper makes a word of it,
