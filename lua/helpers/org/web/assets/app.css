@@ -1474,52 +1474,126 @@ li.entry .live-line {
     margin-bottom: 18px;
   }
 
-  /* the row grows to a thumb's height, and the state chip to the smallest
-     target a finger hits without aiming */
-  li.entry {
-    grid-template-columns: 56px 16px 40px minmax(0, 1fr) 44px auto;
-    gap: 4px;
-    min-height: 52px;
-    padding: 4px;
-  }
-
-  /* the row's action is a thumb's target too: the button fills the column */
-  li.entry button.do {
-    width: 44px;
-    height: 44px;
-    font-size: 12px;
-  }
-
-  li.entry.run-row {
-    grid-template-columns: 56px 16px 40px minmax(0, 1fr) 28px;
-  }
-
-  /* the cancel button keeps the right edge of the row's first line, where
-     the desktop list has it */
-  li.entry.run-row .row-acts {
-    grid-column: 5;
-    grid-row: 1;
-    justify-self: end;
-  }
-
-  /* an agenda row on a phone: the time and the keyword keep their own
-     columns on the left, the title takes the rest, the action the right edge;
-     the priority and the tags go the way of the other views' */
+  /* ---- one row on a phone: a card -------------------------------------
+     The desktop row lays nine columns across the screen and lets the title
+     take what the rest leaves over; on a phone that is a sliver of text with
+     a chip beside it and dead space between them. A phone row is a card
+     instead: the keyword, the project and the row's buttons on the header
+     line, the title across the whole width under them, the date under that.
+     The text of a ticket gets the screen; what the desktop puts beside it
+     goes above and below it. Every view's row wears the same card -- the
+     board, in flight, a run -- and the agenda keeps its time in the header's
+     first cell. */
+  li.entry,
+  li.entry.run-row,
   li.entry.agenda-row {
-    grid-template-columns: 52px 56px minmax(0, 1fr) 44px auto;
+    /* keyword, priority, fold, project | run, the row's writes */
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto auto;
+    align-items: center;
+    gap: 0 6px;
+    min-height: 0;
+    padding: 8px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--mantle) 60%, transparent);
   }
 
-  li.entry.agenda-row .prio {
+  li.entry + li.entry {
+    margin-top: 4px;
+  }
+
+  /* a card under a finger: the accent down its left edge is the selection,
+     and the card itself already carries the surface a hover would add */
+  li.entry.selected {
+    background: var(--base);
+    border-left-color: var(--blue);
+  }
+
+  li.entry .prio {
+    grid-area: 1 / 2;
+    justify-self: start;
+  }
+
+  li.entry .fold {
+    grid-area: 1 / 3;
+  }
+
+  /* the project names the card, in the header beside its keyword */
+  li.entry .project {
+    display: block;
+    grid-area: 1 / 4;
+    padding: 0 2px;
+    font-size: 11px;
+    line-height: 1.3;
+    color: var(--overlay);
+  }
+
+  li.entry .project:empty {
     display: none;
   }
 
+  /* the title is the row: the whole width of the card, the small indent of
+     the entry's depth the only thing taken off it */
+  li.entry .title {
+    grid-area: 2 / 1 / 3 / -1;
+    margin-top: 3px;
+    padding-left: calc(var(--depth, 0) * 14px);
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  /* the date under the title, at the card's right edge -- the deadline a
+     ticket carries, out of the way of the words */
+  li.entry .meta {
+    display: flex;
+    grid-area: 3 / 1 / 4 / -1;
+    margin-top: 2px;
+    justify-self: end;
+    font-size: 11px;
+    color: var(--overlay);
+  }
+
+  li.entry .live-line {
+    grid-area: 4 / 1 / 5 / -1;
+    padding-left: calc(var(--depth, 0) * 14px);
+  }
+
+  li.entry .tags {
+    display: none;
+  }
+
+  /* the row's action is a thumb's target: the button is the whole cell */
+  li.entry button.do {
+    grid-area: 1 / 5;
+    width: 44px;
+    height: 40px;
+    font-size: 12px;
+  }
+
+  /* the two write buttons keep the right edge of the card's header */
+  li.entry .row-acts {
+    grid-area: 1 / 6;
+    justify-self: end;
+  }
+
+  /* an agenda row on a phone: the time it starts at takes the header's first
+     cell, the keyword the second -- the agenda's own columns, folded the way
+     every other row's are, with the title full width under them */
   li.entry.agenda-row .at {
+    grid-area: 1 / 1;
     font-size: 12px;
     text-align: left;
   }
 
-  li.entry.agenda-row .project {
-    grid-column: 3;
+  li.entry.agenda-row .state {
+    grid-area: 1 / 2;
+  }
+
+  li.entry.agenda-row .prio {
+    display: none;
   }
 
   li.agenda-now {
@@ -1538,65 +1612,20 @@ li.entry .live-line {
 
   li.entry .state {
     display: flex;
+    grid-area: 1 / 1;
     align-items: center;
     justify-content: center;
-    min-height: 44px;
+    min-height: 40px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background: color-mix(in srgb, currentColor 12%, transparent);
   }
 
   li.entry .fold {
-    width: 40px;
-    height: 44px;
-    line-height: 44px;
+    width: 36px;
+    height: 40px;
+    line-height: 40px;
     font-size: 14px;
-  }
-
-  li.entry .tags,
-  li.entry .meta {
-    display: none;
-  }
-
-  li.entry .title {
-    font-size: 15px;
-    white-space: normal;
-    text-overflow: clip;
-    line-height: 1.35;
-  }
-
-  /* the project rides under the title instead of taking a column of its own */
-  li.entry .project {
-    display: block;
-    grid-column: 4;
-    grid-row: 2;
-    font-size: 11px;
-    line-height: 1.2;
-    color: var(--overlay);
-  }
-
-  li.entry .project:empty {
-    display: none;
-  }
-
-  li.entry .live-line {
-    grid-row: 3;
-    padding-left: 0;
-  }
-
-  /* the Runs view: a row's age is what the row is for, so it stays on a
-     phone -- under the title, with the project and the step below it */
-  li.entry.run-row .meta {
-    display: flex;
-    grid-column: 4;
-    grid-row: 2;
-    font-size: 11px;
-    color: var(--overlay);
-  }
-
-  li.entry.run-row .project {
-    grid-row: 3;
-  }
-
-  li.entry.run-row .live-line {
-    grid-row: 4;
   }
 
   #detail {
