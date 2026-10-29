@@ -241,6 +241,14 @@ main {
   min-height: 0;
 }
 
+/* the graph fills the pane instead of scrolling: its own svg absorbs the
+   wheel, which is the zoom */
+#views.graphing {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
 section.view-section {
   margin-bottom: 26px;
 }
@@ -1170,14 +1178,33 @@ li.entry .live-line {
 .run-ask-option {
   display: flex;
   flex-direction: column;
+}
+
+/* the option is the click: an answer to the run's question, typed into its
+   picker. The list is a column of them, so each takes the width it has. */
+.run-ask-pick {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
+  width: 100%;
+  text-align: left;
   border: 1px solid var(--surface);
   border-radius: 4px;
   padding: 4px 8px;
 }
 
-.run-ask-option.recommended {
+.run-ask-pick:hover:enabled,
+.run-ask-pick:focus-visible {
+  border-color: var(--accent);
+}
+
+.run-ask-option.recommended .run-ask-pick {
   border-color: var(--yellow);
+}
+
+.run-ask-option.chosen .run-ask-pick {
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
 }
 
 .run-ask-label {
@@ -1190,6 +1217,25 @@ li.entry .live-line {
   font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.run-ask-say {
+  flex-basis: 100%;
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.run-ask-say input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* the answer is sent: the card stays as the record of what was asked, with
+   nothing left to click */
+.run-ask.settled .run-ask-pick,
+.run-ask.settled .run-ask-say {
+  opacity: 0.55;
 }
 
 .run-ask-desc {

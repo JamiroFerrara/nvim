@@ -357,110 +357,6 @@ article.note .backlinks .rel {
   margin-left: 8px;
 }
 
-/* ---- the graph --------------------------------------------------------- */
-
-#graph {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  cursor: grab;
-  touch-action: none;
-}
-
-#graph.panning {
-  cursor: grabbing;
-}
-
-#graph line {
-  stroke: var(--surface1);
-  stroke-width: 1;
-  opacity: 0.55;
-  transition: stroke 0.2s, opacity 0.2s;
-}
-
-#graph line.lit {
-  stroke: var(--blue);
-  stroke-width: 1.6;
-  opacity: 0.95;
-}
-
-#graph circle {
-  fill: var(--surface1);
-  stroke: var(--crust);
-  stroke-width: 1.5;
-  cursor: pointer;
-  transition: fill 0.18s;
-}
-
-#graph g.node:hover circle {
-  fill: var(--blue);
-}
-
-#graph g.node.here circle {
-  fill: var(--lavender);
-  stroke: var(--lavender);
-}
-
-#graph g.node.lit circle {
-  fill: var(--sky);
-}
-
-#graph g.node {
-  transition: opacity 0.2s;
-}
-
-#graph g.node.muted {
-  opacity: 0.16;
-}
-
-#graph g.node .label {
-  font-family: var(--font);
-  font-size: 9px;
-  fill: var(--subtext);
-  paint-order: stroke;
-  stroke: var(--crust);
-  stroke-width: 2.5px;
-  pointer-events: none;
-  display: none;
-}
-
-#graph g.node .label.on {
-  display: block;
-}
-
-#hud {
-  position: absolute;
-  left: 16px;
-  bottom: 14px;
-  color: var(--overlay);
-  font-size: 11px;
-  display: flex;
-  gap: 14px;
-  pointer-events: none;
-}
-
-#tip {
-  position: absolute;
-  pointer-events: none;
-  padding: 3px 7px;
-  border-radius: 5px;
-  background: var(--mantle);
-  border: 1px solid var(--surface1);
-  color: var(--text);
-  font-size: 11px;
-  max-width: 320px;
-  transform: translate(12px, -50%);
-  opacity: 0;
-  transition: opacity 0.12s;
-  z-index: 5;
-}
-
-#tip.on {
-  opacity: 1;
-}
-
 p.empty {
   padding: 26px 30px;
   color: var(--overlay);
@@ -505,6 +401,7 @@ p.empty {
   border-radius: 6px;
   background-clip: content-box;
 }
+
 /* ---- the rail as a menu ------------------------------------------------ */
 
 /* The burger and the shade under the drawer are the phone's: on a wide screen

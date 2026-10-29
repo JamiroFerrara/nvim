@@ -517,10 +517,17 @@ function hasChildren(items, i) {
 
 function renderViews() {
   const container = $('#views');
-  container.replaceChildren();
-  visibleEntries = [];
   const view = state.data.views.find((v) => v.key === state.view) || state.data.views[0];
   if (!view) return;
+  // the graph decides for itself whether it has to be drawn again, so it
+  // clears the pane on its own terms
+  if (view.key === 'graph') {
+    renderGraph();
+    return;
+  }
+  container.classList.remove('graphing');
+  container.replaceChildren();
+  visibleEntries = [];
   if (view.key === 'runs') {
     renderRuns();
     return;
@@ -577,6 +584,83 @@ function renderViews() {
   if (drawn === 0) {
     container.append(el('p', 'empty', state.query ? 'Nothing matches the filter.' : 'Nothing here.'));
   }
+}
+
+// ---- the ticket graph ----------------------------------------------------
+//
+// The board as a picture (/api/graph): every open ticket a node, and two kinds
+// of edge -- the nesting a ticket sits in (the child is what blocks the
+// parent) and the `[[id:…]]` links its body wrote. A closed ticket an open one
+// points back at is drawn too, drained of colour, so a trace runs past the
+// work already done.
+//
+// The layout, the panning and the zooming are the shared engine's
+// (assets/graph.js), the same one the roam notes are drawn by; this function
+// only says what a ticket is and what a click on one does.
+
+let graphToken = 0;
+let graphKey = null; // the payload the drawn picture was made from
+
+async function renderGraph() {
+  const container = $('#views');
+  container.classList.add('graphing');
+  if (!container.querySelector('svg.graph-svg')) {
+    container.replaceChildren(el('p', 'empty', 'Laying the tickets out…'));
+  }
+  const token = ++graphToken;
+  let data;
+  try {
+    data = await api('/api/graph?file=' + encodeURIComponent(state.selection));
+  } catch (err) {
+    if (token === graphToken) container.replaceChildren(el('p', 'empty', 'Could not read the ticket graph.'));
+    return;
+  }
+  // the rail or the vault moved on while this was in flight
+  if (token !== graphToken || state.view !== 'graph') return;
+  // the vault is saved constantly and most of it is not a ticket: a picture
+  // that did not change must not set itself moving again on every save
+  const key = JSON.stringify(data);
+  if (key === graphKey && container.querySelector('svg.graph-svg')) {
+    OrgGraph.filter(state.query);
+    return;
+  }
+  graphKey = key;
+  container.replaceChildren();
+  if (data.nodes.length === 0) {
+    container.append(el('p', 'empty', 'No open ticket to draw here.'));
+    return;
+  }
+  // the engine draws an `id`; the ticket behind it is what a click opens. The
+  // node's own `:ID:` rides along as `entryId`, because the engine's id is the
+  // key -- the `:ID:` itself, or the place a ticket without one sits.
+  const nodes = data.nodes.map((node) => ({
+    ...node,
+    entryId: node.id,
+    id: node.key,
+    // a whole ticket title is a sentence: the picture takes its head, the
+    // hover and the detail pane take the rest
+    label: node.title.length > 38 ? node.title.slice(0, 37).trimEnd() + '…' : node.title,
+    class: ['state-' + (node.todo || 'none'), node.done ? 'done' : '', runKey(node) ? 'running' : ''].join(' ').trim(),
+  }));
+  OrgGraph.draw(container, {
+    nodes,
+    edges: data.edges,
+    hud: [
+      `${data.stats.open} open · ${data.stats.nodes - data.stats.open} closed · ${data.stats.edges} edges`,
+      'click a ticket · drag to pan · scroll to zoom',
+    ],
+    // a board of a few dozen tickets is read by name; a whole vault's worth
+    // is a shape until it is zoomed in, the way the roam graph is
+    labelsAll: data.nodes.length <= 45,
+    query: state.query,
+    open: (node) => selectEntry({ ...node, id: node.entryId }),
+    tip: (node) => {
+      const parts = [node.todo || '—', node.project].filter(Boolean);
+      if (node.links) parts.push(node.links + '→');
+      if (node.backlinks) parts.push(node.backlinks + '←');
+      return node.title + ' — ' + parts.join(' · ');
+    },
+  });
 }
 
 // ---- the Runs view -------------------------------------------------------
@@ -964,38 +1048,121 @@ function stopRunStream() {
 }
 
 // A question the run put to you, drawn whole: the chip the run gave it, the
-// question, and the answers it offered with their tradeoffs. The answer it
-// leans on (`recommended`, an index) is marked. This is the same round the
-// picker in the omp pane shows, and the run waits on it until you answer
-// there, so it is the one step of a transcript that is a turn of yours.
-function askCard(ev) {
+// question, and the answers it offered with their tradeoffs, the one it leans
+// on marked. Clicking an answer answers the run: the server types it into the
+// picker the run is standing on (`/api/answer`, helpers/org/web/picker.lua),
+// which is the only door a waiting run has. A question that takes several
+// answers toggles them and sends them together; the box under a question is
+// for an answer of your own words.
+//
+// `settle` is for the log: once the run has its answer the card is history,
+// and its controls stop taking clicks.
+function askCard(ev, key) {
   const card = el('div', 'run-ask');
+  const controls = [];
+  const settle = () => {
+    for (const node of controls) node.disabled = true;
+    card.classList.add('settled');
+  };
+  const send = async (q, body, ...nodes) => {
+    for (const node of nodes) node.disabled = true;
+    card.classList.add('sending');
+    const fail = (message) => {
+      showToast(message);
+      for (const node of nodes) node.disabled = false;
+    };
+    try {
+      const res = await api('/api/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, question: q.q, ...body }),
+      });
+      if (res && res.error) fail(res.error);
+      else settle();
+    } catch (err) {
+      fail('nvim did not answer');
+    }
+    card.classList.remove('sending');
+  };
+
   if (ev.t) card.append(el('p', 'run-ask-intent', ev.t));
   for (const q of ev.q || []) {
     const item = el('div', 'run-ask-item');
     if (q.h) item.append(el('span', 'run-ask-header', q.h));
     item.append(el('p', 'run-ask-text', q.q || ''));
     if (q.m) item.append(el('span', 'run-ask-any', 'pick any'));
+    const chosen = new Set();
+    let sendAll = null;
     const list = el('ol', 'run-ask-options');
     (q.o || []).forEach((opt, i) => {
       const row = el('li', 'run-ask-option' + (q.r === i ? ' recommended' : ''));
-      row.append(el('span', 'run-ask-label', opt.l || ''));
-      if (opt.d) row.append(el('span', 'run-ask-desc', opt.d));
+      const button = el('button', 'run-ask-pick');
+      button.type = 'button';
+      button.append(el('span', 'run-ask-label', opt.l || ''));
+      if (opt.d) button.append(el('span', 'run-ask-desc', opt.d));
+      button.addEventListener('click', () => {
+        if (!q.m) {
+          send(q, { label: opt.l || '' }, button);
+          return;
+        }
+        if (chosen.has(i)) chosen.delete(i);
+        else chosen.add(i);
+        row.classList.toggle('chosen', chosen.has(i));
+        if (sendAll) sendAll.disabled = chosen.size === 0;
+      });
+      row.append(button);
       list.append(row);
+      controls.push(button);
     });
     item.append(list);
+    if (q.m) {
+      sendAll = el('button', 'primary run-ask-send', 'send these');
+      sendAll.type = 'button';
+      sendAll.disabled = true;
+      sendAll.addEventListener('click', () => {
+        const labels = (q.o || []).filter((_, i) => chosen.has(i)).map((opt) => opt.l || '');
+        send(q, { labels }, ...controls);
+      });
+      item.append(sendAll);
+      controls.push(sendAll);
+    }
+    const say = el('div', 'run-ask-say');
+    const words = document.createElement('input');
+    words.type = 'text';
+    words.placeholder = 'answer in your own words';
+    words.autocomplete = 'off';
+    const sayGo = el('button', '', 'say it');
+    sayGo.type = 'button';
+    const go = () => {
+      const text = words.value.trim();
+      if (!text) {
+        words.focus();
+        return;
+      }
+      send(q, { custom: text }, ...controls);
+    };
+    sayGo.addEventListener('click', go);
+    words.addEventListener('keydown', (ev2) => {
+      if (ev2.key === 'Enter') {
+        ev2.preventDefault();
+        go();
+      }
+    });
+    say.append(words, sayGo);
+    item.append(say);
+    controls.push(words, sayGo);
     card.append(item);
   }
-  return card;
+  return { card, settle };
 }
 
 // One event of the run, drawn as what it is: the agent speaking, a step of
-// thought, a tool it reached for, what the tool answered, a question it put
-// to you and your answer to it.
+// thought, a tool it reached for, what the tool answered, and your answer to
+// what it asked. (A question is a turn of yours, not a line of the log: the
+// log draws it itself, `draw`.)
 function runEvent(ev) {
   if (ev.k === 'say') return el('p', 'run-say', ev.t);
   if (ev.k === 'think') return el('p', 'run-think', ev.t);
-  if (ev.k === 'ask') return askCard(ev);
   if (ev.k === 'answer') return el('p', 'run-answer' + (ev.e ? ' failed' : ''), (ev.e ? '✗ ' : '✔ ') + ev.t);
   if (ev.k === 'user') {
     const box = el('details', 'run-user');
@@ -1062,17 +1229,31 @@ function appendRunLog(body, key, opts) {
   // the log has no answer after it, and the picker in its pane is waiting
   let running = false;
   let asking = false;
+  let openAsk = null;
   const paint = () => {
     box.classList.toggle('running', running);
     box.classList.toggle('asking', asking);
     stateText.textContent = asking ? 'asking you' : running ? 'live' : 'stopped';
   };
+  const settleAsk = () => {
+    if (openAsk) openAsk.settle();
+    openAsk = null;
+  };
   const draw = (events, wasStuck) => {
     for (const ev of events || []) {
-      const node = runEvent(ev);
-      if (node) log.append(node);
-      if (ev.k === 'ask') asking = true;
-      else if (ev.k === 'answer') asking = false;
+      if (ev.k === 'ask') {
+        settleAsk();
+        openAsk = askCard(ev, key);
+        log.append(openAsk.card);
+        asking = true;
+      } else {
+        const node = runEvent(ev);
+        if (node) log.append(node);
+        if (ev.k === 'answer') {
+          settleAsk();
+          asking = false;
+        }
+      }
     }
     trim();
     bottom(wasStuck);
@@ -1090,6 +1271,7 @@ function appendRunLog(body, key, opts) {
     const wasStuck = true;
     log.replaceChildren();
     asking = false;
+    openAsk = null;
     if (snap.title) title.textContent = snap.title;
     if (!snap.file) {
       log.append(el('p', 'empty', 'This run has not written anything yet.'));
@@ -1102,6 +1284,7 @@ function appendRunLog(body, key, opts) {
     const wasStuck = stick();
     log.replaceChildren();
     asking = false;
+    openAsk = null;
     if (snap.title) title.textContent = snap.title;
     draw(snap.events, wasStuck);
     setState(snap.running);
@@ -1722,7 +1905,10 @@ async function onKey(ev) {
       $('#search').value = '';
       state.query = '';
       $('#search').blur();
-      renderViews();
+      // the graph is drawn once and dimmed in place: refiltering it would
+      // throw the layout away for nothing
+      if (state.view === 'graph') OrgGraph.filter('');
+      else renderViews();
       resetKeys();
     }
     return;
@@ -2031,7 +2217,8 @@ $('#capture-open').addEventListener('click', () => openCapture());
 
 $('#search').addEventListener('input', (ev) => {
   state.query = ev.target.value;
-  renderViews();
+  if (state.view === 'graph') OrgGraph.filter(state.query);
+  else renderViews();
 });
 
 // ---- phone door ---------------------------------------------------------

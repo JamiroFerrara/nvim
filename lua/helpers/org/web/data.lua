@@ -60,6 +60,22 @@ local function relative(path)
   return path
 end
 
+--- The ids the entry's own section names, in order: the `[[id:…]]` links of
+--- its body, which is where a hand-back's Related bullet and a wayfinder
+--- map's decisions line sit. Not the children's: a link belongs to the
+--- headline that wrote it.
+---@param hl org.Headline
+---@return string[]
+local function ids_named(hl)
+  local ids = {}
+  for _, line in ipairs(hl:body_lines()) do
+    for target in line:gmatch '%[%[id:([%w%-]+)%]' do
+      ids[#ids + 1] = target
+    end
+  end
+  return ids
+end
+
 --- Everything the views need about one headline.
 ---@param hl org.Headline
 ---@param ctx table shared per-file data: path, rel, project, open keywords
@@ -116,6 +132,7 @@ local function entry_of(hl, ctx)
     changed_at = latest and latest:minutes() or nil,
     wf = wf or false,
     wf_kind = wf_kind,
+    links = ids_named(hl),
   }
 end
 
@@ -331,6 +348,20 @@ end
 
 local function is_open(entry)
   return not entry.done
+end
+
+--- The entries one selection shows: a project's file, or every agenda file
+--- for 'all' (what the payload's `file` argument means).
+---@param entries table[]
+---@param file string|nil
+---@return table[]
+local function scope(entries, file)
+  if file and file ~= '' and file ~= 'all' then
+    return pick(entries, function(e)
+      return e.file == file
+    end)
+  end
+  return entries
 end
 
 --- The sections of one view over `entries`.
@@ -673,6 +704,9 @@ end
 
 local VIEWS = {
   { key = 'board', title = 'Board', icon = '▦' },
+  -- the board as a picture: every open ticket a node, the nesting it sits in
+  -- and the `[[id:…]]` links its body wrote the edges (M.graph)
+  { key = 'graph', title = 'Graph', icon = '◉' },
   { key = 'agenda', title = 'Agenda', icon = '◷' },
   { key = 'flight', title = 'In flight', icon = '▶' },
   -- the one view with nothing of the vault in it: what is running right now
@@ -691,12 +725,7 @@ local VIEWS = {
 ---@return table
 function M.payload(file)
   local entries, projects = M.entries()
-  local scoped = entries
-  if file and file ~= '' and file ~= 'all' then
-    scoped = pick(entries, function(e)
-      return e.file == file
-    end)
-  end
+  local scoped = scope(entries, file)
   local counts = {}
   local total, done, moving, waiting = 0, 0, 0, 0
   for _, entry in ipairs(entries) do
@@ -752,6 +781,11 @@ function M.payload(file)
       -- `out.live.instances`
       sections = {}
       count = #instances
+    elseif view.key == 'graph' then
+      -- a picture, not a list: the tab is here for its name and its count,
+      -- and the client asks /api/graph for the nodes and edges
+      sections = {}
+      count = #pick(scoped, is_open)
     elseif view.key == 'state' then
       sections = state_sections(scoped)
     elseif view.key == 'priority' then
@@ -807,6 +841,110 @@ function M.payload(file)
     end
   end
   return out
+end
+
+-- The node key of an entry: its `:ID:` when it has one, else the place it
+-- sits. Two tickets of one vault never share an id, and a headline the
+-- launcher never touched still gets a node.
+---@param entry table
+---@return string
+local function node_key(entry)
+  return entry.id or (entry.file .. '#' .. tostring(entry.line))
+end
+
+--- The graph of one selection: every open ticket a node, and two kinds of
+--- edge — the nesting a ticket sits in (`blocks`: the child is what blocks
+--- the parent, the way a wayfinder tree is read) and the `id:` links its own
+--- body wrote (`link`). A closed ticket one of them names comes along as a
+--- node too, so the trace runs past the tickets that are finished.
+---@param file string|nil
+---@return table
+function M.graph(file)
+  local entries = M.entries()
+  local scoped = scope(entries, file)
+  local by_line, by_id = {}, {}
+  for _, entry in ipairs(entries) do
+    by_line[entry.file .. '#' .. tostring(entry.line)] = entry
+    if entry.id then
+      by_id[entry.id] = entry
+    end
+  end
+  local nodes, seen, by_key = {}, {}, {}
+  local function add(entry)
+    local key = node_key(entry)
+    if seen[key] then
+      return key
+    end
+    seen[key] = true
+    local node = {
+      key = key,
+      id = entry.id,
+      title = entry.title,
+      todo = entry.todo,
+      done = entry.done,
+      project = entry.project,
+      rel = entry.rel,
+      file = entry.file,
+      line = entry.line,
+      cookie = entry.cookie,
+      session = entry.session,
+      wf = entry.wf,
+      wf_kind = entry.wf_kind,
+      links = 0,
+      backlinks = 0,
+    }
+    nodes[#nodes + 1] = node
+    by_key[key] = node
+    return key
+  end
+  local open = pick(scoped, is_open)
+  for _, entry in ipairs(open) do
+    add(entry)
+  end
+  -- one edge per pair of tickets: two bodies naming each other is one
+  -- relation, and a ticket nested twice in a file cannot be
+  local edges, drawn = {}, {}
+  local function edge(source, target, kind)
+    if source == target then
+      return
+    end
+    local key = kind .. '\0' .. source .. '\0' .. target
+    if drawn[key] then
+      return
+    end
+    drawn[key] = true
+    edges[#edges + 1] = { source = source, target = target, kind = kind }
+  end
+  for _, entry in ipairs(open) do
+    -- the ticket's nearest ancestor that is a ticket too: an untagged
+    -- headline between them is a grouping, not a dependency
+    for _, ancestor in ipairs(entry.ancestors) do
+      local parent = by_line[entry.file .. '#' .. tostring(ancestor)]
+      if parent and not parent.done then
+        edge(node_key(parent), node_key(entry), 'blocks')
+        break
+      end
+    end
+  end
+  for _, entry in ipairs(open) do
+    local from = node_key(entry)
+    for _, id in ipairs(entry.links or {}) do
+      local target = by_id[id]
+      if target then
+        local to = add(target)
+        if to ~= from then
+          edge(from, to, 'link')
+          by_key[from].links = by_key[from].links + 1
+          by_key[to].backlinks = by_key[to].backlinks + 1
+        end
+      end
+    end
+  end
+  return {
+    nodes = nodes,
+    edges = edges,
+    stats = { nodes = #nodes, edges = #edges, open = #open },
+  }
 end
 
 return M

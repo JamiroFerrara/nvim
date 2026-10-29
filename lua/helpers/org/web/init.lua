@@ -219,6 +219,27 @@ local function handle(req, res)
     return
   end
 
+  -- the answer to the question a run is standing on: the page's click is
+  -- typed into the run's picker (`helpers/org/web/picker.lua`), the only way
+  -- in -- a waiting run has no socket, just the keys its pane takes
+  if req.method == 'POST' and path == '/api/answer' then
+    local body = payload_of(req)
+    local live = require 'helpers.org.web.live'
+    local pane = live.pane(body.key or '')
+    if not pane then
+      json(res, { ok = false, error = 'that run is not in a pane' })
+      return
+    end
+    local ok, err = require('helpers.org.web.picker').answer(pane, {
+      question = body.question,
+      label = body.label,
+      labels = body.labels,
+      custom = body.custom,
+    })
+    json(res, { ok = ok and true or false, error = err })
+    return
+  end
+
   if req.method == 'GET' and path == '/api/live/stream' then
     local key = req.query.key or ''
     if not key:match '%S' then
@@ -234,6 +255,13 @@ local function handle(req, res)
     local out = data.payload(req.query.file)
     out.keywords = keyword_lists()
     json(res, out)
+    return
+  end
+
+  -- the ticket graph the board draws as a picture: nodes and the two kinds
+  -- of edge between them (helpers/org/web/data.lua's M.graph)
+  if req.method == 'GET' and path == '/api/graph' then
+    json(res, data.graph(req.query.file))
     return
   end
 
