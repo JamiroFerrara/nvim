@@ -15,6 +15,7 @@ const state = {
   refile: null, // the entry `r` picked, waiting for a destination
   live: { tickets: new Set(), sessions: new Set(), activity: {}, instances: [] }, // runs in flight
   runStream: null, // the open event stream of the run the detail pane shows
+  runDetail: null, // the run the detail pane is showing, when it is one
   historyOpen: false, // the detail pane is a history step (a phone's back)
 };
 
@@ -477,8 +478,28 @@ async function pollLive() {
       applyRuns();
       syncRunsBadge();
     }
+    applyRunDetail();
   } catch (err) {
     console.error(err);
+  }
+}
+
+// The run the detail pane is showing, brought up to date from the last look:
+// its elapsed time, its activity, and whether it is still one of the runs.
+// A run that has ended keeps its log on screen -- the last steps are what it
+// did -- and the line says it has stopped.
+function applyRunDetail() {
+  const shown = state.runDetail;
+  if (!shown) return;
+  const meta = document.querySelector('#detail .run-meta');
+  if (!meta) return;
+  const run = (state.live.instances || []).find((r) => r.key === shown.key);
+  if (run) {
+    state.runDetail = run;
+    if (run.title) shown.title = run.title;
+    meta.textContent = runMeta(run);
+  } else {
+    meta.textContent = runMeta(shown) + '  ·  ended';
   }
 }
 
@@ -633,9 +654,15 @@ function runRow(run) {
   acts.append(cancel);
   li.append(acts);
   li.append(el('span', 'live-line', run.activity || ''));
+  // the row opens the run itself -- what the instance is doing, step by step
+  // -- whether or not it is on a ticket; a ticket's title is the way to the
+  // entry the run is working on
+  li.addEventListener('click', () => showRun(run));
   if (entry) {
-    title.addEventListener('click', () => selectEntry(entry));
-    li.addEventListener('click', () => selectEntry(entry));
+    title.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      selectEntry(entry);
+    });
   }
   return li;
 }
@@ -687,6 +714,7 @@ function renderRuns() {
 function selectEntry(entry, focusNote) {
   state.selected = { file: entry.file, line: entry.line, id: entry.id };
   state.selectedEntry = entry;
+  state.runDetail = null;
   for (const li of document.querySelectorAll('li.entry.selected')) li.classList.remove('selected');
   const row = document.querySelector(
     `li.entry[data-file="${CSS.escape(entry.file)}"][data-line="${entry.line}"]`,
@@ -695,7 +723,91 @@ function selectEntry(entry, focusNote) {
   showDetail(entry, focusNote);
 }
 
+// One line about the run: the pane it is in, how long it has been going, the
+// ticket it is on (if any) and the session it writes.
+function runMeta(run) {
+  const parts = ['pane ' + run.pane];
+  if (run.started) parts.push(elapsed(run.started) + ' going');
+  if (run.ticket) parts.push('ticket ' + run.ticket.slice(0, 8));
+  else parts.push('no ticket');
+  if (run.key && run.key !== run.ticket) parts.push(run.key);
+  return parts.join('  ·  ');
+}
+
+// The detail pane's window on a run itself, from the Runs view: what the
+// instance is doing, step by step, as it writes it. Works for a run that is on
+// a ticket and for one that is not (the talking instance, a batch's
+// orchestrator) -- the transcript is the run's own, and it is the same stream
+// the entry's box follows. A ticket's title on the row still opens the entry;
+// here its `ticket` button does.
+function showRun(run) {
+  stopRunStream();
+  const detail = $('#detail');
+  detail.hidden = false;
+  document.body.classList.add('detail-open');
+  detail.scrollTop = 0;
+  state.detailEntry = { run: run.key };
+  state.runDetail = run;
+  // nothing of the list is selected while a run is on screen, so a reload
+  // does not draw an entry over the run being watched
+  state.selected = null;
+  state.selectedEntry = null;
+  for (const li of document.querySelectorAll('li.entry.selected')) li.classList.remove('selected');
+  if (isPhone() && !state.historyOpen) {
+    state.historyOpen = true;
+    history.pushState({ orgDetail: true }, '');
+  }
+  detail.replaceChildren();
+
+  const header = el('header');
+  header.append(el('span', 'where', 'run · pane ' + run.pane));
+  const actions = el('span');
+  if (run.entry) {
+    const ticket = el('button', '', 'ticket');
+    ticket.type = 'button';
+    ticket.title = 'open the entry this run is on';
+    ticket.addEventListener('click', () => selectEntry(run.entry));
+    actions.append(ticket);
+  }
+  // the way out of a run that is going nowhere, armed like the row's `✕`
+  const cancel = el('button', 'kill', 'cancel');
+  cancel.type = 'button';
+  cancel.title = 'cancel this run: the pane goes, and the omp inside it';
+  cancel.addEventListener('click', async () => {
+    if (!cancel.dataset.armed) {
+      cancel.dataset.armed = '1';
+      cancel.textContent = 'cancel?';
+      cancel.classList.add('armed');
+      clearTimeout(cancel._disarm);
+      cancel._disarm = setTimeout(() => {
+        delete cancel.dataset.armed;
+        cancel.textContent = 'cancel';
+        cancel.classList.remove('armed');
+      }, 4000);
+      return;
+    }
+    await cancelRun(run);
+    closeDetail();
+  });
+  const close = el('button', '', '✕');
+  close.type = 'button';
+  close.title = 'q  close';
+  close.addEventListener('click', () => closeDetail());
+  actions.append(cancel, close);
+  header.append(actions);
+  detail.append(header);
+
+  const body = el('div', 'body');
+  const title = el('h2', 'detail-title headline');
+  title.append(el('span', 'title', run.title || run.key));
+  const meta = el('p', 'run-meta', runMeta(run));
+  body.append(title, meta);
+  detail.append(body);
+  appendRunLog(body, run.key, {});
+}
+
 async function showDetail(entry, focusNote) {
+  state.runDetail = null;
   const detail = $('#detail');
   detail.hidden = false;
   document.body.classList.add('detail-open');
@@ -772,6 +884,7 @@ function closeDetail(fromHistory) {
   state.selected = null;
   state.selectedEntry = null;
   state.detailEntry = null;
+  state.runDetail = null;
   stopRunStream();
   $('#detail').hidden = true;
   document.body.classList.remove('detail-open');
@@ -911,17 +1024,29 @@ function runEvent(ev) {
 // open on that one ticket (helpers/org/web/live.lua). Nothing is drawn for
 // an entry no run has ever been on.
 function appendRunBox(body, entry) {
-  stopRunStream();
   const key = entry.session || (entry.id && state.live.tickets.has(entry.id) ? entry.id : null);
   if (!key) return;
+  appendRunLog(body, key, { hide: true });
+}
+
+// One run's live log, drawn in `body` and followed over the stream the server
+// keeps open on its key -- a ticket's :ID:, or a batch's session key (the
+// talking instance's `talk/one`). A `hide` button takes the box away without
+// leaving the pane; without it the box is the pane.
+function appendRunLog(body, key, opts) {
+  opts = opts || {};
+  stopRunStream();
 
   const box = el('div', 'run-box');
   const head = el('div', 'run-head');
   const stateText = el('span', 'run-state', 'connecting…');
   const title = el('span', 'run-title', '');
-  const hide = el('button', '', 'hide');
-  hide.type = 'button';
-  head.append(el('span', 'live-dot', '●'), stateText, title, hide);
+  head.append(el('span', 'live-dot', '●'), stateText, title);
+  const hide = opts.hide ? el('button', '', 'hide') : null;
+  if (hide) {
+    hide.type = 'button';
+    head.append(hide);
+  }
   const log = el('div', 'run-log');
   box.append(head, log);
   body.append(box);
@@ -990,10 +1115,12 @@ function appendRunBox(body, entry) {
   source.addEventListener('status', (msg) => setState(JSON.parse(msg.data).running));
   source.addEventListener('error', () => setState(false));
 
-  hide.addEventListener('click', () => {
-    stopRunStream();
-    box.remove();
-  });
+  if (hide) {
+    hide.addEventListener('click', () => {
+      stopRunStream();
+      box.remove();
+    });
+  }
   log.scrollTop = log.scrollHeight;
 }
 

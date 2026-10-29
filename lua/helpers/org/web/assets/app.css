@@ -970,6 +970,13 @@ li.entry .live-line {
 
 /* The detail pane's window on the run: what the agent is doing, step by
    step, as its session transcript grows. */
+#detail .run-meta {
+  margin: -6px 0 14px;
+  color: var(--overlay);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
 .run-box {
   margin-top: 22px;
   border: 1px solid var(--surface);
