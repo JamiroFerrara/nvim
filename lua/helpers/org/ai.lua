@@ -221,35 +221,40 @@ local SPECS_KEPT = 200
 --- at the keyboard.
 local FILE_GRACE = 45
 
---- What the talking instance is told once, as its system prompt. It is a
---- router and nothing else: answer a line, or file the words and start their
---- run (`M.talk`) with one command. Every word here that opens a door -- the
---- vault's rules, "pick the project file it belongs to" -- was a door the
---- instance walked through to read code and repair old tickets, so the rules
---- are the short list of the one act it has, and the argv leaves it no tool
---- but the shell that one command needs.
+--- What the talking instance is told once, as its system prompt. It is the
+--- voice of the board and the orchestrator of what is said here -- it answers,
+--- dispatches one read-only look when a question needs one, or files the work
+--- and starts its run (`M.talk`) with one command. Every word here that opens
+--- a door -- the vault's rules, "pick the project file it belongs to" -- was a
+--- door the instance walked through to read code and repair old tickets, so
+--- the doors stay shut: the digest in the message is what it knows, a `task`
+--- subagent is the only reading it can have done, and the command is the only
+--- write. The argv gives it the shell for that command and `task` for that
+--- look, and nothing else.
 ---@return string
 local function talk_rules()
   return table.concat({
     'You are the talking instance of the org renderer: the one omp every spoken or typed line reaches',
-    '(the voice card, :OrgVoice, :OrgVoiceSay). There is one of you, and there stays one.',
+    '(the voice card, :OrgVoice, :OrgVoiceSay), and the orchestrator of what gets said here. There is',
+    'one of you, and there stays one.',
     '',
-    'You are a router, not a worker. Each message you do exactly one of two things: answer in a line, or',
-    'run one command. Nothing else, ever.',
+    'You are not a worker. Each message you do exactly one of three things: answer in a line, dispatch',
+    'one read-only look, or run one command. Nothing else, ever.',
     '',
-    'You never:',
+    'You never, in your own turn:',
     '- open the spec file: the message already says the words, the view, the org file and the entry;',
     '- read, list or search a repository, a config file or the vault;',
-    '- run tests, scripts or nvim other than the one command below;',
-    '- edit an org file, a ticket, or a code file by hand;',
+    '- use the shell for anything but the one command below -- no cat, no ls, no git, no tests, no nvim;',
+    '- edit an org file, a ticket, or a code file, by hand or with a tool;',
+    '- retitle, close, move, reopen or annotate a ticket: you file new work, and runs change the board;',
     '- look at tmux panes, jobs, logs or other runs;',
-    '- start subagents or tasks;',
     '- ask me anything back: a question costs me a whole second turn, so the plainest reading is yours',
     '  to take, and what you took is one line of your reply;',
-    '- repair, retitle, reopen or re-file anything said earlier.',
+    '- repair or re-file anything said earlier.',
     '',
     'A message is the words, the view they were said on, their org file (or none), the entry they hang',
-    'under (or none), and the path of the spec the command takes.',
+    'under (or none), the path of the spec the command takes, and where things stand -- what is running,',
+    'what is in flight, what is next, the board you were looking at.',
     '',
     'WORK: file it and start it, with exactly this command, once:',
     '',
@@ -259,17 +264,28 @@ local function talk_rules()
     ':ID:, the launch state, the checkpoint, a pane of its own -- and the run it starts is the worker.',
     'You write no org text and do none of the work.',
     '',
-    'When the message says the org file is none, run the same command with no file argument: it files',
-    'the words in the board this shell stands in, and its one line says which. Do not ask which file --',
-    'the only message that carries one is the words naming it themselves:',
+    'The message gives a file for every line, and the boards of the vault by name and file. File the',
+    'words in the board they name -- the board whose name is a word of them, or plainly the one their',
+    'subject belongs to -- even when the file the message gives is another; a line that names no board',
+    'goes in the file the message gives. Do not ask which board: take the plainest reading, and the one',
+    "line the command prints says where the words went. Name the board as the command's file argument:",
     '',
-    "    nvim --headless -c \"lua require('helpers.org.ai').talk('<spec path>', '<file>')\" -c 'qa!'",
+    "    nvim --headless -c \"lua require('helpers.org.ai').talk('<spec path>', '<board>')\" -c 'qa!'",
+    '',
+    'When the message says the org file is none, run the same command with no file argument: it files',
+    'the words in the board this shell stands in, and its one line says which.',
     '',
     'Words that are plainly two separate jobs: the command twice, once each.',
     '',
-    'A question from me: at most three lines, from the words and this conversation alone. If the answer',
-    'needs a look at anything, file it as work instead of looking. You answer questions; you never ask',
-    'one. A remark to you: one line, what you take from it. A correction to an earlier ticket: file it',
+    'A QUESTION: answer from the message and this conversation alone -- where things stand answers most',
+    'of it, and it is the truth as of the moment the words were said. Only when the answer needs what a',
+    'file or the vault holds, dispatch one task: a single subagent, told to read only, to answer that',
+    'question in a few lines, and to change nothing -- no edit, no write, no command that changes a file,',
+    'no work beyond the question. Say the answer in at most three lines and stop. One dispatch, never a',
+    'second: if it came back with nothing, say what is unknown, and file the question as work only when I',
+    'asked for work.',
+    '',
+    'A remark to you: one line, what you take from it. A correction to an earlier ticket: file it',
     "as new work -- the ticket it corrects is a run's, not yours.",
     '',
     'The command settles a repeat itself: when it says the words are already a ticket, quote that and',
@@ -464,6 +480,49 @@ local function home_board()
     return vim.fs.normalize(file)
   end
   return last_board()
+end
+
+--- Is this a path to something on disk? A board named rather than written
+--- out ('ing', the project's title) is not, and the callers look it up next.
+---@param path any
+---@return boolean
+local function is_file(path)
+  return type(path) == 'string' and path ~= '' and vim.uv.fs_stat(vim.fn.expand(path)) ~= nil
+end
+
+--- Every board of the vault: `{ path, rel, name }` per org file that holds at
+--- least one entry, the walk the dashboard already makes
+--- (helpers/org/web/data.lua), cached for a moment there.
+---@return table[]
+local function board_list()
+  local ok, _, projects = pcall(function()
+    return require('helpers.org.web.data').entries()
+  end)
+  return ok and type(projects) == 'table' and projects or {}
+end
+
+--- The board the words name, when they name one: a board answers to its
+--- project title, to the name of its file and to its path, in any case and
+--- with its words kept whole -- 'in the ing project' is ing.org,
+--- 'add it to personal' is personal.org. A name of two letters or fewer is
+--- never a match ('to', 'my'), and when two boards fit, the longer name wins:
+--- the user said the longer one. nil when the words name no board, and the
+--- caller keeps the selection or `home_board`.
+---@param words string
+---@return string|nil path
+local function named_board(words)
+  local text = (' ' .. (words or ''):lower():gsub('[^%w]+', ' '):gsub('%s+', ' ') .. ' ')
+  local named, named_len
+  for _, board in ipairs(board_list()) do
+    local candidates = { board.name, vim.fn.fnamemodify(board.path or '', ':t:r'), board.path }
+    for _, name in ipairs(candidates) do
+      local key = type(name) == 'string' and vim.trim(name:lower():gsub('[^%w]+', ' '):gsub('%s+', ' ')) or ''
+      if #key > 2 and text:find(' ' .. key .. ' ', 1, true) and (not named_len or #key > named_len) then
+        named, named_len = board.path, #key
+      end
+    end
+  end
+  return named
 end
 
 ---@class OrgTicket
@@ -1221,7 +1280,7 @@ local function talk_argv(message)
     argv[#argv + 1] = '--continue'
   end
   vim.list_extend(argv, {
-    '--tools=bash',
+    '--tools=bash,task',
     '--no-skills',
     '--no-rules',
     '--no-context-files',
@@ -2075,6 +2134,72 @@ local function net(path)
   end, FILE_GRACE * 1000)
 end
 
+--- Where things stand, in one line, for the talking instance: the runs going,
+--- the tickets in flight, the next few to take, the board the words were said
+--- on, and the vault's boards by name. The dashboard already builds every piece
+--- of it from the vault (`helpers.org.web.data`, one walk the editor has
+--- cached), so the voice can answer "what is running" and "what is next" from
+--- what it was handed -- and file a line in the board it names, keeping its own
+--- hands off the vault.
+---@param file string|nil the org file the words belong to
+---@return string
+local function digest(file)
+  local ok, data = pcall(require, 'helpers.org.web.data')
+  if not ok then
+    return ''
+  end
+  local parts = { ('Where things stand at %s.'):format(os.date '%Y-%m-%d %H:%M') }
+  local runs_ok, runs = pcall(data.instances)
+  if runs_ok and type(runs) == 'table' then
+    local going = {}
+    for _, run in ipairs(runs) do
+      -- the talking instance is the one being spoken to: naming it would be
+      -- the voice reporting itself as work in progress
+      if run.key ~= TALK_KEY then
+        local mins = run.started and math.max(0, math.floor((os.time() - run.started) / 60))
+        going[#going + 1] = mins and ('"%s", %d minutes in'):format(run.title, mins) or ('"%s"'):format(run.title)
+      end
+    end
+    parts[#parts + 1] = #going == 0 and 'No run is going.' or ('Runs going: %s.'):format(table.concat(going, '; '))
+  end
+  local entries_ok, entries, projects = pcall(data.entries)
+  if entries_ok and type(entries) == 'table' then
+    local count = { NEXT = 0, TEST = 0, WARN = 0 }
+    local nexts, here = {}, {}
+    for _, entry in ipairs(entries) do
+      if count[entry.todo] then
+        count[entry.todo] = count[entry.todo] + 1
+      end
+      if entry.todo == 'NEXT' then
+        if #nexts < 3 then
+          nexts[#nexts + 1] = ('"%s"'):format(entry.title)
+        end
+        if file and entry.file == file and #here < 3 then
+          here[#here + 1] = ('"%s"'):format(entry.title)
+        end
+      end
+    end
+    parts[#parts + 1] = ('In flight: %d next, %d waiting on me to test, %d failed.'):format(count.NEXT, count.TEST, count.WARN)
+    if #nexts > 0 then
+      parts[#parts + 1] = ('Next up: %s.'):format(table.concat(nexts, ', '))
+    end
+    if file and file ~= '' and #here > 0 then
+      parts[#parts + 1] = ('Next on the %s board: %s.'):format(vim.fn.fnamemodify(file, ':t:r'), table.concat(here, ', '))
+    end
+  end
+  -- the boards a line can be filed in, by the names it would be said by: the
+  -- instance cannot read the vault, so the names and their files are what lets
+  -- it file a line in the board the words name (`M.talk` takes the name too)
+  if type(projects) == 'table' and #projects > 1 then
+    local boards = {}
+    for _, board in ipairs(projects) do
+      boards[#boards + 1] = ('%s (%s)'):format(board.name, board.path)
+    end
+    parts[#parts + 1] = ('The boards, by name and file: %s.'):format(table.concat(boards, '; '))
+  end
+  return table.concat(parts, ' ')
+end
+
 --- Hand words that came from outside the board to the one talking instance
 --- (`TALK_KEY`): the dashboard's voice card (helpers/org/voice.lua), and the
 --- `:OrgVoice` / `:OrgVoiceSay` commands that speak the same way. Nothing is
@@ -2093,8 +2218,9 @@ end
 --- themselves, the view they were said on, and -- when the dashboard had an
 --- entry highlighted -- the file and the entry's :ID:, which is where the
 --- ticket they become will hang; with nothing highlighted, the file is the
---- project's own, the one this nvim is working in (`home_board`), so the
---- spec always names a destination. The instance reads the spec when it files
+--- board the words name (`named_board`), else the project's own, the one this
+--- nvim is working in (`home_board`), so the spec always names a destination.
+--- The instance reads the spec when it files
 --- them (`M.talk`), so no quote of them has to survive a shell or a prompt.
 ---
 --- The spec is also the editor's last word on the line: once the words are the
@@ -2126,11 +2252,13 @@ function M.open_prompt(text, target, view)
     spec.file = target.file
     spec.under = target.id
   else
-    -- nothing was highlighted, so the words name no board of their own: they
-    -- go where a capture from this directory would, and the instance is handed
-    -- that file like any other -- it never has to ask which project they
-    -- belong to, a question that would cost a whole second listen
-    spec.file = home_board()
+    -- nothing was highlighted, so no entry says where the words belong: the
+    -- board they name in as many words ('in the ing project') is the one they
+    -- are filed in, and a line that names none goes where a capture from this
+    -- directory would. Either way the instance is handed a file, so it never
+    -- has to ask which project they belong to -- a question that would cost a
+    -- whole second listen
+    spec.file = named_board(words) or home_board()
   end
   -- the words are written down where they outlive this nvim: the talking
   -- instance reads the spec when it files them, and the specs of a day are what
@@ -2164,6 +2292,12 @@ function M.open_prompt(text, target, view)
       path
     )
   )
+  -- where things stand rides along: the dashboard's own walk of the vault, so
+  -- the answer to "what is running" costs no reading at all (`digest`)
+  local context = digest(spec.file)
+  if context ~= '' then
+    msg = msg .. ' ' .. context
+  end
   if not in_tmux() then
     open_window(talk_argv(msg))
     net(path)
@@ -2233,10 +2367,13 @@ end
 ---
 --- The spec carries the words, the file they belong to and the :ID: of the
 --- entry they hang under (`M.open_prompt` writes it, and it names a file even
---- with nothing highlighted). A spec that names none here -- one written by an
---- older editor, or by a line whose nvim stood in no project -- is filed in the
---- board this shell stands in (`home_board`): a wrong board is said in one line
---- and corrected by saying so, where a question would cost the user a second
+--- with nothing highlighted). The instance may name another board as the
+--- command's file -- by path, or by the name the digest lists it under, which
+--- is how the words' own board wins over the one they were said from. What no
+--- file and no name settles -- a spec written by an older editor, a board no
+--- vault holds -- falls back to the spec's own file, then to the board this
+--- shell stands in (`home_board`): a wrong board is said in one line and
+--- corrected by saying so, where a question would cost the user a second
 --- listen, and the vault is not the instance's to read either way.
 ---
 --- This is called by the talking instance, from the shell of a headless nvim
@@ -2256,7 +2393,7 @@ end
 --- they did not need -- and the stamp above is what keeps the two from filing
 --- the same words twice.
 ---@param spec_path string path of the spec JSON
----@param file? string the org file to file the words in, when the spec names none
+---@param file? string the board to file the words in -- a file path, or the name it is listed under
 ---@return integer|nil lnum the headline's line, or nil when nothing was filed
 function M.talk(spec_path, file)
   local say = function(msg)
@@ -2284,10 +2421,14 @@ function M.talk(spec_path, file)
     say 'those words are already a ticket on the board -- nothing written'
     return nil
   end
-  local dest = (file and file ~= '') and file or spec.file
-  if type(dest) ~= 'string' or dest == '' then
-    dest = home_board()
-  end
+  -- where the words go, best first: a file the instance gave, a board it named
+  -- instead of a path ('ing', the project's title), a board the words name, the
+  -- file the editor wrote into the spec, and the board this shell stands in.
+  -- The instance cannot read the vault, so a name it half-remembers still lands
+  -- in the right board here rather than in whatever file it happened to type.
+  local own = type(spec.file) == 'string' and spec.file or ''
+  local given = type(file) == 'string' and vim.trim(file) or ''
+  local dest = (is_file(given) and vim.fn.expand(given)) or named_board(given) or named_board(words) or (is_file(own) and vim.fn.expand(own)) or home_board()
   if type(dest) ~= 'string' or dest == '' then
     say 'nowhere to file the words: this shell stands in no project'
     return nil
@@ -2312,7 +2453,7 @@ function M.talk(spec_path, file)
   -- where the words went and that the run is under way -- and leaves the
   -- :ID:, the path and the pane to the board, where they are read letter by
   -- letter and a voice reads them as noise.
-  say(('filed "%s" on the %s board, and the run is going'):format(ticket.title, vim.fs.stem(ticket.file)))
+  say(('filed "%s" on the %s board, and the run is going'):format(ticket.title, vim.fn.fnamemodify(ticket.file, ':t:r')))
   return preset.lnum
 end
 

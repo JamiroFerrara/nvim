@@ -38,9 +38,10 @@
 -- the entry under the cursor in the list. The talking instance is told, and
 -- the ticket it files hangs under that entry, so a spoken command lands in the
 -- project the user was reading. A listen with nothing highlighted carries no
--- target, and the board is the project nvim is working in: the words go where a
--- capture from that directory would, so the instance is never left asking
--- which file they belong to.
+-- target, and the board is the one the words name ('in the ing project'), else
+-- the project nvim is working in: the words go where a capture from that
+-- directory would, so the instance is never left asking which file they belong
+-- to.
 --
 -- The instance answers; it never asks. A line that leaves something open is
 -- read the plainest way and the reply says what was taken, because a question
