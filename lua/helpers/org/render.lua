@@ -2,6 +2,13 @@
 -- in a browser, and the TODO dashboard. The `O` mapping is buffer-local in
 -- org files -- `o` / `O` stay the editor's own everywhere else -- and the
 -- commands reach the same views from anywhere.
+--
+-- Rendering is the renderer's: a feature that only changes how org reads
+-- goes in helpers/org/web (export, then headings/markdown/highlight/clicks),
+-- never in the buffer as syntax, conceal or extmarks. Nothing has to be
+-- built twice -- the browser is the view that gets the work, and the editor
+-- stays the editor. The buffer-side rendering that predates this rule
+-- (helpers/org/decorations, blocks, callouts, links) stays as it is.
 local M = {}
 
 function M.setup()
