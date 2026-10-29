@@ -2109,6 +2109,60 @@ local function say_to_run(target, words, view)
   return pane
 end
 
+--- The words that make a line a question on their own: it ends on a question
+--- mark, or opens on one of these.
+local ASKS = {}
+for _, word in ipairs {
+  'what',
+  'why',
+  'how',
+  'when',
+  'where',
+  'who',
+  'whom',
+  'whose',
+  'which',
+  'is',
+  'are',
+  'was',
+  'were',
+  'do',
+  'does',
+  'did',
+  'can',
+  'could',
+  'should',
+  'would',
+  'will',
+  'shall',
+  'may',
+  'might',
+  'have',
+  'has',
+  'had',
+} do
+  ASKS[word] = true
+end
+
+--- Does this line ask something rather than order it? A question is the one
+--- line that is meant to be answered, and the net below must not put the
+--- user's question on the board as a job: a line said as a question gets the
+--- talking instance's answer, and nothing else. A request dressed as a
+--- question ("can you fix the importer?") is the instance's to file -- this
+--- only stops the net from filing for it.
+---@param words string|nil
+---@return boolean
+local function asks(words)
+  local line = vim.trim(tostring(words or ''))
+  if line == '' then
+    return false
+  end
+  if line:sub(-1) == '?' then
+    return true
+  end
+  return ASKS[line:lower():match '^([%a]+)'] == true
+end
+
 --- The net under the talking instance, armed once per line: `path` is the spec
 --- the words were written to, and the instance was handed a message telling it
 --- to file them. Its one silent failure is a reply without the write -- the
@@ -2124,7 +2178,9 @@ end
 --- gets there later is told the words are already a ticket.
 ---
 --- Nothing in the instance's rules mentions this: a net it knows about is a
---- net it leans on.
+--- net it leans on. What it does not do is file a question (`asks`): those are
+--- the instance's to answer, and a net that turned them into tickets would put
+--- every question the user asked on the board as a job.
 ---@param path string the spec file the words were written to
 local function net(path)
   vim.defer_fn(function()
@@ -2135,6 +2191,9 @@ local function net(path)
       return
     end
     if type(spec.filed) == 'string' and spec.filed ~= '' then
+      return
+    end
+    if asks(spec.text) then
       return
     end
     pcall(M.talk, path)
