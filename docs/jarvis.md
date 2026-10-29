@@ -97,17 +97,17 @@ a half.
    shows up as it is said. `OMP_VOICE_PARTIAL` sets that clock (`0` turns the
    re-reads off).
 4. When the listening window ends (or a second click stops it), the whole wav
-   goes to whisper.cpp, to a command of the user's, or to Windows' own
-   recognizer run on the file. The transcript is the words the run receives.
-   whisper.cpp reads the finished sentence with the best English model on the
-   machine (`ggml-small.en.bin` before `ggml-base.en.bin`, and so on up to
-   `ggml-medium.en.bin`; `OMP_VOICE_WHISPER_MODEL` or `whisper_model` in setup
-   overrides), and the sentence while it is still being said with
-   `ggml-base.en.bin` if it is there: reading a recording costs the same
-   whatever its length — whisper encodes a fixed thirty seconds — so the words
-   on the card come from the quick model and the words that start a run come
-   from the accurate one. A read of a sentence takes a few seconds on a CPU;
-   it is the only slow part of a listen.
+   goes to Handy's own model, to whisper.cpp, to a command of the user's, or to
+   Windows' own recognizer run on the file. The transcript is the words the run
+   receives. whisper.cpp reads the finished sentence with the best English
+   model on the machine (`ggml-small.en.bin` before `ggml-base.en.bin`, and so
+   on up to `ggml-medium.en.bin`; `OMP_VOICE_WHISPER_MODEL` or
+   `whisper_model` in setup overrides), and the sentence while it is still
+   being said with `ggml-base.en.bin` if it is there: reading a recording costs
+   the same whatever its length — whisper encodes a fixed thirty seconds — so
+   the words on the card come from the quick model and the words that start a
+   run come from the accurate one. A read of a sentence takes a few seconds on
+   a CPU; it is the only slow part of a listen.
 5. The words go to a fresh `omp` pane (`helpers/org/ai.lua`'s `open_prompt`),
    carrying one line of context — that they were said on the dashboard, the
    view's name, and where the vault is. From there the run decides what to do
@@ -119,13 +119,29 @@ a transcriber asked about silence still answers — whisper makes a word of it,
 `you`, or `(crickets chirping)` — and non-speech markers like that are cut from
 the words before they are used.
 
-The transcriber is whisper.cpp when the machine has it — `whisper-cli` on
-`PATH`, and a `ggml-*.bin` model in `~/.local/share/whisper`, `~/.cache/whisper`
-or `/usr/share/whisper.cpp` — and Windows' own recognizer when it does not. The
+The transcriber is Handy's own model when both halves are there — the Windows
+dictation app installed, and `transcribe-cli` (the command line of
+[transcribe.cpp](https://github.com/handy-computer/transcribe.cpp), the engine
+Handy ships) on `PATH`. Handy keeps its models in the Windows profile's Hugging
+Face cache and names the one in use in its settings; the run reads that name, so
+whichever model is picked in Handy is the one dictation uses here, and changing
+it there changes it here. The model file has to be readable from the Linux side,
+and a memory-mapped read straight off the Windows drive is slow enough to turn a
+sentence into half a minute, so it is copied once into `~/.cache/omp/voice` and
+read from there — until that first copy lands, a listen falls back to whatever
+else is installed. (`transcribe-cli` builds with `cmake -B build && cmake
+--build build` in that repository; `build/bin/transcribe-cli` is the file to
+put on `PATH`.)
+
+Failing that, whisper.cpp when the machine has it — `whisper-cli` on `PATH`, and
+a `ggml-*.bin` model in `~/.local/share/whisper`, `~/.cache/whisper` or
+`/usr/share/whisper.cpp` — and Windows' own recognizer when it does not. The
 Windows one is the reason the model matters: it reads clear speech and then
 loses the sentence in room noise (`this is a vocal command test` came back as
-`was the motive mom's house`), where whisper gets it right on the same audio.
+`was the motive mom's house`), where Handy's model gets it right on the same
+audio.
 
 Overrides, when detection guesses wrong: `OMP_VOICE_SPEAK`, `OMP_VOICE_TTS`,
-`OMP_VOICE_STT`, `OMP_VOICE_WHISPER_MODEL`, `OMP_VOICE_LANG`,
-`OMP_VOICE_PIPER_MODEL`, `OMP_VOICE_LISTEN_SECONDS`, `OMP_VOICE_PARTIAL`.
+`OMP_VOICE_STT`, `OMP_VOICE_HANDY_MODEL` (a gguf path),
+`OMP_VOICE_WHISPER_MODEL`, `OMP_VOICE_LANG`, `OMP_VOICE_PIPER_MODEL`,
+`OMP_VOICE_LISTEN_SECONDS`, `OMP_VOICE_PARTIAL`.
