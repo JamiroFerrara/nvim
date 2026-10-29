@@ -1116,11 +1116,6 @@ local function launch(text)
   run = { pane = pane, title = title, at = os.time() }
   set_phase('sent', { heard = text })
   watch_run()
-  -- the words went somewhere: the little window that says what the runs are
-  -- doing comes up, so the run is not just a pane off screen
-  if pane ~= '' then
-    require('helpers.org.runs').show()
-  end
 end
 
 --- Does the card say anything at all? Off by default: it is a microphone and

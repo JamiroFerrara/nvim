@@ -13,9 +13,14 @@
 --
 -- The window is informational: it does not take the focus, so it can come up
 -- while you are typing. `<leader>ov` (or `:OrgRuns`) toggles it, `q` closes it
--- from inside, and `<CR>` on a run brings that run's pane up in tmux. It comes
--- up by itself when the voice card starts a run -- the words go somewhere, and
--- that somewhere is what you are watching -- and stays down once you close it.
+-- from inside, and `<CR>` on a run brings that run's pane up in tmux.
+--
+-- It never opens on its own: it is down until you ask for it, and down again
+-- once you close it. Nothing is polled while it is down, so a hidden window
+-- costs nothing. It used to come up when the voice card started a run; that
+-- is off for now, because a popup over the entry you are reading is noise.
+-- The way back is one call -- `require('helpers.org.runs').show()` at the end
+-- of the voice launcher (helpers/org/voice.lua, `launch`).
 
 local M = {}
 
@@ -34,10 +39,6 @@ local ns = vim.api.nvim_create_namespace 'org_runs'
 --- for `LINGER` seconds so the window can say how it ended.
 ---@type table<string, table>
 local known = {}
-
---- Has the user closed the window since the last run started? A new voice run
---- opens it again whatever this says.
-local dismissed = false
 
 --- The window, its buffer, and the pane each of its lines jumps to.
 local win, buf, line_panes, empty_since = nil, nil, {}, nil
@@ -286,47 +287,46 @@ local function render(entries)
   end
 end
 
---- One look at the runs, and the window brought in line with them.
-function M.sync()
-  if dismissed and not (win and vim.api.nvim_win_is_valid(win)) then
-    -- closed by the user: nothing to draw until a new voice run asks for it
-    return
-  end
+--- One look at the runs: who is there, and the step each live one is on.
+---@return table[] entries
+local function look()
   local entries = scan()
-  local running = false
   for _, run in ipairs(entries) do
     if run.alive then
-      running = true
       run.line = activity(run.key) or run.line
     end
   end
-  if win and vim.api.nvim_win_is_valid(win) then
-    render(entries)
-    if #entries == 0 then
-      empty_since = empty_since or os.time()
-      if os.time() - empty_since >= IDLE_HIDE then
-        close()
-      end
-    else
-      empty_since = nil
-    end
+  return entries
+end
+
+--- One look at the runs, and the window brought in line with them. Only a
+--- window already open is drawn: a tick never opens one, and a window that is
+--- down is not looked at at all -- no tmux call, no transcript read.
+function M.sync()
+  if not (win and vim.api.nvim_win_is_valid(win)) then
     return
   end
-  if not dismissed and running then
+  local entries = look()
+  render(entries)
+  if #entries == 0 then
+    empty_since = empty_since or os.time()
+    if os.time() - empty_since >= IDLE_HIDE then
+      close()
+    end
+  else
     empty_since = nil
-    render(entries)
   end
 end
 
---- Open the window (and keep it open against a run that ends right away).
+--- Open the window (`<leader>ov`, `:OrgRuns`). It is a look you asked for, so
+--- it comes up even with no run in flight, and says so.
 function M.show()
-  dismissed = false
-  M.sync()
+  empty_since = nil
+  render(look())
 end
 
---- Close the window, and leave it closed for the runs already in flight.
+--- Close the window; it stays down until it is asked for again.
 function M.hide()
-  dismissed = true
   close()
 end
 

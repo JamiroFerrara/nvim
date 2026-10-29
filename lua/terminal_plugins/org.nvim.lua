@@ -133,8 +133,8 @@
 --                   a ticket's, a project's orchestrator, a voice run -- with
 --                   what it was asked, how long it has been going, and the
 --                   step it is on now (the run's own transcript, through
---                   helpers/org/web/live.lua). It comes up when the voice
---                   card starts a run and stays down once closed.
+--                   helpers/org/web/live.lua). It never opens on its own: it
+--                   is down until asked for, and down again once closed.
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
