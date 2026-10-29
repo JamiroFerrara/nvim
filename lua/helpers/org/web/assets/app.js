@@ -1097,7 +1097,7 @@ function cycleAllFolds() {
 // The list reads like the TODO view in nvim: j/k and the half page, gg/G,
 // <Tab> to fold an entry, D/T/N/u on the entry at point, dd to delete it,
 // `i` to edit its text here, `o` to open it in the editor, and <Space> for
-// the leader, where `o` + the view key switches views (ow, oo, of, og, op,
+// the leader, where `o` + the view key switches views (ow, oa, oo, of, og, op,
 // oy) and `ai` / `aj` launch or jump to a run.
 const HELP = [
   ['j / k', 'next / previous entry'],
@@ -1117,7 +1117,7 @@ const HELP = [
   ['dd / a', 'delete the entry’s subtree / archive it'],
   ['r', 'refile: then <CR> on the destination'],
   ['/ / ?', 'filter the view / this help'],
-  ['<Space>ow / oo / of / og / op / oy', 'board / open / in flight / by state / priorities / wayfinder'],
+  ['<Space>ow / oa / oo / of / og / op / oy', 'board / agenda / open / in flight / by state / priorities / wayfinder'],
   ['<Space>ai / <Space>aj', 'launch a run on the entry / jump to it'],
 ];
 
@@ -1217,6 +1217,7 @@ function setView(key) {
 
 const VIEW_KEYS = {
   w: 'board',
+  a: 'agenda',
   o: 'open',
   f: 'flight',
   g: 'state',

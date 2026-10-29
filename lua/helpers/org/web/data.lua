@@ -6,6 +6,8 @@
 --
 --   board      the `w` board -- In progress, one section per classification
 --              tag, the untagged rest, Done (most recently closed first)
+--   agenda     the `§` agenda -- the current week, one section per day that
+--              holds work with a SCHEDULED or DEADLINE date, Monday first
 --   open       the `o` list, one section per project file
 --   flight     the `f` list -- NEXT, TEST and WARN, one section per
 --              classification tag (the bug / feat / chore sections, the
@@ -71,6 +73,10 @@ local function entry_of(hl, ctx)
   end
   local title = hl:plain_title()
   local cookie = hl.title:match '%[%d*/%d*%]' or hl.title:match '%[%d*%%%]'
+  local deadline, scheduled = hl:deadline(), hl:scheduled()
+  -- the day the agenda view files the entry under: the deadline it carries,
+  -- else the one it was scheduled for -- the date its own line shows
+  local when = deadline or scheduled
   local ancestors = {}
   local p = hl.parent
   while p do
@@ -93,8 +99,10 @@ local function entry_of(hl, ctx)
     tags = own_tags,
     id = hl.properties and hl.properties.ID or nil,
     session = hl.properties and hl.properties.OMP_SESSION or nil,
-    deadline = hl:deadline() and hl:deadline():to_string() or nil,
-    scheduled = hl:scheduled() and hl:scheduled():to_string() or nil,
+    deadline = deadline and deadline:to_string() or nil,
+    scheduled = scheduled and scheduled:to_string() or nil,
+    day = when and when:days() or nil,
+    at = when and when:minutes() or nil,
     closed = hl:closed() and hl:closed():to_string() or nil,
     changed = changed.label(hl),
     changed_at = latest and latest:minutes() or nil,
@@ -395,6 +403,71 @@ local function flight(entries)
   return sections
 end
 
+-- The `§` agenda over the week the editor draws, Monday to Sunday: the days
+-- already past included, where the closed work of the week sits, and the
+-- dated work a week alone would hide -- what ran past its date above the
+-- week, the days still ahead of it and the weeks behind it below. A day
+-- lists its entries in the order of their time, priority settling the ties.
+local function by_at(a, b)
+  local aa, ab = a.at or math.huge, b.at or math.huge
+  if aa ~= ab then
+    return aa < ab
+  end
+  return by_priority(a, b)
+end
+
+local function agenda(entries)
+  local date = require 'org.date'
+  local start = date.today()
+  local today = start:days()
+  local monday = today - (start:weekday() - 1)
+  local sunday = monday + 6
+  local sections = {}
+  -- the board's Done list cap: a bucket that would run past it says how much
+  -- it left out instead of growing without limit
+  local function section(title, icon, items, newest_first)
+    table.sort(items, newest_first and function(a, b)
+      return by_at(b, a)
+    end or by_at)
+    local shown = vim.list_slice(items, 1, 100)
+    if #shown > 0 then
+      sections[#sections + 1] = {
+        title = title,
+        icon = icon,
+        items = indent(shown),
+        note = #items > #shown and ('%d more'):format(#items - #shown) or nil,
+      }
+    end
+  end
+
+  section('Overdue', '!', pick(entries, function(e)
+    return e.day and e.day < today and not e.done
+  end))
+  for d = monday, sunday do
+    local label = date.from_days(d):strftime '%a %d %b'
+    local title = label
+    if d == today then
+      title = 'Today, ' .. label
+    elseif d == today + 1 then
+      title = 'Tomorrow, ' .. label
+    end
+    -- a day gone by lists what was closed on it; its open work is Overdue,
+    -- one section above, and a second copy here would say nothing new
+    section(title, '◷', pick(entries, function(e)
+      return e.day == d and (d >= today or e.done)
+    end))
+  end
+  section('Later', '›', pick(entries, function(e)
+    return e.day and e.day > sunday
+  end))
+  -- the weeks behind the one on screen, latest first: the closed work that
+  -- would otherwise leave the agenda for good
+  section('Earlier', '‹', pick(entries, function(e)
+    return e.day and e.day < monday and e.done
+  end), true)
+  return sections
+end
+
 local function state_sections(entries)
   local sections = {}
   for _, state in ipairs(GROUP_STATES) do
@@ -462,6 +535,7 @@ end
 
 local VIEWS = {
   { key = 'board', title = 'Board', icon = '▦' },
+  { key = 'agenda', title = 'Agenda', icon = '◷' },
   { key = 'flight', title = 'In flight', icon = '▶' },
   { key = 'open', title = 'All open', icon = '≡' },
   { key = 'state', title = 'By state', icon = '●' },
@@ -509,6 +583,8 @@ function M.payload(file)
     local sections
     if view.key == 'board' then
       sections = board(scoped)
+    elseif view.key == 'agenda' then
+      sections = agenda(scoped)
     elseif view.key == 'open' then
       sections = by_project(scoped, projects)
     elseif view.key == 'flight' then
