@@ -275,8 +275,8 @@ ul.entries {
 
 li.entry {
   display: grid;
-  /* state, priority, fold, title, tags, date, project, do */
-  grid-template-columns: 52px 14px 14px minmax(0, 1fr) auto auto 150px 34px;
+  /* state, priority, fold, title, tags, date, project, do, acts */
+  grid-template-columns: 52px 14px 14px minmax(0, 1fr) auto auto 150px 34px auto;
   align-items: center;
   gap: 10px;
   padding: 4px 8px;
@@ -422,6 +422,61 @@ li.entry button.do.running {
   color: var(--teal);
 }
 
+/* the two write buttons of a row -- `✓` / `↺` and `✕`, the pair a rendered
+   headline carries: quiet until the row is under the pointer, so a list of
+   tickets does not read as a wall of buttons, and shown outright where there
+   is no pointer to hover with */
+li.entry .row-acts {
+  display: flex;
+  gap: 2px;
+}
+
+li.entry .row-acts button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--overlay);
+  border-radius: 5px;
+  padding: 0 4px;
+  line-height: 18px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+
+li.entry:hover .row-acts button,
+li.entry .row-acts button:focus-visible {
+  opacity: 1;
+}
+
+li.entry .row-acts .flip:hover {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+li.entry .row-acts .flip.closed:hover {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+
+li.entry .row-acts .kill:hover,
+li.entry .row-acts .kill.armed {
+  color: var(--red);
+  border-color: var(--red);
+  opacity: 1;
+}
+
+@media (hover: none) {
+  li.entry .row-acts button {
+    opacity: 0.75;
+    /* a thumb, not a pointer: the row grows to the size a finger needs */
+    min-height: 26px;
+    min-width: 26px;
+    padding: 0 6px;
+  }
+}
+
 /* a Runs view row is a run, not a ticket: it has nothing to start, so it
    keeps the row without the action's column */
 li.entry.run-row {
@@ -434,7 +489,7 @@ li.entry.run-row {
    action. The time and the numbers are tabular so the columns line up down
    the list, the way they do in the editor's agenda. */
 li.entry.agenda-row {
-  grid-template-columns: 88px 52px 14px minmax(0, 1fr) auto 150px 34px;
+  grid-template-columns: 88px 52px 14px minmax(0, 1fr) auto 150px 34px auto;
 }
 
 li.entry.agenda-row .at {
@@ -1414,7 +1469,7 @@ li.entry .live-line {
   /* the row grows to a thumb's height, and the state chip to the smallest
      target a finger hits without aiming */
   li.entry {
-    grid-template-columns: 56px 16px 40px minmax(0, 1fr) 44px;
+    grid-template-columns: 56px 16px 40px minmax(0, 1fr) 44px auto;
     gap: 4px;
     min-height: 52px;
     padding: 4px;
@@ -1435,7 +1490,7 @@ li.entry .live-line {
      columns on the left, the title takes the rest, the action the right edge;
      the priority and the tags go the way of the other views' */
   li.entry.agenda-row {
-    grid-template-columns: 52px 56px minmax(0, 1fr) 44px;
+    grid-template-columns: 52px 56px minmax(0, 1fr) 44px auto;
   }
 
   li.entry.agenda-row .prio {

@@ -155,6 +155,7 @@ function entryRow(entry) {
     launchEntry(entry, !!runKey(entry));
   });
   li.append(doButton);
+  li.append(rowActs(entry));
 
   const key = runKey(entry);
   if (key) {
@@ -227,6 +228,8 @@ function agendaRow(entry) {
   } else {
     li.append(el('span', ''));
   }
+  // a diary line is not a ticket: nothing to close and nothing to delete
+  li.append(live ? rowActs(entry) : el('span', 'row-acts'));
 
   const key = runKey(entry);
   if (key) {
@@ -1257,6 +1260,51 @@ async function removeEntry(entry) {
     closeDetail();
     await reload();
   }
+}
+
+// The two buttons a row carries, the pair a rendered headline carries in the
+// pane and on the `O` page: `✓` closes the ticket in one click and `↺` opens
+// it again, `✕` deletes it after a second click that says what it will do.
+// Drawn here rather than in the exported document, so a ticket is finished or
+// dropped from the list itself, without opening it first.
+function rowActs(entry) {
+  const lists = (state.data && state.data.keywords) || { open: ['TODO'], done: ['DONE'] };
+  const open = lists.open[0] || 'TODO';
+  const done = lists.done[0] || 'DONE';
+  const closed = (lists.done || []).includes(entry.todo);
+
+  const acts = el('span', 'row-acts');
+
+  const flip = el('button', 'flip' + (closed ? ' closed' : ''), closed ? '↺' : '✓');
+  flip.type = 'button';
+  flip.title = closed ? 'back to ' + open : 'mark ' + done;
+  flip.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    setState(entry, closed ? open : done);
+  });
+
+  const kill = el('button', 'kill', '✕');
+  kill.type = 'button';
+  kill.title = 'delete this ticket and everything under it';
+  kill.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (!kill.dataset.armed) {
+      kill.dataset.armed = '1';
+      kill.textContent = 'delete?';
+      kill.classList.add('armed');
+      clearTimeout(kill._disarm);
+      kill._disarm = setTimeout(() => {
+        delete kill.dataset.armed;
+        kill.textContent = '✕';
+        kill.classList.remove('armed');
+      }, 4000);
+      return;
+    }
+    removeEntry(entry);
+  });
+
+  acts.append(flip, kill);
+  return acts;
 }
 
 async function archiveEntry(entry) {
