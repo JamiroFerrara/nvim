@@ -88,7 +88,9 @@ a half.
 
 ## The conversation behind it
 
-1. `POST /api/voice` with `{view}` — the dashboard's current view title.
+1. `POST /api/voice` with `{view, entry}` — the dashboard's current view title,
+   and the entry the list has highlighted (its file, line, `:ID:` and title, or
+   nothing when none is).
 2. nvim (`helpers/org/voice.lua`) records through PulseAudio (`parec`) into a
    16 kHz mono wav, measuring each chunk on the way in and publishing the level
    on `GET /api/voice`; the card draws it as the bar.
@@ -108,11 +110,26 @@ a half.
    the words on the card come from the quick model and the words that start a
    run come from the accurate one. A read of a sentence takes a few seconds on
    a CPU; it is the only slow part of a listen.
-5. The words go to a fresh `omp` pane (`helpers/org/ai.lua`'s `open_prompt`),
-   carrying one line of context — that they were said on the dashboard, the
-   view's name, and where the vault is. From there the run decides what to do
-   inside the org system; the card's part ends. When the voice is on, the
-   transcript is spoken back first.
+5. The words go to an `omp` run (`helpers/org/ai.lua`'s `open_prompt`). What
+   the run is handed depends on what the page had highlighted when the mic was
+   clicked:
+
+   - **an entry highlighted** — the words become a ticket first, and the
+     ordinary ticket run works it (`launch_targets`): a `TODO` headline nested
+     under the highlighted one, its body the words under the capture header, and
+     then the same drawer (`:ID:`, `:OMP_SESSION:`, `:OMP_LAUNCH:`), the claim to
+     `NEXT`, the project checkpoint and the pane any `<leader>ai` launch gives a
+     ticket. The command is on the board before a run touches it, and the run
+     opens on a ticket already filed in the project the user was reading instead
+     of guessing which project the words meant. The card says which entry it will
+     use — `ticket under “…” — click the mic to speak`.
+   - **nothing highlighted** — the words start a run of their own, carrying one
+     line of context: that they were said on the dashboard, the view's name, and
+     where the vault is. From there the run decides what to do inside the org
+     system.
+
+   Either way the card's part ends there. When the voice is on, the transcript is
+   spoken back first.
 
 A recording that never rose above the meter's floor is an error, not a listen:
 a transcriber asked about silence still answers — whisper makes a word of it,

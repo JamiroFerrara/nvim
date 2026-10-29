@@ -104,9 +104,10 @@
     if (s.phase === 'error') return 'click the mic to try again';
     if (s.stt === false) return 'no microphone on this machine';
     // the entry the list has highlighted: the words become a ticket under it,
-    // and saying so is what makes the pre-selection visible before the click
-    const under = s.target && s.target.title ? `under “${s.target.title}”` : '';
-    return (under ? `ticket ${under} — ` : '') + 'click the mic to speak';
+    // and saying so is what makes the pre-selection visible before the click.
+    // Read off the page, not the server, so it follows the cursor.
+    const picked = highlighted();
+    return (picked && picked.title ? `ticket under “${picked.title}” — ` : '') + 'click the mic to speak';
   }
 
   // the run holding the words: which pane, and whether it is still working.
