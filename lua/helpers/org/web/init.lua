@@ -14,6 +14,11 @@
 -- refetches. The server listens on the loopback address only, the way
 -- markdown-preview.nvim's does.
 --
+-- The phone reaches the same pages through an ngrok tunnel started beside the
+-- server (helpers/org/web/share.lua): its address and the QR of it are the
+-- rail's last card, and `:OrgWebShare` copies it and opens the page that
+-- draws it. `g:org_web_share = false` keeps the vault off a public address.
+--
 -- The dashboard carries the voice card (`/api/voice`, drawn by
 -- assets/jarvis.js): the click starts a conversation in helpers/org/voice.lua
 -- -- record, report the level and the words so far, transcribe, then an `omp`

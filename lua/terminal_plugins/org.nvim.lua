@@ -113,7 +113,12 @@
 --                   TODO dashboard -- the board, in-flight, all-open,
 --                   by-state, priority and wayfinder lists, sectioned and
 --                   sorted like the views above -- as a page whose clicks
---                   come back into nvim (a state change, opening an entry)
+--                   come back into nvim (a state change, opening an entry).
+--                   An ngrok tunnel runs beside the server so the same page
+--                   opens on a phone (`:OrgWebShare`): the rail carries its
+--                   address and a QR code of it (`helpers/org/web/share.lua`,
+--                   `qr.lua`), and a narrow window lays the page out as one
+--                   column for that screen
 --   voice.lua       the engine behind the recording card on the dashboard
 --                   (helpers/org/web/assets/jarvis.js): a click there is
 --                   `POST /api/voice`, which records through PulseAudio while

@@ -1160,6 +1160,7 @@ li.entry .live-line {
 
   #projects button {
     flex: 0 0 auto;
+    width: auto;
   }
 
   #totals {
@@ -1169,6 +1170,29 @@ li.entry .live-line {
   #share {
     margin: 4px 0 0;
     padding: 6px 4px 0;
+  }
+
+  /* Open, the code floats over the list instead of pushing it down: it is
+     something to point a camera at, not part of the bar. */
+  #share.open {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    top: auto;
+    bottom: 10px;
+    z-index: 45;
+    width: auto;
+    margin: 0;
+    padding: 12px;
+    background: var(--mantle);
+    border: 1px solid var(--surface1);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  }
+
+  #share.open #share-qr svg {
+    width: min(220px, 58vw);
+    margin: 0 auto;
   }
 
   main {

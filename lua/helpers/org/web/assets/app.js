@@ -1520,14 +1520,21 @@ function renderShare(share) {
     shareTimer = null;
   }
 
+  const qrBox = $('#share-qr');
+  const power = $('#share-off');
+
   if (share.status === 'up' && share.url) {
     label.textContent = '◲ phone ready';
     card.classList.add('on');
-    const qrBox = $('#share-qr');
-    if (share.qr && !qrBox.childElementCount) qrBox.innerHTML = share.qr;
+    // a new tunnel comes with a new address, and its code has to follow it
+    if (share.qr && qrBox.dataset.url !== share.url) {
+      qrBox.innerHTML = share.qr;
+      qrBox.dataset.url = share.url;
+    }
     link.href = share.url;
     link.textContent = share.url.replace(/^https?:\/\//, '');
     note.textContent = 'Scan with your phone camera, or open the link.';
+    power.textContent = 'stop';
     body.hidden = false;
     return;
   }
@@ -1535,6 +1542,9 @@ function renderShare(share) {
   card.classList.remove('on');
   label.textContent = '◲ phone';
   body.hidden = false;
+  power.textContent = 'share';
+  qrBox.replaceChildren();
+  delete qrBox.dataset.url;
   link.removeAttribute('href');
   link.textContent = '';
   if (share.status === 'starting') {
@@ -1567,12 +1577,14 @@ $('#share-copy').addEventListener('click', async () => {
   showToast('link copied');
 });
 
+// The one switch: stop the tunnel while it is up, put it back when it is not.
 $('#share-off').addEventListener('click', async () => {
+  const up = $('#share').classList.contains('on');
   try {
-    renderShare(await api('/api/share', { method: 'POST', body: JSON.stringify({ on: false }) }));
-    showToast('phone door closed');
+    renderShare(await api('/api/share', { method: 'POST', body: JSON.stringify({ on: !up }) }));
+    showToast(up ? 'phone door closed' : 'putting a public address up…');
   } catch (err) {
-    showToast('could not close it');
+    showToast('could not reach nvim');
   }
 });
 
