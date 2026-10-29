@@ -138,6 +138,11 @@ local function handle(req, res)
       json(res, require('helpers.org.voice').status())
       return
     end
+    if body.stop then
+      require('helpers.org.voice').stop()
+      json(res, require('helpers.org.voice').status())
+      return
+    end
     local started = require('helpers.org.voice').converse(body.view)
     json(res, { started = started, status = require('helpers.org.voice').status() })
     return

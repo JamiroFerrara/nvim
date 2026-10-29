@@ -8,10 +8,17 @@
 --   1. listen -- record through PulseAudio and report the level as it goes,
 --      so a machine whose microphone is dead looks dead instead of silent
 --   2. read the recording back into words -- the sentence so far, a piece at
---      a time while it is still being said, then all of it at the end
+--      a time while it is still being said, then all of it at the end. On a
+--      machine whose only transcriber is Windows' own, one recognizer stays
+--      open for the whole listen (`reader_start`), because starting it costs
+--      more than reading a few seconds of audio does
 --   3. hand the words to an `omp` instance in a tmux pane
 --      (`helpers.org.ai.open_prompt`): that run decides what to do with them
---      inside the org system, the buddy only carries the words
+--      inside the org system, the buddy only carries the words -- and the
+--      card keeps saying what became of that run (`M.status().run`)
+--
+-- A click while listening stops the recording and reads it back (`M.stop`);
+-- throwing it away is `M.cancel`, the card's escape key.
 --
 -- The card is silent: speaking is off unless asked for (`OMP_VOICE_SPEAK=1`,
 -- or `speak = true` in setup), because the voice was getting in the way of
@@ -34,9 +41,10 @@
 -- `0` turns them off).
 --
 -- The browser polls `GET /api/voice` for `M.status()`: the phase is what the
--- card draws (idle, speaking, listening, thinking, error), `partial` the words
--- it has made of a sentence still being said, and `heard` the words the
--- finished recording produced.
+-- card draws (idle, speaking, listening, thinking, sent, error), `partial` the
+-- words it has made of a sentence still being said, `heard` the words the
+-- finished recording produced, and `run` the pane the words went to and
+-- whether it is still working.
 
 local M = {}
 
@@ -68,7 +76,7 @@ local tts_backend, stt_backend
 
 local opts = {
   listen_seconds = 10,
-  partial_seconds = 1.5,
+  partial_seconds = 0.4,
   lang = nil,
   tts = nil,
   stt = nil,
@@ -95,6 +103,17 @@ local state = {
   signal = false,
 }
 
+--- The run the last words started: the pane it lives in, what the pane was
+--- called and when it was opened. The card draws what became of it, so the
+--- words do not vanish into a pane the user cannot see.
+local run = { pane = '', title = '', at = 0 }
+
+--- Asked of tmux, once the words have gone (the run section below).
+local run_alive
+
+--- The timer that watches that run's pane (the run section below).
+local run_timer
+
 local function set_phase(phase, extra)
   state.phase = phase
   state.at = os.time()
@@ -117,6 +136,7 @@ function M.status()
     level = state.level,
     level_db = state.level_db,
     signal = state.signal,
+    run = { pane = run.pane, title = run.title, at = run.at, alive = run.pane ~= '' and run_alive(run.pane) or false },
     speak = opts.speak and tts_backend() ~= nil,
     tts = tts_backend() ~= nil,
     stt = stt_backend() ~= nil,
@@ -404,6 +424,10 @@ local function drop_partial()
   end
 end
 
+--- The open recognizer's parts, filled in below ("the open recognizer"): the
+--- end of a listen closes it, so the names have to exist by then.
+local reader_start, reader_stop, reader_exit, reader_ask, reader_parse
+
 --- Close the listen and hand `text` (empty when nothing was heard) to `done`,
 --- once. Every way out -- the recognizer answering, the recorder stopped, the
 --- cap firing, a program failing -- comes through here, so the phase always
@@ -415,6 +439,10 @@ end
 local function heard(text, done)
   drop_timer()
   drop_partial()
+  reader_stop()
+  if job.wav then
+    pcall(uv.fs_unlink, job.wav)
+  end
   job.proc = nil
   job.wav = nil
   state.level = 0
@@ -482,6 +510,20 @@ local function transcribe(wav, backend, done, quiet)
   end)
 end
 
+--- Write the two sizes into the wav's header, so the file names its own length
+--- at whatever moment it is read: the recorder writes a zero length first and
+--- the real one is filled in here. Safe while the recorder is still writing
+--- (the samples go at a fixed offset past the header), which is what lets a
+--- reader open the recording while the sentence is still being said.
+local function patch_sizes()
+  if not job.fd or not job.bytes then
+    return
+  end
+  local bytes = job.bytes
+  pcall(uv.fs_write, job.fd, u32(36 + bytes), 4)
+  pcall(uv.fs_write, job.fd, u32(bytes), 40)
+end
+
 --- Close the wav and fill in its two sizes, so the file is whole before any
 --- transcriber opens it. Safe to call twice: the handle is gone after the
 --- first.
@@ -489,9 +531,7 @@ local function close_wav()
   if not job.fd then
     return
   end
-  local bytes = job.bytes or 0
-  pcall(uv.fs_write, job.fd, u32(36 + bytes), 4)
-  pcall(uv.fs_write, job.fd, u32(bytes), 40)
+  patch_sizes()
   pcall(uv.fs_close, job.fd)
   job.fd = nil
 end
@@ -526,12 +566,245 @@ local function snapshot()
   return path
 end
 
+-- ------------------------------------------------------- the open recognizer
+
+--- Windows' own recognizer, kept open for the whole listen. Words have to show
+--- up on the card while the sentence is still being said, and starting
+--- PowerShell -- loading System.Speech and building a grammar -- costs more
+--- than reading a few seconds of audio does; kept open, a read is the
+--- recognition and nothing else, on one engine built while the recorder is
+--- already running. The process reads its wav path from its first stdin line,
+--- then answers one line per question it is asked: `\1` is what a peek found,
+--- `\2` what the final read found, and `QUIT` ends it.
+local PS_READ = table.concat({
+  'Add-Type -AssemblyName System.Speech;',
+  '$p = [Console]::In.ReadLine();',
+  'if ($null -ne $p) {',
+  '$p = $p.Trim();',
+  '$eng = New-Object System.Speech.Recognition.SpeechRecognitionEngine;',
+  '$eng.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar));',
+  'function Words($f) {',
+  '  $o = @();',
+  '  try {',
+  '    $eng.SetInputToWaveFile($f);',
+  '    while ($true) {',
+  '      try { $x = $eng.Recognize() } catch { break };',
+  '      if ($null -eq $x) { break };',
+  '      $o += $x.Text',
+  '    }',
+  '  } catch { };',
+  "  return (($o -join ' ').Trim())",
+  '};',
+  'while ($true) {',
+  '  $l = [Console]::In.ReadLine();',
+  '  if ($null -eq $l) { break };',
+  '  $l = $l.Trim();',
+  "  if ($l -eq 'QUIT') { break };",
+  '  $t = [char]1;',
+  "  if ($l -eq 'FINAL') { $t = [char]2 };",
+  '  [Console]::Out.WriteLine($t + (Words $p));',
+  '  [Console]::Out.Flush();',
+  "  if ($l -eq 'FINAL') { break }",
+  '}',
+  '}',
+}, ' ')
+
+--- The open recognizer: its process, the recording it reads, and the answer a
+--- final read is still owed.
+local reader = { proc = nil, wav = nil, buf = '', final = nil }
+
+--- The path a Windows program needs to open this recording: it is in a Linux
+--- directory, and Windows reads it through the WSL share.
+---@param wav string
+---@return string
+local function win_path(wav)
+  local out = vim.fn.systemlist { 'wslpath', '-w', wav }
+  if vim.v.shell_error ~= 0 then
+    return ''
+  end
+  return vim.trim(out[1] or '')
+end
+
+--- Start the recognizer on `wav`, or say it is already open. PowerShell is the
+--- only one it knows: every other transcriber is cheap enough to start per
+--- read.
+---@param wav string|nil
+---@return boolean started
+function reader_start(wav)
+  if reader.proc then
+    return true
+  end
+  if not windows() or not wav then
+    return false
+  end
+  local win = win_path(wav)
+  if win == '' then
+    return false
+  end
+  -- declared before the callbacks so they close over the handle that is
+  -- assigned once it exists: a `local ok, handle = ...` would leave them
+  -- reading a global of the same name, always nil, and every answer would
+  -- look like a dead recognizer's
+  local handle
+  local ok
+  ok, handle = pcall(vim.system, {
+    'powershell.exe',
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    PS_READ,
+  }, {
+    stdin = true,
+    text = true,
+    stdout = function(_, data)
+      if not data or data == '' then
+        return
+      end
+      vim.schedule(function()
+        if reader.proc ~= handle then
+          return
+        end
+        reader.buf = reader.buf .. data
+        reader_parse()
+      end)
+    end,
+  }, function()
+    vim.schedule(function()
+      if reader.proc == handle then
+        reader_exit()
+      end
+    end)
+  end)
+  if not ok then
+    return false
+  end
+  reader.proc, reader.wav, reader.buf = handle, wav, ''
+  local wrote = pcall(function()
+    handle:write(win .. '\n')
+  end)
+  if not wrote then
+    reader_stop()
+    return false
+  end
+  return true
+end
+
+--- Let go of the recognizer: the recording stays on disk (`M.cancel` and the
+--- ends of a listen delete it themselves), and nothing left to answer.
+function reader_stop()
+  local handle = reader.proc
+  reader.proc = nil
+  reader.wav, reader.buf, reader.final = nil, '', nil
+  partial.busy, partial.asked = false, nil
+  if handle then
+    pcall(handle.kill, handle, 'sigterm')
+  end
+end
+
+--- The recognizer's process is gone. A final read it owed is taken the one-off
+--- way, so the words are not lost with the process; otherwise the recording is
+--- done and its file goes.
+function reader_exit()
+  local wav, final = reader.wav, reader.final
+  reader.proc, reader.wav, reader.buf, reader.final = nil, nil, '', nil
+  partial.busy, partial.asked = false, nil
+  if state.phase == 'listening' then
+    -- the recording goes on; the next peek starts a recognizer again
+    return
+  end
+  if final and state.phase == 'thinking' and wav and vim.fn.filereadable(wav) == 1 then
+    transcribe(wav, 'windows', final)
+    return
+  end
+  if wav then
+    pcall(uv.fs_unlink, wav)
+  end
+end
+
+--- Ask the open recognizer a question: `PEEK` for the words so far, `FINAL`
+--- for the whole recording. Answers arrive on the reader's stdout.
+---@param cmd string
+---@return boolean asked
+function reader_ask(cmd)
+  local handle = reader.proc
+  if not handle then
+    return false
+  end
+  local ok = pcall(function()
+    handle:write(cmd .. '\n')
+  end)
+  if not ok then
+    reader_stop()
+    return false
+  end
+  return true
+end
+
+--- One line per completed answer: what a peek found goes on the card while the
+--- sentence is still being said, what the final read found is the sentence.
+function reader_parse()
+  while true do
+    local line = reader.buf:match '^([^\n]*)\n'
+    if not line then
+      return
+    end
+    reader.buf = reader.buf:sub(#line + 2)
+    local kind = line:sub(1, 1)
+    local words = vim.trim((line:sub(2):gsub('%s+$', '')))
+    if kind == '\1' then
+      partial.busy, partial.asked = false, nil
+      if state.phase == 'listening' and words ~= '' then
+        state.partial = words
+      end
+    elseif kind == '\2' then
+      local done = reader.final
+      reader.final = nil
+      if done and state.phase == 'thinking' then
+        heard(words, done)
+      end
+    end
+  end
+end
+
+--- Read the growing recording again and again, so the card shows the words
+--- while they are still being said. A read at a time: a recognizer slower than
+--- the clock skips a turn instead of piling up behind itself, and one that
+--- stops answering is replaced rather than waited on forever.
+local function peek_open()
+  local step = opts.partial_seconds
+  partial.timer = uv.new_timer()
+  partial.timer:start(step * 1000, step * 1000, function()
+    vim.schedule(function()
+      if state.phase ~= 'listening' then
+        return
+      end
+      if partial.busy then
+        if uv.now() - (partial.asked or 0) > 5000 then
+          reader_stop()
+          reader_start(job.wav)
+        end
+        return
+      end
+      patch_sizes()
+      partial.busy = true
+      partial.asked = uv.now()
+      if not reader_ask 'PEEK' then
+        partial.busy = false
+      end
+    end)
+  end)
+end
+
 --- Read the words of the recording so far, again and again, until the
 --- recording stops: this is the text the screen shows while the sentence is
 --- still being said.
 ---@param backend string|nil
 local function peek(backend)
   if not backend or (opts.partial_seconds or 0) <= 0 then
+    return
+  end
+  if backend == 'windows' and reader_start(job.wav) then
+    peek_open()
     return
   end
   partial.timer = uv.new_timer()
@@ -574,6 +847,11 @@ local function start_recording(backend, done)
   end
   job.wav, job.fd, job.bytes = wav, fd, 0
   uv.fs_write(fd, wav_header(0), 0)
+  if backend == 'windows' then
+    -- started with the recording, so PowerShell's own startup is paid for
+    -- while the sentence is being said rather than after it
+    reader_start(wav)
+  end
   local function finished()
     close_wav()
     drop_partial()
@@ -590,11 +868,21 @@ local function start_recording(backend, done)
     if not backend then
       pcall(uv.fs_unlink, wav)
       job.wav = nil
+      reader_stop()
       set_phase('error', { error = 'recorded, but no speech-to-text is installed' })
       done ''
       return
     end
     set_phase 'thinking'
+    if backend == 'windows' and reader.proc and reader.wav == wav then
+      -- the recognizer already has the recording open: asking it again is the
+      -- recognition alone, where a fresh process would pay for its startup
+      reader.final = done
+      if reader_ask 'FINAL' then
+        return
+      end
+      reader.final = nil
+    end
     transcribe(wav, backend, done)
   end
   local function on_stdout(_, data)
@@ -652,9 +940,57 @@ end
 
 -- ------------------------------------------------------------------ the run
 
+--- A cheap answer to "is the run still there": the page asks three times a
+--- second while it draws, and asking tmux costs a process. Two seconds is the
+--- shortest age that tells the truth and still misses no ending.
+local seen = { pane = '', at = 0, alive = false }
+
+---@param pane string
+---@return boolean
+function run_alive(pane)
+  if not pane or pane == '' then
+    return false
+  end
+  local now = uv.now()
+  if seen.pane == pane and now - seen.at < 2000 then
+    return seen.alive
+  end
+  local out = vim.fn.systemlist { 'tmux', 'list-panes', '-a', '-F', '#{pane_id}' }
+  local alive = vim.v.shell_error == 0 and vim.tbl_contains(out, pane)
+  seen = { pane = pane, at = now, alive = alive }
+  return alive
+end
+
+--- Watch the run until its pane is gone, then let the card fold away: the
+--- words are the run's now, and the card has said where they went.
+local function watch_run()
+  local function drop()
+    if run_timer then
+      pcall(run_timer.stop, run_timer)
+      pcall(run_timer.close, run_timer)
+      run_timer = nil
+    end
+  end
+  drop()
+  run_timer = uv.new_timer()
+  run_timer:start(2000, 2000, function()
+    vim.schedule(function()
+      if state.phase ~= 'sent' then
+        drop()
+        return
+      end
+      if not run_alive(run.pane) then
+        drop()
+        set_phase 'idle'
+      end
+    end)
+  end)
+end
+
 --- Hand the heard words to a fresh `omp` instance in a tmux pane: from here on
 --- the run decides what to do with them inside the org system, the buddy only
---- carries them and says which view they came from.
+--- carries them and says which view they came from -- and the card goes on
+--- saying whether that run is still working.
 ---@param text string
 local function launch(text)
   if text == '' then
@@ -672,15 +1008,20 @@ local function launch(text)
     text,
     org_dir
   )
+  local title = '🤖 ' .. text:sub(1, 40)
+  local pane
   local ok, err = pcall(function()
-    require('helpers.org.ai').open_prompt(message, '🤖 ' .. text:sub(1, 40))
+    pane = require('helpers.org.ai').open_prompt(message, title)
   end)
-  if not ok then
-    set_phase('error', { error = tostring(err) })
-    notify('voice: ' .. tostring(err), vim.log.levels.ERROR)
+  if not ok or not pane then
+    local why = ok and 'could not open a pane for the words' or tostring(err)
+    set_phase('error', { error = why })
+    notify('voice: ' .. why, vim.log.levels.ERROR)
     return
   end
-  set_phase 'idle'
+  run = { pane = pane, title = title, at = os.time() }
+  set_phase('sent', { heard = text })
+  watch_run()
 end
 
 --- Does the card say anything at all? Off by default: it is a microphone and
@@ -696,7 +1037,7 @@ end
 --- where the words came from.
 ---@param view? string
 function M.converse(view)
-  if state.phase ~= 'idle' and state.phase ~= 'error' then
+  if state.phase ~= 'idle' and state.phase ~= 'error' and state.phase ~= 'sent' then
     return false
   end
   local function begin()
@@ -737,8 +1078,27 @@ function M._said(text)
   end
 end
 
---- Stop whatever is running: the second click on a listening mic, and the
---- escape hatch when a program hangs.
+--- Stop the recording and read the words back: the second click on the mic.
+--- The click that ends a sentence is the one that wants the sentence, so this
+--- closes the recording the way the cap does and lets the transcription run;
+--- `M.cancel` is the other way out, which throws the recording away.
+---@return boolean stopping
+function M.stop()
+  if state.phase ~= 'listening' then
+    return false
+  end
+  local handle = job.proc
+  drop_timer()
+  if not handle then
+    M.cancel()
+    return false
+  end
+  pcall(handle.kill, handle, 'sigint')
+  return true
+end
+
+--- Throw the recording away: the card's escape key, and the escape hatch when
+--- a program hangs. Nothing is read back and no run starts.
 function M.cancel()
   if job.proc then
     local handle = job.proc
@@ -747,12 +1107,13 @@ function M.cancel()
   end
   drop_timer()
   drop_partial()
+  reader_stop()
   if job.fd then
     close_wav()
-    if job.wav then
-      pcall(uv.fs_unlink, job.wav)
-      job.wav = nil
-    end
+  end
+  if job.wav then
+    pcall(uv.fs_unlink, job.wav)
+    job.wav = nil
   end
   set_phase('idle', { heard = '', partial = '', level = 0, level_db = nil })
 end
@@ -801,6 +1162,9 @@ function M.setup(user)
   vim.api.nvim_create_user_command('OrgVoiceCancel', function()
     M.cancel()
   end, { desc = 'voice: stop listening' })
+  vim.api.nvim_create_user_command('OrgVoiceStop', function()
+    M.stop()
+  end, { desc = 'voice: stop recording and read it back' })
 end
 
 return M

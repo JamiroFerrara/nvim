@@ -1609,19 +1609,20 @@ end
 --- of ours to match.
 ---@param text string
 ---@param title? string
----@return boolean started
+---@return string|nil pane the pane the run lives in ('' for a window of its
+--- own, when this is not tmux), or nil when nothing could be started
 function M.open_prompt(text, title)
   local msg = one_line(text)
   if msg == '' then
-    return false
+    return nil
   end
   local argv = { 'omp', msg }
   local name = title or ('🤖 ' .. msg:sub(1, 40))
   if not in_tmux() then
     open_window(argv)
-    return true
+    return ''
   end
-  return open_instance_pane(argv, name, '@omp_voice', tostring(vim.uv.hrtime())) ~= nil
+  return open_instance_pane(argv, name, '@omp_voice', tostring(vim.uv.hrtime()))
 end
 
 --- The climb up the tree, offered to every run at its end: the ordinary

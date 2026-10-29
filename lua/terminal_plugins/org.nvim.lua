@@ -120,11 +120,14 @@
 --                   reporting the microphone's level and the words heard so
 --                   far, reads the recording back into words and hands them to
 --                   a fresh `omp` pane (`ai.open_prompt`) -- that run decides
---                   what to do with them inside the org system. The card stays
---                   silent unless the voice is turned on (`OMP_VOICE_SPEAK=1`);
---                   dictation is local: whisper.cpp, Windows' own recognizer
---                   through powershell.exe when nvim runs under WSL, or a
---                   command of the user's
+--                   what to do with them inside the org system, and the card
+--                   goes on showing whether it is still working. A second
+--                   click ends the recording and keeps what it heard (Escape
+--                   throws it away). The card stays silent unless the voice is
+--                   turned on (`OMP_VOICE_SPEAK=1`); dictation is local:
+--                   whisper.cpp, Windows' own recognizer through
+--                   powershell.exe when nvim runs under WSL, or a command of
+--                   the user's
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'

@@ -15,7 +15,7 @@
 // can be read, then folds back into the button.
 
 (() => {
-  const PHASES = ['idle', 'speaking', 'listening', 'thinking', 'error'];
+  const PHASES = ['idle', 'speaking', 'listening', 'thinking', 'sent', 'error'];
   const LINGER = 5000; // how long the finished words stay on screen
   const FAST = 300; // poll while a listen runs: the level and the words move
   const SLOW = 1500; // poll while idle
@@ -28,6 +28,7 @@
       <div class="jv-head"><span class="jv-dot"></span><span class="jv-state">idle</span></div>
       <div class="jv-meter"><span class="jv-meter-fill"></span></div>
       <div class="jv-text"></div>
+      <div class="jv-run" hidden></div>
       <div class="jv-hint"></div>
     </div>
     <button class="jv-mic" type="button" aria-label="Record a line for J.A.R.V.I.S." title="click to speak, click again to stop">
@@ -42,6 +43,7 @@
   const card = root.querySelector('.jv-card');
   const stateLabel = root.querySelector('.jv-state');
   const textLine = root.querySelector('.jv-text');
+  const runLine = root.querySelector('.jv-run');
   const hintLine = root.querySelector('.jv-hint');
   const meter = root.querySelector('.jv-meter');
   const meterFill = root.querySelector('.jv-meter-fill');
@@ -56,6 +58,7 @@
     level: 0,
     level_db: null,
     signal: false,
+    run: null,
     stt: true,
   };
   let linger = 0; // when the finished words stop showing
@@ -69,6 +72,7 @@
     speaking: 'speaking',
     listening: 'listening',
     thinking: 'reading it back',
+    sent: 'with the run',
     error: 'could not listen',
   };
 
@@ -78,6 +82,8 @@
         return s.partial || (s.signal ? '…' : 'say something');
       case 'thinking':
         return s.heard || s.partial;
+      case 'sent':
+        return s.heard;
       case 'error':
         return s.error;
       default:
@@ -91,12 +97,21 @@
       // not delivering anything and the hint says so instead of asking the
       // user to speak into a dead device
       if (!s.signal && s.at && Date.now() / 1000 - s.at >= 1) return 'no sound from the microphone';
-      return 'click the mic to stop';
+      return 'click the mic to stop and keep the words';
     }
-    if (s.phase === 'thinking') return 'handing it to a run';
+    if (s.phase === 'thinking') return 'reading it back';
+    if (s.phase === 'sent') return 'click the mic to say more';
     if (s.phase === 'error') return 'click the mic to try again';
     if (s.stt === false) return 'no microphone on this machine';
     return 'click the mic to speak';
+  }
+
+  // the run holding the words: which pane, and whether it is still working.
+  // The server asks tmux, so this is the run's own state, not a guess.
+  function runText(s) {
+    const run = s.run;
+    if (!run || !run.pane) return '';
+    return `${run.alive ? '▶' : '■'} run ${run.pane} — ${run.alive ? 'working on it' : 'finished'}`;
   }
 
   function render() {
@@ -108,13 +123,18 @@
     textLine.textContent = words(status) || '';
     hintLine.textContent = hint(status);
 
+    const run = runText(status);
+    runLine.hidden = !shown || run === '';
+    runLine.textContent = run;
+    runLine.classList.toggle('run-done', Boolean(status.run) && !status.run.alive);
+
     const level = Math.max(0, Math.min(1, Number(status.level) || 0));
     meterFill.style.transform = `scaleX(${level.toFixed(3)})`;
     meter.hidden = phase !== 'listening';
 
     mic.title =
       phase === 'listening'
-        ? 'click to stop'
+        ? 'click to stop and keep the words'
         : phase === 'thinking' || phase === 'speaking'
           ? 'still working'
           : 'click to speak';
@@ -132,7 +152,7 @@
     status = { ...status, ...next, phase };
 
     if (phase !== last) {
-      if (phase === 'idle' && last === 'thinking' && status.heard) {
+      if (phase === 'sent' && status.heard) {
         chime();
         toast(`J.A.R.V.I.S. → ${status.heard}`);
         linger = Date.now() + LINGER;
@@ -184,6 +204,21 @@
       if (out.status) apply(out.status);
     } catch (err) {
       apply({ phase: 'idle' });
+    }
+  }
+
+  // the second click: finish the recording and keep what it heard
+  async function stop() {
+    try {
+      const res = await fetch('/api/voice', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ stop: true }),
+      });
+      const out = await res.json();
+      if (out.status) apply(out.status);
+    } catch (err) {
+      // the poll will say what happened
     }
   }
 
@@ -244,7 +279,7 @@
   mic.addEventListener('click', () => {
     const phase = status.phase;
     if (phase === 'listening') {
-      cancel();
+      stop();
       return;
     }
     if (phase === 'speaking' || phase === 'thinking') {
