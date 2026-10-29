@@ -15,9 +15,14 @@ const state = {
   refile: null, // the entry `r` picked, waiting for a destination
   live: { tickets: new Set(), sessions: new Set(), activity: {} }, // runs in flight
   runStream: null, // the open event stream of the run the detail pane shows
+  historyOpen: false, // the detail pane is a history step (a phone's back)
 };
 
 const $ = (sel) => document.querySelector(sel);
+const isPhone = () =>
+  window.matchMedia(
+    '(max-width: 720px), (hover: none) and (pointer: coarse), (max-height: 500px) and (hover: none)',
+  ).matches;
 const el = (tag, cls, text) => {
   const node = document.createElement(tag);
   if (cls) node.className = cls;
@@ -217,6 +222,7 @@ loadShare();
   footer.replaceChildren();
   footer.append(el('span', '', `${totals.open} open`));
   footer.append(el('span', '', `${totals.done} done`));
+  nav.querySelector('button.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
 function viewCount(view) {
@@ -239,6 +245,9 @@ function renderTabs() {
     });
     tabs.append(btn);
   }
+  // on a phone the row is wider than the screen: the view that is on is the
+  // one that has to be visible
+  tabs.querySelector('button.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
 let visibleEntries = [];
@@ -385,6 +394,18 @@ async function showDetail(entry, focusNote) {
   const detail = $('#detail');
   detail.hidden = false;
   document.body.classList.add('detail-open');
+  // a pane that was scrolled for the last entry starts at the top for this
+  // one, while a live update of the entry being read keeps its place
+  const same =
+    state.detailEntry && state.detailEntry.file === entry.file && state.detailEntry.line === entry.line;
+  if (!same) detail.scrollTop = 0;
+  state.detailEntry = { file: entry.file, line: entry.line };
+  // the back button and the back gesture are how a phone leaves a screen:
+  // open the entry as one, so either of them closes it
+  if (isPhone() && !state.historyOpen) {
+    state.historyOpen = true;
+    history.pushState({ orgDetail: true }, '');
+  }
   detail.replaceChildren();
   const header = el('header');
   header.append(el('span', 'where', '~/' + entry.rel + ':' + entry.line));
@@ -442,14 +463,26 @@ async function showDetail(entry, focusNote) {
   }
 }
 
-function closeDetail() {
+function closeDetail(fromHistory) {
   state.selected = null;
   state.selectedEntry = null;
+  state.detailEntry = null;
   stopRunStream();
   $('#detail').hidden = true;
   document.body.classList.remove('detail-open');
   for (const li of document.querySelectorAll('li.entry.selected')) li.classList.remove('selected');
+  if (state.historyOpen) {
+    state.historyOpen = false;
+    // the entry was opened as a history step; closing it by the button or `q`
+    // takes that step back, so a later back press does not close nothing
+    if (!fromHistory) history.back();
+  }
 }
+
+// the phone's back button and back gesture land here
+window.addEventListener('popstate', () => {
+  if (state.historyOpen) closeDetail(true);
+});
 
 // The note box of the detail pane: what `<leader>n` in the editor writes --
 // a timestamped block at the end of the entry's body, as
@@ -803,6 +836,15 @@ function openMenu(anchor, items) {
   menu.style.left = rect.left + 'px';
   menu.style.top = rect.bottom + 4 + 'px';
   document.body.append(menu);
+  // near the edge of a narrow screen the menu would open off the page: the
+  // width is known once it is in the document, so place it again after that
+  const box = menu.getBoundingClientRect();
+  const left = Math.max(8, Math.min(rect.left, innerWidth - box.width - 8));
+  const below = rect.bottom + 4;
+  const top =
+    below + box.height > innerHeight - 8 ? Math.max(8, rect.top - box.height - 4) : below;
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
   const off = (ev) => {
     if (!menu.contains(ev.target)) {
       menu.remove();

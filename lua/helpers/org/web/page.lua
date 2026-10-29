@@ -112,12 +112,13 @@ function M.preview(opts)
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#11111b">
 <title>%s</title>
 <link rel="stylesheet" href="/assets/org.css">
 <link rel="stylesheet" href="/assets/editor.css">
 <style>
-  html { background: #11111b; }
+  html { background: #11111b; -webkit-text-size-adjust: 100%%; text-size-adjust: 100%%; }
   body { margin: 0; }
   .wrap { max-width: 940px; margin: 0 auto; padding: 34px 30px 140px; }
   /* the page's header is the node itself: its title on the left, and the
@@ -142,6 +143,16 @@ function M.preview(opts)
      the cookie and the tags belong to the title, not to the page's edges */
   .bar .node-title .title { flex: 0 1 auto; }
   .bar .node-title .tag { margin-left: 0; }
+  /* a phone: the margins were drawn for a wide page and the keys are not
+     there to press, so the node takes the width it has */
+  @media (max-width: 720px) {
+    .wrap { padding: 20px 14px calc(80px + env(safe-area-inset-bottom)); }
+    .bar { margin-bottom: 20px; }
+    .bar .sub { gap: 10px; font-size: 10px; }
+    .bar .keys { display: none; }
+    .node-title { font-size: 1.3em; }
+    .org { font-size: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -273,11 +284,12 @@ function M.file(opts)
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#11111b">
 <title>%s</title>
 <link rel="stylesheet" href="/assets/org.css">
 <style>
-  html { background: var(--crust); }
+  html { background: var(--crust); -webkit-text-size-adjust: 100%%; text-size-adjust: 100%%; }
   body { margin: 0; }
   .bar {
     display: flex; align-items: center; justify-content: space-between; gap: 16px;
@@ -308,6 +320,12 @@ function M.file(opts)
     background: rgba(137, 220, 235, 0.09);
     border-top: 1px solid rgba(137, 220, 235, 0.28);
     border-bottom: 1px solid rgba(137, 220, 235, 0.28);
+  }
+  /* a phone: the bar is a tap-height row, and the code takes the height the
+     screen has left instead of the height a desktop window would */
+  @media (max-width: 720px) {
+    .bar { height: 52px; padding: 0 12px; font-size: 12px; }
+    .file-body { height: calc(100vh - 52px); height: calc(100dvh - 52px); font-size: 13px; }
   }
 </style>
 </head>

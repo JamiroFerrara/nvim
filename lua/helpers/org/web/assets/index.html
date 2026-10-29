@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#11111b" />
     <title>org — todos</title>
     <link rel="stylesheet" href="/assets/org.css" />
     <link rel="stylesheet" href="/assets/app.css" />
@@ -16,8 +17,8 @@
         <span>◈ roam</span>
       </a>
       <input id="search" type="search" placeholder="Filter  /" autocomplete="off" spellcheck="false" />
-      <button id="capture-open" type="button" title="Capture a task (c)">
-        <span>＋ capture</span><span class="key">c</span>
+      <button id="capture-open" type="button" title="Capture a task (c)" aria-label="Capture a task">
+        <span class="cap-long">＋ capture</span><span class="cap-short" aria-hidden="true">＋</span><span class="key">c</span>
       </button>
       <nav id="projects"></nav>
       <section id="share" hidden>

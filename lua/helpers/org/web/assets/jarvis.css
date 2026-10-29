@@ -212,6 +212,27 @@
   --jv-a: var(--mauve);
 }
 
+/* A phone: the mic sits above the home bar, and its card is as wide as the
+   screen it is on instead of a floating 320px box over the list. */
+@media (max-width: 720px) {
+  #jarvis {
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+
+  #jarvis .jv-card {
+    width: calc(100vw - 28px);
+    max-width: 360px;
+    max-height: 50vh;
+    max-height: 50dvh;
+  }
+
+  #jarvis .jv-mic {
+    width: 52px;
+    height: 52px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #jarvis .jv-dot {
     animation: none;

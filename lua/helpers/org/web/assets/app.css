@@ -5,6 +5,24 @@
   box-sizing: border-box;
 }
 
+/* iOS and Android enlarge text on their own when a page is turned sideways;
+   the sizes here are the ones the phone should get. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* the tap is the page's, not the browser's: no 300ms wait before a click,
+   and no grey flash over a card that is already selected */
+button,
+a,
+input,
+.fold,
+li.entry {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 html,
 body {
   height: 100%;
@@ -557,6 +575,12 @@ li.entry .fold.empty {
 #capture-open .key {
   font-size: 10px;
   color: var(--overlay);
+}
+
+/* the rail is full width on a desktop; on a phone the button shrinks to its
+   glyph and `cap-long` is the one that stays home */
+#capture-open .cap-short {
+  display: none;
 }
 
 /* the capture form: the same fields the capture buffer asks for in nvim,
@@ -1120,115 +1144,217 @@ li.entry .live-line {
 
 /* ---- a phone ----------------------------------------------------------- */
 
-/* One column: the rail becomes a bar across the top, the list gets the width,
-   and the detail pane covers the screen instead of squeezing beside it. */
-@media (max-width: 720px) {
+/* The page is the viewport: the rail becomes a two-row app bar, the tabs a
+   single scrollable row under it, and `#views` the only thing that scrolls,
+   so the controls never leave the screen while a thumb walks the board.
+   `dvh` is the height left after the browser's own bars, which `100vh` on a
+   phone counts as if they were not there. */
+/* A phone on its side is 844px wide, wider than this breakpoint, and still a
+   thumb on glass: the touch layout follows the pointer, not just the width.
+   A tablet in portrait is wider still but has the same coarse pointer. */
+@media (max-width: 720px), (hover: none) and (pointer: coarse), (max-height: 500px) and (hover: none) {
   body,
   body.detail-open {
-    display: block;
-    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
   }
 
   #sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    padding: 8px 8px 6px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(48px, auto);
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    padding: calc(6px + env(safe-area-inset-top)) 10px 6px;
     border-right: 0;
     border-bottom: 1px solid var(--surface);
     max-height: none;
   }
 
   #sidebar h1 {
-    margin: 0 0 6px 4px;
+    grid-column: 1;
+    margin: 0 0 0 2px;
     font-size: 13px;
   }
 
+  #roam-link {
+    grid-column: 2;
+    justify-self: end;
+    margin: 0;
+    min-height: 44px;
+    padding: 0 8px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
   #search {
+    grid-column: 1;
     width: 100%;
-    margin-bottom: 6px;
+    min-height: 44px;
+    margin: 0;
+    /* under 16px iOS zooms the page into the field and leaves it there */
+    font-size: 16px;
+  }
+
+  #capture-open {
+    grid-column: 2;
+    width: 48px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  #capture-open .cap-long {
+    display: none;
+  }
+
+  #capture-open .cap-short {
+    display: inline;
+  }
+
+  #capture-open .key {
+    display: none;
   }
 
   #projects {
+    grid-column: 1 / -1;
     display: flex;
     gap: 6px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding-bottom: 4px;
+    padding: 0 0 2px;
     flex: none;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  #projects::-webkit-scrollbar {
+    display: none;
   }
 
   #projects button {
     flex: 0 0 auto;
     width: auto;
+    min-height: 44px;
+    padding: 6px 10px;
+    scroll-snap-align: start;
+  }
+
+  #projects .name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* the door is for the machine this page is not already running on */
+  #share {
+    display: none;
   }
 
   #totals {
-    padding: 6px 4px;
-  }
-
-  #share {
-    margin: 4px 0 0;
-    padding: 6px 4px 0;
-  }
-
-  /* Open, the code floats over the list instead of pushing it down: it is
-     something to point a camera at, not part of the bar. */
-  #share.open {
-    position: fixed;
-    left: 10px;
-    right: 10px;
-    top: auto;
-    bottom: 10px;
-    z-index: 45;
-    width: auto;
-    margin: 0;
-    padding: 12px;
-    background: var(--mantle);
-    border: 1px solid var(--surface1);
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
-  }
-
-  #share.open #share-qr svg {
-    width: min(220px, 58vw);
-    margin: 0 auto;
+    grid-column: 1 / -1;
+    padding: 0 2px;
+    font-size: 10px;
   }
 
   main {
-    min-height: 60vh;
+    flex: 1;
+    min-height: 0;
   }
 
   #tabs {
+    flex: none;
     flex-wrap: nowrap;
+    gap: 2px;
     overflow-x: auto;
-    padding: 8px 10px 0;
+    padding: 4px 10px 0;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  #tabs::-webkit-scrollbar {
+    display: none;
   }
 
   #tabs button {
     flex: 0 0 auto;
+    min-height: 44px;
+    padding: 10px 14px;
+    scroll-snap-align: start;
   }
 
+  /* the list scrolls inside the screen, not the document: two scrollers on
+     one axis are what makes a phone page feel like it is fighting a thumb */
   #views {
-    padding: 12px 10px 60px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 8px calc(84px + env(safe-area-inset-bottom));
   }
 
+  section.view-section {
+    margin-bottom: 18px;
+  }
+
+  /* the row grows to a thumb's height, and the state chip to the smallest
+     target a finger hits without aiming */
   li.entry {
-    grid-template-columns: 46px 12px 12px minmax(0, 1fr);
-    gap: 6px;
-    padding: 7px 4px;
+    grid-template-columns: 56px 16px 40px minmax(0, 1fr);
+    gap: 4px;
+    min-height: 52px;
+    padding: 4px;
+  }
+
+  li.entry .state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  li.entry .fold {
+    width: 40px;
+    height: 44px;
+    line-height: 44px;
+    font-size: 14px;
   }
 
   li.entry .tags,
-  li.entry .meta,
-  li.entry .project {
+  li.entry .meta {
     display: none;
   }
 
   li.entry .title {
+    font-size: 15px;
     white-space: normal;
     text-overflow: clip;
     line-height: 1.35;
+  }
+
+  /* the project rides under the title instead of taking a column of its own */
+  li.entry .project {
+    display: block;
+    grid-column: 4;
+    grid-row: 2;
+    font-size: 11px;
+    line-height: 1.2;
+    color: var(--overlay);
+  }
+
+  li.entry .project:empty {
+    display: none;
+  }
+
+  li.entry .live-line {
+    grid-row: 3;
+    padding-left: 0;
   }
 
   #detail {
@@ -1236,8 +1362,138 @@ li.entry .live-line {
     inset: 0;
     z-index: 40;
     width: auto;
+    height: 100vh;
+    height: 100dvh;
     border-left: 0;
     background: var(--mantle);
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* the pane is the screen: the list behind it is not a second thing to
+     scroll while an entry is open */
+  body.detail-open #views {
+    overflow: hidden;
+  }
+
+  #detail header {
+    padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+    gap: 6px;
+  }
+
+  #detail header .where {
+    font-size: 10px;
+  }
+
+  #detail header button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 8px;
+  }
+
+  #detail .body {
+    padding: 4px 14px 96px;
+  }
+
+  #detail .detail-title {
+    font-size: 1.25em;
+  }
+
+  #capture {
+    padding: max(4vh, env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+
+  #capture form {
+    width: 100%;
+    max-width: 560px;
+  }
+
+  /* iOS zooms a field under 16px; the capture and note boxes are fields */
+  #capture input.title,
+  #capture textarea.body,
+  .note-box textarea {
+    font-size: 16px;
+  }
+
+  #capture input.title {
+    min-height: 44px;
+  }
+
+  /* the entry's own run box already says what the run is doing, so the
+     floating card would only cover the text being read */
+  body.detail-open #jarvis .jv-card {
+    display: none;
+  }
+
+  /* the capture sheet is the only thing on screen while it is open */
+  #capture {
+    z-index: 50;
+  }
+
+  #capture select,
+  button.primary,
+  #capture header button,
+  .note-box .note-row button {
+    min-height: 44px;
+  }
+
+  #capture select {
+    max-width: none;
+  }
+
+  #capture footer {
+    flex-wrap: wrap;
+  }
+
+  #help {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+    max-height: calc(100dvh - 20px);
+    padding: 14px 16px;
+  }
+
+  #cmdline {
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  #menu button,
+  .state-menu button {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  #toast {
+    bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+}
+
+/* A phone held sideways: 390px of height cannot spare the title row, so the
+   bar keeps only what is used -- the filter, capture and the projects. */
+@media (max-height: 500px) and (hover: none) {
+  #sidebar h1,
+  #sidebar #roam-link {
+    display: none;
+  }
+
+  #sidebar {
+    row-gap: 4px;
+  }
+
+  #totals {
+    display: none;
+  }
+}
+
+/* A finger has no hover: what a desktop reveals under the pointer is there
+   from the start on a touch screen. */
+@media (hover: none) {
+  .org .snippet-bar .snippet-copy {
+    opacity: 1;
   }
 }

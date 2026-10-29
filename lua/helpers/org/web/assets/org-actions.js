@@ -75,6 +75,13 @@ window.OrgActions = (() => {
     box.style.left = rect.left + 'px';
     box.style.top = rect.bottom + 4 + 'px';
     document.body.append(box);
+    // a keyword near the right edge or the bottom of a phone would push the
+    // menu off the page; its size is only known once it is in the document
+    const size = box.getBoundingClientRect();
+    const below = rect.bottom + 4;
+    box.style.left = Math.max(8, Math.min(rect.left, innerWidth - size.width - 8)) + 'px';
+    box.style.top =
+      (below + size.height > innerHeight - 8 ? Math.max(8, rect.top - size.height - 4) : below) + 'px';
     const off = (ev) => {
       if (!box.contains(ev.target)) {
         box.remove();
