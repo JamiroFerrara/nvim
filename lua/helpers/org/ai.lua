@@ -1624,7 +1624,7 @@ function M.open_prompt(text, title)
   if msg == '' then
     return nil
   end
-  local key = 'voice/' .. tostring(vim.uv.hrtime())
+  local key = 'voice/' .. ('%d'):format(vim.uv.hrtime())
   local argv = { 'omp', '--session-dir', session_dir(key), msg }
   local name = title or ('🤖 ' .. msg:sub(1, 40))
   if not in_tmux() then

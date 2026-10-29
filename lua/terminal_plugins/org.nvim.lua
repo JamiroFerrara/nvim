@@ -128,6 +128,13 @@
 --                   whisper.cpp, Windows' own recognizer through
 --                   powershell.exe when nvim runs under WSL, or a command of
 --                   the user's
+--   runs.lua        the little window that says what the runs are doing
+--                   (`<leader>ov`, `:OrgRuns`): every marked tmux pane --
+--                   a ticket's, a project's orchestrator, a voice run -- with
+--                   what it was asked, how long it has been going, and the
+--                   step it is on now (the run's own transcript, through
+--                   helpers/org/web/live.lua). It comes up when the voice
+--                   card starts a run and stays down once closed.
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'
@@ -1392,6 +1399,7 @@ return {
     require('helpers.org.ics').setup()
     require('helpers.org.ai').setup()
     require('helpers.org.voice').setup()
+    require('helpers.org.runs').setup()
     require('helpers.org.retro').setup()
     require('helpers.org.kb').setup()
     require('helpers.org.actions').setup()

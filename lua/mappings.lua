@@ -248,6 +248,7 @@ return {
     ['<leader>oc'] = { function() require('org').capture('t') end, desc = 'Org capture (project)' },
     ['<leader>ob'] = { function() require('helpers.org.web').dashboard() end, desc = 'Org dashboard (browser)' },
     ['<leader>op'] = { function() require('helpers.org.web').preview() end, desc = 'Org node preview (browser)' },
+    ['<leader>ov'] = { function() require('helpers.org.runs').toggle() end, desc = 'Org runs (what the omp instances are doing)' },
     ['<leader>oR'] = { function() require('helpers.org.web').roam() end, desc = 'Org-roam notes and graph (browser)' },
     ['<leader>ot'] = {
       function()

@@ -1095,11 +1095,13 @@ local function launch(text)
       org_dir = vim.fn.expand(cfg.org_directory)
     end
   end)
-  local message = ('Spoken to the org dashboard (%s view): "%s". The vault is at %s; work it out from there.'):format(
-    state.view ~= '' and state.view or 'dashboard',
-    text,
-    org_dir
-  )
+  local view = state.view ~= '' and state.view or 'dashboard'
+  local message = ('Spoken to the org dashboard (%s view): "%s". '):format(view, text)
+    .. ('The vault is at %s; read %s/WORKFLOW.org first, it is the shape this vault runs on. '):format(org_dir, org_dir)
+    .. 'The words are one of three things: a question (answer it here), a ticket (write it as a TODO headline '
+    .. ('in the project file under %s/projects that it belongs to, with its :ID:, and say which file), '):format(org_dir)
+    .. 'or a piece of work (do it now, the way that workflow says). '
+    .. 'If the words do not say which project they mean and the vault does not either, ask.'
   local title = '🤖 ' .. text:sub(1, 40)
   local pane
   local ok, err = pcall(function()
@@ -1114,6 +1116,11 @@ local function launch(text)
   run = { pane = pane, title = title, at = os.time() }
   set_phase('sent', { heard = text })
   watch_run()
+  -- the words went somewhere: the little window that says what the runs are
+  -- doing comes up, so the run is not just a pane off screen
+  if pane ~= '' then
+    require('helpers.org.runs').show()
+  end
 end
 
 --- Does the card say anything at all? Off by default: it is a microphone and
