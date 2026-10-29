@@ -1357,6 +1357,24 @@ li.entry .live-line {
     padding-left: 0;
   }
 
+  /* the Runs view: a row's age is what the row is for, so it stays on a
+     phone -- under the title, with the project and the step below it */
+  li.entry.run-row .meta {
+    display: flex;
+    grid-column: 4;
+    grid-row: 2;
+    font-size: 11px;
+    color: var(--overlay);
+  }
+
+  li.entry.run-row .project {
+    grid-row: 3;
+  }
+
+  li.entry.run-row .live-line {
+    grid-row: 4;
+  }
+
   #detail {
     position: fixed;
     inset: 0;

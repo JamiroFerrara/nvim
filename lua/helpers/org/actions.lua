@@ -270,11 +270,6 @@ local function view_items()
       require('helpers.org.agenda').custom_view(key, scope)
     end)
   end
-  -- the `7` view is not an agenda: helpers/org/runs.lua draws the running
-  -- instances itself, over the same window
-  items[#items + 1] = item('View 7', THIS_VIEW, function()
-    require('helpers.org.runs').view()
-  end)
   local refile = buffer_key(buf, 'r')
   if refile then
     items[#items + 1] = item('Refile the entry at point', THIS_VIEW, refile)

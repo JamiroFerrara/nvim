@@ -166,7 +166,7 @@ local function handle(req, res)
   if req.method == 'GET' and path == '/api/live' then
     local live = require 'helpers.org.web.live'
     local r = live.runs()
-    local out = { generated = os.date '%Y-%m-%d %H:%M:%S', tickets = {}, sessions = {}, activity = {} }
+    local out = { generated = os.date '%Y-%m-%d %H:%M:%S', tickets = {}, sessions = {}, activity = {}, instances = {} }
     for id in pairs(r.tickets) do
       out.tickets[#out.tickets + 1] = id
     end
@@ -176,6 +176,9 @@ local function handle(req, res)
     for _, key in ipairs(vim.list_extend(vim.list_slice(out.sessions), out.tickets)) do
       out.activity[key] = live.activity(key)
     end
+    -- the Runs view's rows: the same list, one row per pane, with the ticket
+    -- each run is on resolved back to its entry
+    out.instances = require('helpers.org.web.data').instances()
     json(res, out)
     return
   end

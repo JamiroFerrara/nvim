@@ -13,6 +13,11 @@
 --   flight     the `f` list -- NEXT, TEST and WARN, one section per
 --              classification tag (the bug / feat / chore sections, the
 --              untagged rest last), each with NEXT first
+--   runs       the omp instances running now -- the panes the launcher
+--              marked, each with what it was asked, how long it has been
+--              going and the last step of its transcript. Not an agenda
+--              view: its rows are tmux panes (helpers/org/web/live.lua), so
+--              the client draws them from the payload's `live.instances`
 --   state      the `g` list -- one section per open state
 --   priority   the `p` list -- A, then B
 --   wayfinder  the `y` view -- the charted map as a tree, then one section
@@ -205,6 +210,36 @@ function M.find(file, line, id)
     end
   end
   return nil
+end
+
+--- The entry carrying `id`, wherever it lives, or nil when the vault no longer
+--- has it (a ticket archived out of the vault still has a run).
+---@param id string|nil
+---@return table|nil
+function M.by_id(id)
+  if not id then
+    return nil
+  end
+  for _, entry in ipairs(M.entries()) do
+    if entry.id == id then
+      return entry
+    end
+  end
+  return nil
+end
+
+--- The instances running now, each with the entry of the ticket it is on
+--- attached when the vault still has that ticket: the Runs view links a row
+--- to what the run is working on.
+---@return table[]
+function M.instances()
+  local out = require('helpers.org.web.live').instances()
+  for _, instance in ipairs(out) do
+    if instance.ticket then
+      instance.entry = M.by_id(instance.ticket)
+    end
+  end
+  return out
 end
 
 --- Absolute minutes are comparable across entries; a missing date sorts
@@ -441,9 +476,13 @@ local function agenda(entries)
     end
   end
 
-  section('Overdue', '!', pick(entries, function(e)
-    return e.day and e.day < today and not e.done
-  end))
+  section(
+    'Overdue',
+    '!',
+    pick(entries, function(e)
+      return e.day and e.day < today and not e.done
+    end)
+  )
   for d = monday, sunday do
     local label = date.from_days(d):strftime '%a %d %b'
     local title = label
@@ -454,18 +493,31 @@ local function agenda(entries)
     end
     -- a day gone by lists what was closed on it; its open work is Overdue,
     -- one section above, and a second copy here would say nothing new
-    section(title, '◷', pick(entries, function(e)
-      return e.day == d and (d >= today or e.done)
-    end))
+    section(
+      title,
+      '◷',
+      pick(entries, function(e)
+        return e.day == d and (d >= today or e.done)
+      end)
+    )
   end
-  section('Later', '›', pick(entries, function(e)
-    return e.day and e.day > sunday
-  end))
+  section(
+    'Later',
+    '›',
+    pick(entries, function(e)
+      return e.day and e.day > sunday
+    end)
+  )
   -- the weeks behind the one on screen, latest first: the closed work that
   -- would otherwise leave the agenda for good
-  section('Earlier', '‹', pick(entries, function(e)
-    return e.day and e.day < monday and e.done
-  end), true)
+  section(
+    'Earlier',
+    '‹',
+    pick(entries, function(e)
+      return e.day and e.day < monday and e.done
+    end),
+    true
+  )
   return sections
 end
 
@@ -538,6 +590,10 @@ local VIEWS = {
   { key = 'board', title = 'Board', icon = '▦' },
   { key = 'agenda', title = 'Agenda', icon = '◷' },
   { key = 'flight', title = 'In flight', icon = '▶' },
+  -- the one view with nothing of the vault in it: what is running right now
+  -- is a set of tmux panes (helpers/org/web/live.lua), so its rows come from
+  -- the live half of the payload, not from a section of entries
+  { key = 'runs', title = 'Runs', icon = '⦿' },
   { key = 'open', title = 'All open', icon = '≡' },
   { key = 'state', title = 'By state', icon = '●' },
   { key = 'priority', title = 'Priorities', icon = '!' },
@@ -579,9 +635,11 @@ function M.payload(file)
     end
     total = total + 1
   end
+  local instances = M.instances()
   local views = {}
   for _, view in ipairs(VIEWS) do
     local sections
+    local count
     if view.key == 'board' then
       sections = board(scoped)
     elseif view.key == 'agenda' then
@@ -590,6 +648,12 @@ function M.payload(file)
       sections = by_project(scoped, projects)
     elseif view.key == 'flight' then
       sections = flight(scoped)
+    elseif view.key == 'runs' then
+      -- its rows are the live instances below, not entries: the tab is here
+      -- for its name and its count, and the client draws the list from
+      -- `out.live.instances`
+      sections = {}
+      count = #instances
     elseif view.key == 'state' then
       sections = state_sections(scoped)
     elseif view.key == 'priority' then
@@ -602,6 +666,7 @@ function M.payload(file)
       title = view.title,
       icon = view.icon,
       sections = sections,
+      count = count,
     }
   end
   local open_total = 0
@@ -635,6 +700,7 @@ function M.payload(file)
     tickets = vim.tbl_keys(running.tickets),
     sessions = vim.tbl_keys(running.sessions),
     activity = {},
+    instances = instances,
   }
   for _, entry in ipairs(scoped) do
     local key = entry.session

@@ -28,7 +28,7 @@ local CHUNK_BYTES = 96 * 1024 -- one tick reads at most this much
 local BACKLOG = 200 -- events a stream's snapshot carries
 local ACTIVITY_BYTES = 16 * 1024 -- how far back the list's one-line summary reads
 
-local runs = { at = 0, tickets = {}, sessions = {} }
+local runs = { at = 0, tickets = {}, sessions = {}, info = {} }
 local watchers = {}
 local timer = nil
 
@@ -51,7 +51,7 @@ function M.runs()
     return runs
   end
   runs.at = now
-  runs.tickets, runs.sessions = {}, {}
+  runs.tickets, runs.sessions, runs.info = {}, {}, {}
   if vim.fn.executable 'tmux' ~= 1 then
     return runs
   end
@@ -60,13 +60,13 @@ function M.runs()
     'list-panes',
     '-a',
     '-F',
-    '#{pane_id}\t#{@omp_ticket}\t#{@omp_orchestrator}\t#{pane_dead}',
+    '#{pane_id}\t#{@omp_ticket}\t#{@omp_orchestrator}\t#{@omp_run_title}\t#{@omp_run_at}\t#{pane_dead}',
   }
   if vim.v.shell_error ~= 0 then
     return runs
   end
   for line in vim.gsplit(out or '', '\n', { plain = true }) do
-    local pane, ticket, key, dead = line:match '^(%%%d+)\t([^\t]*)\t([^\t]*)\t(%d)$'
+    local pane, ticket, key, title, at, dead = line:match '^(%%%d+)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t(%d)$'
     if pane and dead == '0' then
       if ticket and ticket ~= '' then
         runs.tickets[ticket] = pane
@@ -74,9 +74,52 @@ function M.runs()
       if key and key ~= '' then
         runs.sessions[key] = pane
       end
+      if (ticket and ticket ~= '') or (key and key ~= '') then
+        -- what the launcher asked the pane and when it started it
+        -- (`@omp_run_title`, `@omp_run_at`, helpers/org/ai.lua)
+        runs.info[pane] = { title = title ~= '' and title or nil, at = tonumber(at) or nil }
+      end
     end
   end
   return runs
+end
+
+--- Every instance running now, one row per marked pane: what it was asked,
+--- when it started, the ticket it is on (nil for a project's orchestrator and
+--- for the talking instance) and the last thing its transcript says it is
+--- doing. This is what the dashboard's Runs view draws.
+---@return table[]
+function M.instances()
+  local r = M.runs()
+  local out, seen = {}, {}
+  local function add(key, pane, ticket)
+    if seen[pane] then
+      return
+    end
+    seen[pane] = true
+    local info = r.info[pane] or {}
+    out[#out + 1] = {
+      key = key,
+      pane = pane,
+      ticket = ticket,
+      title = info.title or key,
+      started = info.at,
+      activity = M.activity(key),
+    }
+  end
+  for id, pane in pairs(r.tickets) do
+    add(id, pane, id)
+  end
+  for key, pane in pairs(r.sessions) do
+    add(key, pane, nil)
+  end
+  table.sort(out, function(a, b)
+    if (a.started or 0) ~= (b.started or 0) then
+      return (a.started or 0) < (b.started or 0)
+    end
+    return a.pane < b.pane
+  end)
+  return out
 end
 
 --- The pane running `key` (a ticket's :ID: or a session key), or nil.

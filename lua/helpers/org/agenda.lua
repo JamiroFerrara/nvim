@@ -783,9 +783,7 @@ end
 -- split by state, not
 -- just the headline cwd's project resolved to -- 5 priorities, 6 the
 -- wayfinder map of the cwd project: the charted tree, then a section
--- per ticket kind (the `y` command, lua/terminal_plugins/org.nvim.lua), 7
--- the omp instances running now (helpers/org/runs.lua, which draws that one
--- itself: a run is a tmux pane, not a headline).
+-- per ticket kind (the `y` command, lua/terminal_plugins/org.nvim.lua).
 -- Buffer-local to orgagenda -- the TODO view renders into the same buffer,
 -- so it switches from there too -- which is why the keys are the plain
 -- digits and not the `<leader>o` ones: a count typed in the agenda
@@ -828,10 +826,6 @@ local CUSTOM_VIEWS = {
   { '4', 'g', 'the whole project file, by state', 'file' },
   { '5', 'y', 'wayfinder: the charted map, open leaves takeable', 'project' },
   { '6', 'p', 'open A/B priorities', 'project' },
-  -- 7 has no custom_commands key: the agenda lists org files and a run is a
-  -- tmux pane, so helpers/org/runs.lua draws this one itself, over the same
-  -- window, and its own `q` gives that window back.
-  { '7', nil, 'the omp instances running now' },
 }
 
 -- The group headers the custom views draw: the global super_agenda groups
@@ -977,11 +971,7 @@ local function setup_custom_views()
       for _, view in ipairs(CUSTOM_VIEWS) do
         local key, command, label, scope = view[1], view[2], view[3], view[4] or 'project'
         vim.keymap.set('n', key, function()
-          if command then
-            open_custom_view(command, label, scope)
-          else
-            require('helpers.org.runs').view()
-          end
+          open_custom_view(command, label, scope)
         end, { buffer = args.buf, desc = 'org: Agenda view ' .. key .. ' (' .. label .. ')' })
       end
     end,

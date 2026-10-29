@@ -13,7 +13,7 @@ const state = {
   pending: '', // a key waiting for its second (g, d, <Space>…)
   folded: new Set(), // entry keys folded away
   refile: null, // the entry `r` picked, waiting for a destination
-  live: { tickets: new Set(), sessions: new Set(), activity: {} }, // runs in flight
+  live: { tickets: new Set(), sessions: new Set(), activity: {}, instances: [] }, // runs in flight
   runStream: null, // the open event stream of the run the detail pane shows
   historyOpen: false, // the detail pane is a history step (a phone's back)
 };
@@ -236,12 +236,19 @@ function renderTabs() {
   tabs.replaceChildren();
   for (const view of state.data.views) {
     const btn = el('button', state.view === view.key ? 'active' : '');
+    btn.dataset.view = view.key;
     btn.append(el('span', '', view.icon + ' ' + view.title));
-    btn.append(el('span', 'badge', String(viewCount(view))));
+    btn.append(el('span', 'badge', String(view.count ?? viewCount(view))));
     btn.addEventListener('click', () => {
       state.view = view.key;
       renderTabs();
       renderViews();
+      // the runs view has no entries to draw from: it is live data, so it
+      // asks for it now and keeps asking while it is the view on screen
+      if (view.key === 'runs') {
+        watchLive();
+        pollLive();
+      }
     });
     tabs.append(btn);
   }
@@ -275,12 +282,16 @@ function setLive(live) {
   state.live.tickets = new Set(live.tickets || []);
   state.live.sessions = new Set(live.sessions || []);
   state.live.activity = live.activity || {};
+  state.live.instances = live.instances || [];
 }
 
 // Patch the drawn rows instead of redrawing them: a redraw would drop the
 // selection and the scroll position every couple of seconds.
 function applyLive() {
   for (const li of document.querySelectorAll('li.entry')) {
+    // the Runs view's rows are patched by `applyRuns`: they are runs, not
+    // entries with a run attached
+    if (li.dataset.run) continue;
     const entry = li._entry;
     const key = runKey(entry);
     li.classList.toggle('running', !!key);
@@ -305,11 +316,42 @@ function applyLive() {
   }
 }
 
+// The Runs view's rows, patched the same way: an activity line that changed,
+// an elapsed time that moved. The rows themselves are redrawn when the set of
+// runs changes -- one started or ended -- because then there is a row to add
+// or drop.
+function applyRuns() {
+  const list = document.querySelector('#views ul.entries.runs');
+  if (!list) return;
+  const runs = state.live.instances.filter(runMatches);
+  if (list.dataset.keys !== runs.map((run) => run.key).join('|')) {
+    renderRuns();
+    return;
+  }
+  for (const li of list.children) {
+    const run = runs.find((r) => r.key === li.dataset.run);
+    if (!run) continue;
+    const line = li.querySelector('.live-line');
+    if (line) line.textContent = run.activity || '';
+    const when = li.querySelector('.meta');
+    if (when) when.textContent = elapsed(run.started);
+  }
+}
+
+// The Runs tab's count is the number of rows the view would draw, so it only
+// moves while that view is on screen.
+function syncRunsBadge() {
+  const badge = document.querySelector('#tabs button[data-view="runs"] .badge');
+  if (badge) badge.textContent = String(state.live.instances.filter(runMatches).length);
+}
+
 // While something runs, ask again every few seconds: a run's steps change no
 // org file, so the vault's own `change` events do not cover them.
 let liveTimer = null;
 async function pollLive() {
-  const any = state.live.tickets.size > 0 || state.live.sessions.size > 0;
+  // the runs view asks even with nothing in flight: what it shows is a run
+  // that started after the last look, and no org file changed to say so
+  const any = state.live.tickets.size > 0 || state.live.sessions.size > 0 || state.view === 'runs';
   if (!any) {
     clearInterval(liveTimer);
     liveTimer = null;
@@ -319,6 +361,10 @@ async function pollLive() {
   try {
     setLive(await api('/api/live'));
     applyLive();
+    if (state.view === 'runs') {
+      applyRuns();
+      syncRunsBadge();
+    }
   } catch (err) {
     console.error(err);
   }
@@ -342,6 +388,10 @@ function renderViews() {
   visibleEntries = [];
   const view = state.data.views.find((v) => v.key === state.view) || state.data.views[0];
   if (!view) return;
+  if (view.key === 'runs') {
+    renderRuns();
+    return;
+  }
   let drawn = 0;
   for (const section of view.sections) {
     const items = section.items.filter(matches);
@@ -377,6 +427,89 @@ function renderViews() {
   if (drawn === 0) {
     container.append(el('p', 'empty', state.query ? 'Nothing matches the filter.' : 'Nothing here.'));
   }
+}
+
+// ---- the Runs view -------------------------------------------------------
+//
+// A run is a tmux pane the launcher opened and marked: a ticket's :ID: in
+// `@omp_ticket`, a project's session key (or the talking instance's) in
+// `@omp_orchestrator`. Its own transcript says what it is doing now
+// (helpers/org/web/live.lua), and the server pairs each one with the ticket's
+// entry when the vault still holds that ticket.
+
+// How long a run has been going, the way the editor's own window says it.
+function elapsed(started) {
+  if (!started) return '';
+  const secs = Math.max(0, Math.floor(Date.now() / 1000 - started));
+  if (secs < 60) return secs + 's';
+  if (secs < 3600) return Math.floor(secs / 60) + 'm ' + String(secs % 60).padStart(2, '0') + 's';
+  return Math.floor(secs / 3600) + 'h ' + String(Math.floor((secs % 3600) / 60)).padStart(2, '0') + 'm';
+}
+
+function runMatches(run) {
+  const q = state.query.trim().toLowerCase();
+  if (!q) return true;
+  const entry = run.entry || {};
+  const haystack = [run.title, run.activity, entry.project, entry.todo, ...(entry.tags || [])]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return q.split(/\s+/).every((word) => haystack.includes(word.replace(/^#/, '')));
+}
+
+function runRow(run) {
+  const entry = run.entry;
+  const li = el('li', 'entry run-row running');
+  li.dataset.run = run.key;
+  if (entry) {
+    li.dataset.file = entry.file;
+    li.dataset.line = entry.line;
+  }
+  const chip = el('span', 'state ' + ((entry && entry.todo) || ''), (entry && entry.todo) || '·');
+  chip.title = entry ? 'the ticket this run is on' : 'a session run, no ticket';
+  li.append(chip);
+  li.append(el('span', 'prio', (entry && entry.priority) || ''));
+  li.append(el('span', 'fold empty'));
+  const title = el('span', 'title');
+  title.append(el('span', 'live-dot', '●'));
+  title.append(document.createTextNode(run.title));
+  title.title = entry ? entry.rel + ':' + entry.line : 'tmux pane ' + run.pane;
+  li.append(title);
+  li.append(el('span', 'tags'));
+  li.append(el('span', 'meta', elapsed(run.started)));
+  li.append(el('span', 'project', state.selection === 'all' ? (entry && entry.project) || '' : ''));
+  li.append(el('span', 'live-line', run.activity || ''));
+  if (entry) {
+    title.addEventListener('click', () => selectEntry(entry));
+    li.addEventListener('click', () => selectEntry(entry));
+  }
+  return li;
+}
+
+function renderRuns() {
+  const container = $('#views');
+  const runs = (state.live.instances || []).filter(runMatches);
+  container.replaceChildren();
+  visibleEntries = [];
+  if (runs.length === 0) {
+    container.append(
+      el('p', 'empty', state.query ? 'Nothing matches the filter.' : 'No omp instance is running.'),
+    );
+    return;
+  }
+  const box = el('section', 'view-section');
+  const head = el('h2');
+  head.append(el('span', '', '● Running'));
+  head.append(el('span', 'n', String(runs.length)));
+  box.append(head);
+  const list = el('ul', 'entries runs');
+  list.dataset.keys = runs.map((run) => run.key).join('|');
+  for (const run of runs) {
+    list.append(runRow(run));
+    if (run.entry) visibleEntries.push(run.entry);
+  }
+  box.append(list);
+  container.append(box);
 }
 
 function selectEntry(entry, focusNote) {

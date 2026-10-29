@@ -110,10 +110,13 @@
 --                   buffer renders the node at the cursor in the browser
 --                   (the subtree through org.nvim's HTML export, following
 --                   the buffer as it changes), and `<leader>ob` opens the
---                   TODO dashboard -- the board, in-flight, all-open,
+--                   TODO dashboard -- the board, in-flight, runs, all-open,
 --                   by-state, priority and wayfinder lists, sectioned and
 --                   sorted like the views above -- as a page whose clicks
 --                   come back into nvim (a state change, opening an entry).
+--                   The runs list is the odd one out: it is not a slice of
+--                   the vault but the panes running right now, with what
+--                   each is doing (helpers/org/web/live.lua).
 --                   An ngrok tunnel runs beside the server so the same page
 --                   opens on a phone (`:OrgWebShare`): the rail carries its
 --                   address and a QR code of it (`helpers/org/web/share.lua`,
@@ -142,9 +145,6 @@
 --                   step it is on now (the run's own transcript, through
 --                   helpers/org/web/live.lua). It never opens on its own: it
 --                   is down until asked for, and down again once closed.
---                   The same list is `7` in the views below, drawn by the
---                   module itself into the window it takes over (a run is a
---                   tmux pane, not a headline the agenda can list).
 
 local ics = require 'helpers.org.ics'
 local capture = require 'helpers.org.capture'

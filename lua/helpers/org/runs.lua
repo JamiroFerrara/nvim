@@ -16,11 +16,6 @@
 -- while you are typing. `<leader>ov` (or `:OrgRuns`) toggles it, `q` closes it
 -- from inside, and `<CR>` on a run brings that run's pane up in tmux.
 --
--- `7` in the agenda is the same answer in the editor's own views
--- (`M.view`): it takes the window over the way the other numbered views do
--- and keeps itself up to date, so a list of runs is something you can read
--- and walk rather than a popup in the corner. `q` gives the window back.
---
 -- It never opens on its own: it is down until you ask for it, and down again
 -- once you close it. Nothing is polled while it is down, so a hidden window
 -- costs nothing. It used to come up when the voice card started a run; that
@@ -48,11 +43,6 @@ local known = {}
 
 --- The window, its buffer, and the pane each of its lines jumps to.
 local win, buf, line_panes, empty_since = nil, nil, {}, nil
-
---- The `7` view: the same answer as the little window, in the editor's own
---- view -- it takes the window over the way the agenda does, and `q` gives
---- the window back to the buffer it was showing.
-local view_win, view_buf, view_prev, view_panes = nil, nil, nil, {}
 
 local timer = nil
 
@@ -215,29 +205,6 @@ local function close()
   win, buf, line_panes, empty_since = nil, nil, {}, nil
 end
 
---- One run as two lines: the head -- its state icon, what it was asked, how
---- long it has been going -- and below it the last thing it said. Both the
---- floating window and the `7` view draw a run this way.
----@param run table
----@param width integer
----@return string head
----@return string detail
----@return string icon
-local function run_lines(run, width)
-  local icon = run.alive and (run.line and run.line:match '^❓' and '❓' or '▶') or '✔'
-  local when = run.alive and elapsed(os.time() - (run.started or os.time())) or 'done'
-  local room = width - 4 - vim.fn.strdisplaywidth(icon) - 1 - vim.fn.strdisplaywidth(when)
-  local head = icon .. ' ' .. pad(clip(run.title, math.max(1, room)), math.max(1, room)) .. when
-  local detail = run.line
-  if run.alive and not detail then
-    detail = 'just started'
-  end
-  if not run.alive and not run.line then
-    detail = 'finished'
-  end
-  return head, '  ' .. clip(detail or '', width - 4), icon
-end
-
 --- Draw `entries` in the window, opening it first when it is not there.
 ---@param entries table[]
 local function render(entries)
@@ -247,10 +214,21 @@ local function render(entries)
     lines[1] = 'no omp run in flight'
   end
   for _, run in ipairs(entries) do
-    local head, detail, icon = run_lines(run, width)
+    local icon = run.alive and (run.line and run.line:match '^❓' and '❓' or '▶') or '✔'
+    local when = run.alive and elapsed(os.time() - (run.started or os.time())) or 'done'
+    local room = width - 4 - vim.fn.strdisplaywidth(icon) - 1 - vim.fn.strdisplaywidth(when)
+    local title = clip(run.title, math.max(1, room))
+    local head = icon .. ' ' .. pad(title, math.max(1, room)) .. when
     lines[#lines + 1] = head
     marks[#lines] = { icon = icon, run = run }
-    lines[#lines + 1] = detail
+    local detail = run.line
+    if run.alive and not detail then
+      detail = 'just started'
+    end
+    if not run.alive and not run.line then
+      detail = 'finished'
+    end
+    lines[#lines + 1] = '  ' .. clip(detail or '', width - 4)
   end
 
   local height = math.min(MAX_ROWS, math.max(3, #lines))
@@ -302,9 +280,9 @@ local function render(entries)
   vim.bo[buf].modifiable = false
   vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
   line_panes = {}
-  -- `marks` is keyed by line number (one per run head, a detail line between
-  -- two of them), so it is walked with pairs: ipairs stopped at the hole and
-  -- only the first run ever got its icon, and the pane it jumps to.
+  -- `marks` is keyed by line number -- one per run head, a detail line
+  -- between two of them -- so it is walked with pairs: ipairs stopped at the
+  -- hole, and only the first run ever got its icon and its pane.
   for lnum, mark in pairs(marks) do
     line_panes[lnum] = mark.run.pane
     local group = mark.icon == '❓' and 'DiagnosticWarn' or mark.icon == '✔' and 'DiagnosticOk' or 'DiagnosticInfo'
@@ -324,177 +302,22 @@ local function look()
   return entries
 end
 
---- Is the `7` view on screen?
----@return boolean
-local function view_open()
-  return view_buf ~= nil
-    and vim.api.nvim_buf_is_valid(view_buf)
-    and view_win ~= nil
-    and vim.api.nvim_win_is_valid(view_win)
-    and vim.api.nvim_win_get_buf(view_win) == view_buf
-end
-
---- Bring the `7` view's text in line with `entries`. The cursor stays where it
---- is unless it was left past the new end.
----@param entries table[]
-local function view_draw(entries)
-  if not view_open() then
-    return
-  end
-  local width = math.max(20, vim.api.nvim_win_get_width(view_win) - 2)
-  local alive = 0
-  for _, run in ipairs(entries) do
-    if run.alive then
-      alive = alive + 1
-    end
-  end
-  local count = ('%d running'):format(alive)
-  if #entries > alive then
-    count = count .. (' · %d just finished'):format(#entries - alive)
-  end
-  local title = ' omp runs'
-  local header = pad(title, math.max(#title + 1, width - vim.fn.strdisplaywidth(count))) .. count
-  local lines = { header }
-  local hl = { { 1, 1, #title, 'Title' }, { 1, #title + 1, #header, 'Comment' } }
-  local panes = {}
-  if #entries == 0 then
-    lines[#lines + 1] = ''
-    lines[#lines + 1] = vim.fn.executable 'tmux' == 1 and ' no omp instance is running' or ' tmux is not running here'
-    hl[#hl + 1] = { #lines, 1, #lines[#lines], 'Comment' }
-  end
-  local section = nil
-  for _, run in ipairs(entries) do
-    local want = run.alive and 'Running' or 'Just finished'
-    if want ~= section then
-      section = want
-      lines[#lines + 1] = ''
-      lines[#lines + 1] = ' ' .. section
-      hl[#hl + 1] = { #lines, 1, #lines[#lines], 'Title' }
-      lines[#lines + 1] = ''
-    end
-    local head, detail, icon = run_lines(run, width)
-    lines[#lines + 1] = ' ' .. head
-    panes[#lines] = run.pane
-    local group = icon == '❓' and 'DiagnosticWarn' or icon == '✔' and 'DiagnosticOk' or 'DiagnosticInfo'
-    hl[#hl + 1] = { #lines, 2, 2 + #icon, group }
-    lines[#lines + 1] = detail
-    hl[#hl + 1] = { #lines, 1, #lines[#lines], 'Comment' }
-  end
-
-  local lnum = math.min(vim.api.nvim_win_get_cursor(view_win)[1], #lines)
-  vim.bo[view_buf].modifiable = true
-  vim.api.nvim_buf_set_lines(view_buf, 0, -1, false, lines)
-  vim.bo[view_buf].modifiable = false
-  vim.api.nvim_buf_clear_namespace(view_buf, ns, 0, -1)
-  for _, mark in ipairs(hl) do
-    vim.api.nvim_buf_set_extmark(view_buf, ns, mark[1] - 1, mark[2] - 1, {
-      end_col = mark[3] - 1,
-      hl_group = mark[4],
-    })
-  end
-  vim.api.nvim_win_set_cursor(view_win, { lnum, 0 })
-  view_panes = panes
-end
-
---- The pane the `7` view's line names, if it names one.
----@return string|nil
-local function view_pane()
-  local lnum = vim.api.nvim_win_get_cursor(view_win)[1]
-  return view_panes[lnum]
-end
-
-local function view_jump()
-  local pane = view_pane()
-  if not pane then
-    return
-  end
-  M.hide_view()
-  vim.fn.system { 'tmux', 'select-window', '-t', pane }
-  vim.fn.system { 'tmux', 'select-pane', '-t', pane }
-end
-
---- Close the `7` view and give the window back to the buffer it was showing.
-function M.hide_view()
-  local win_, buf_, prev = view_win, view_buf, view_prev
-  view_win, view_buf, view_prev, view_panes = nil, nil, nil, {}
-  if win_ and vim.api.nvim_win_is_valid(win_) and buf_ and vim.api.nvim_buf_is_valid(buf_) and vim.api.nvim_win_get_buf(win_) == buf_ then
-    if prev and vim.api.nvim_buf_is_valid(prev) and vim.fn.bufloaded(prev) == 1 then
-      vim.api.nvim_win_set_buf(win_, prev)
-    else
-      vim.api.nvim_win_set_buf(win_, vim.api.nvim_create_buf(true, false))
-    end
-  end
-  if buf_ and vim.api.nvim_buf_is_valid(buf_) then
-    pcall(vim.api.nvim_buf_delete, buf_, { force = true })
-  end
-end
-
---- The `7` view: every run on one screen, in the window you are in -- the
---- editor's own answer to the question the little window answers, for when a
---- popup in the corner is not a place you can read a list. It takes the window
---- over (the agenda's `window = 'current'`), so the digits still switch views,
---- and it keeps itself up to date while it is on screen.
-function M.view()
-  if view_open() then
-    if vim.api.nvim_get_current_win() == view_win then
-      M.hide_view()
-      return
-    end
-    vim.api.nvim_set_current_win(view_win)
-    return
-  end
-  local prev = vim.api.nvim_get_current_buf()
-  local created = vim.api.nvim_create_buf(false, true)
-  pcall(vim.api.nvim_buf_set_name, created, 'omp runs')
-  vim.bo[created].buftype = 'nofile'
-  vim.bo[created].bufhidden = 'wipe'
-  vim.bo[created].swapfile = false
-  vim.bo[created].undolevels = -1
-  vim.bo[created].modifiable = false
-  view_win, view_buf, view_prev, view_panes = vim.api.nvim_get_current_win(), created, prev, {}
-  vim.api.nvim_win_set_buf(view_win, created)
-  vim.wo[view_win].number = false
-  vim.wo[view_win].relativenumber = false
-  vim.wo[view_win].signcolumn = 'no'
-  vim.wo[view_win].wrap = false
-  vim.wo[view_win].cursorline = true
-  vim.wo[view_win].foldenable = false
-  vim.wo[view_win].spell = false
-  vim.wo[view_win].list = false
-  vim.wo[view_win].colorcolumn = ''
-  vim.keymap.set('n', 'q', M.hide_view, { buffer = created, desc = 'runs: close the view' })
-  vim.keymap.set('n', '<Esc>', M.hide_view, { buffer = created, desc = 'runs: close the view' })
-  vim.keymap.set('n', 'g', function()
-    view_draw(look())
-  end, { buffer = created, desc = 'runs: look again' })
-  vim.keymap.set('n', '<CR>', view_jump, { buffer = created, desc = 'runs: jump to the run' })
-  vim.bo[created].filetype = 'orgagenda'
-  view_draw(look())
-end
-
---- One look at the runs, and whatever is on screen brought in line with them.
---- Only a surface already open is drawn: a tick never opens one, and a surface
---- that is down is not looked at at all -- no tmux call, no transcript read.
+--- One look at the runs, and the window brought in line with them. Only a
+--- window already open is drawn: a tick never opens one, and a window that is
+--- down is not looked at at all -- no tmux call, no transcript read.
 function M.sync()
-  local shown = view_open()
-  local popup = win and vim.api.nvim_win_is_valid(win)
-  if not (shown or popup) then
+  if not (win and vim.api.nvim_win_is_valid(win)) then
     return
   end
   local entries = look()
-  if shown then
-    view_draw(entries)
-  end
-  if popup then
-    render(entries)
-    if #entries == 0 then
-      empty_since = empty_since or os.time()
-      if os.time() - empty_since >= IDLE_HIDE then
-        close()
-      end
-    else
-      empty_since = nil
+  render(entries)
+  if #entries == 0 then
+    empty_since = empty_since or os.time()
+    if os.time() - empty_since >= IDLE_HIDE then
+      close()
     end
+  else
+    empty_since = nil
   end
 end
 
