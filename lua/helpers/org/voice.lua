@@ -158,7 +158,6 @@ function M.status()
     heard = state.heard,
     partial = state.partial,
     view = state.view,
-    target = state.target,
     error = state.error,
     at = state.at,
     level = state.level,
