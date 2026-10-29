@@ -29,7 +29,13 @@
 -- the entry under the cursor in the list. The talking instance is told, and
 -- the ticket it files hangs under that entry, so a spoken command lands in the
 -- project the user was reading. A listen with nothing highlighted carries no
--- target, and the instance picks the project the words belong to.
+-- target, and the board is the project nvim is working in: the words go where a
+-- capture from that directory would, so the instance is never left asking
+-- which file they belong to.
+--
+-- The instance answers; it never asks. A line that leaves something open is
+-- read the plainest way and the reply says what was taken, because a question
+-- from the bot is a whole second listen from the user.
 --
 -- One selected entry is not the talking instance's: a ticket a run already
 -- holds (`@omp_ticket`, or the orchestrator that batch-launched it) hears the
@@ -1418,7 +1424,9 @@ end
 --- With the selection in hand (`state.target`) the instance is told which entry
 --- the words hang under, so a spoken command lands in the project the user was
 --- reading, or on the ticket they were looking at. Without one the words name
---- no destination, and the instance picks the project they belong to.
+--- no destination, and they get the project's own board -- the one nvim is
+--- working in (`ai.open_prompt`'s spec) -- so the instance files them without
+--- asking anything back.
 ---@param text string
 local function launch(text)
   if text == '' then
