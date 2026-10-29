@@ -19,14 +19,25 @@
       <nav id="notes"></nav>
       <footer id="stats"></footer>
     </aside>
+    <div id="scrim"></div>
     <main>
       <header id="top">
+        <button
+          id="rail-toggle"
+          type="button"
+          title="Notes"
+          aria-label="Show the notes"
+          aria-controls="rail"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
         <div class="tabs">
           <button id="tab-graph" type="button" title="g">◉ Graph</button>
           <button id="tab-local" type="button" hidden>◎ Local graph</button>
         </div>
         <span class="spacer"></span>
-        <a class="ghost" href="/" title="TODO dashboard">☰ todos</a>
+        <a class="ghost" href="/" title="TODO dashboard"><span class="ico">☰ </span>todos</a>
       </header>
       <div id="pane"></div>
     </main>

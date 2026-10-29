@@ -505,3 +505,104 @@ p.empty {
   border-radius: 6px;
   background-clip: content-box;
 }
+/* ---- the rail as a menu ------------------------------------------------ */
+
+/* The burger and the shade under the drawer are the phone's: on a wide screen
+   the rail stands where it always stood and neither is drawn. */
+#rail-toggle,
+#scrim {
+  display: none;
+}
+
+/* ---- a phone ----------------------------------------------------------- */
+
+/* A phone has no 250px to give the rail -- at 390 the note it shows would read
+   in a strip about twenty characters wide. So the rail becomes a drawer: the
+   burger in the top bar slides it over the page, a tap beside it or on a note
+   puts it away again, and the note keeps the whole screen.
+   The same breakpoint as the dashboard: a phone on its side is 844px wide,
+   wider than 720, and still a thumb on glass. */
+@media (max-width: 720px), (hover: none) and (pointer: coarse), (max-height: 500px) and (hover: none) {
+  body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #rail-toggle {
+    display: block;
+    flex: none;
+    min-width: 44px;
+    min-height: 44px;
+    margin-right: 2px;
+    border-radius: 6px;
+    color: var(--subtext);
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  #top .ghost .ico {
+    display: none;
+  }
+
+  #rail {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 20;
+    width: min(86vw, 320px);
+    padding: calc(14px + env(safe-area-inset-top)) 10px env(safe-area-inset-bottom);
+    border-right: 1px solid var(--surface1);
+    transform: translateX(-101%);
+    transition: transform 0.18s ease;
+    /* the drawer scrolls its own notes, not the page behind it */
+    overscroll-behavior: contain;
+  }
+
+  body.rail-open #rail {
+    transform: none;
+    box-shadow: 0 0 34px rgb(0 0 0 / 0.5);
+  }
+
+  #scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    background: rgb(0 0 0 / 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s;
+  }
+
+  body.rail-open #scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* a thumb, not a pointer: the rows grow to the height a finger needs */
+  #notes button {
+    padding: 9px 8px;
+    min-height: 44px;
+  }
+
+  /* under 16px iOS zooms the page into the field and leaves it there */
+  #search {
+    font-size: 16px;
+    padding: 9px 10px;
+  }
+
+  #top {
+    padding: calc(6px + env(safe-area-inset-top)) 10px 6px;
+    gap: 2px;
+  }
+
+  #top button,
+  #top .ghost {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  article.note {
+    padding: 20px 16px calc(60px + env(safe-area-inset-bottom));
+  }
+}

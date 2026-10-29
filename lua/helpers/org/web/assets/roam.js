@@ -103,6 +103,18 @@ function groupOf(note) {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+// ---- the drawer ----------------------------------------------------------
+
+// On a phone the rail is a drawer behind the burger in the top bar; on a wide
+// screen the stylesheet keeps the rail in place and the class does nothing.
+const railToggle = $('#rail-toggle');
+const railOpen = () => document.body.classList.contains('rail-open');
+
+function setRail(open) {
+  document.body.classList.toggle('rail-open', open);
+  railToggle.setAttribute('aria-expanded', String(open));
+}
+
 function renderRail(current) {
   const nav = $('#notes');
   nav.replaceChildren();
@@ -128,7 +140,10 @@ function renderRail(current) {
         .join('  ');
       btn.append(el('span', 'hint', hint || note.rel.replace(/^.*roam\//, '')));
       btn.title = note.rel;
-      btn.addEventListener('click', () => go('n=' + note.id));
+      btn.addEventListener('click', () => {
+        go('n=' + note.id);
+        setRail(false); // a phone: the note picked is the page now
+      });
       nav.append(btn);
     }
   }
@@ -734,6 +749,9 @@ async function load() {
 
 window.addEventListener('hashchange', render);
 
+railToggle.addEventListener('click', () => setRail(!railOpen()));
+$('#scrim').addEventListener('click', () => setRail(false));
+
 $('#search').addEventListener('input', (ev) => {
   state.query = ev.target.value;
   const current = route();
@@ -750,6 +768,8 @@ document.addEventListener('keydown', (ev) => {
     $('#search').select();
   } else if (ev.key === 'Escape' && typing) {
     ev.target.blur();
+  } else if (ev.key === 'Escape' && railOpen()) {
+    setRail(false);
   } else if ((ev.key === 'g' || ev.key === 'G') && !typing) {
     const current = route();
     if (current?.kind === 'note') go('g=' + current.id);
