@@ -1975,8 +1975,21 @@ live.addEventListener('change', debounce(async () => {
 live.addEventListener('reload', () => {
   if (!busy()) location.reload();
 });
-live.addEventListener('open', () => $('#live').classList.add('on'));
-live.addEventListener('error', () => $('#live').classList.remove('on'));
+// A phone puts the page away -- the screen locks, another app comes forward --
+// and the stream dies with it, then reconnects by itself. Whatever the site
+// was edited to while the page was away is only in the file now, so the page
+// that comes back loads itself again rather than show yesterday's code.
+let dropped = false;
+live.addEventListener('open', () => {
+  $('#live').classList.add('on');
+  const missed = dropped;
+  dropped = false;
+  if (missed && !busy()) location.reload();
+});
+live.addEventListener('error', () => {
+  dropped = true;
+  $('#live').classList.remove('on');
+});
 
 load();
 loadShare();

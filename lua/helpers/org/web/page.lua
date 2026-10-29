@@ -174,6 +174,7 @@ function M.preview(opts)
   const live = document.getElementById('live');
   const es = new EventSource('/events');
   let timer;
+  let dropped = false; // the stream died while the page was away
 
   // the state badge and the checkboxes of the rendered node write the file
   // through nvim (helpers/org/web/clicks)
@@ -247,10 +248,18 @@ function M.preview(opts)
     } catch (e) {}
   }
 
-  es.addEventListener('open', () => live.classList.add('on'));
-  es.addEventListener('error', () => live.classList.remove('on'));
-  // the site's own files changed (an asset, a renderer module): the page loads
-  // itself again, unless an open editor is holding words a reload would drop
+  es.addEventListener('open', () => {
+    live.classList.add('on');
+    // the stream died while the phone had the page away, and came back: the
+    // site may have been edited in between, so the page loads itself again
+    const missed = dropped;
+    dropped = false;
+    if (missed && !document.querySelector('.editor')) location.reload();
+  });
+  es.addEventListener('error', () => {
+    dropped = true;
+    live.classList.remove('on');
+  });
   es.addEventListener('reload', () => {
     if (document.querySelector('.editor')) return;
     location.reload();

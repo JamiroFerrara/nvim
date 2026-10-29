@@ -760,9 +760,19 @@ document.addEventListener('keydown', (ev) => {
 // The vault follows the page: one save, one re-read, the note or the graph
 // redrawn where it stands. A change to the site's own files loads the page
 // again, so an asset or a renderer module edited while it is open shows up
-// without a refresh.
+// without a refresh -- and so does one edited while a phone had the page away:
+// the stream reconnects afterwards, and the page then loads itself again.
+let dropped = false;
 const live = new EventSource('/events');
 live.addEventListener('change', debounce(load, 250));
 live.addEventListener('reload', () => location.reload());
+live.addEventListener('error', () => {
+  dropped = true;
+});
+live.addEventListener('open', () => {
+  const missed = dropped;
+  dropped = false;
+  if (missed) location.reload();
+});
 
 load();
