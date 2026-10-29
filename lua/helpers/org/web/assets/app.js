@@ -1955,11 +1955,26 @@ $('#share-off').addEventListener('click', async () => {
 
 // ---- live reload --------------------------------------------------------
 
+// `change` is the vault; `reload` is the site's own files, an asset or a
+// renderer module edited while the page is open. The page loads itself again
+// and the asset it asks for next is the new one -- unless it is holding work
+// only the page has, which a reload would throw away.
+function busy() {
+  if (document.querySelector('.editor')) return true;
+  const voice = document.querySelector('#jarvis');
+  if (voice && /phase-(speaking|listening|thinking|review)/.test(voice.className)) return true;
+  const field = document.querySelector('textarea');
+  return !!(field && field.value.trim());
+}
+
 const live = new EventSource('/events');
 live.addEventListener('change', debounce(async () => {
   await load();
   refreshSelection();
 }, 200));
+live.addEventListener('reload', () => {
+  if (!busy()) location.reload();
+});
 live.addEventListener('open', () => $('#live').classList.add('on'));
 live.addEventListener('error', () => $('#live').classList.remove('on'));
 

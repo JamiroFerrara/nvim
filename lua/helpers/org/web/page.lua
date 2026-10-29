@@ -236,6 +236,12 @@ function M.preview(opts)
 
   es.addEventListener('open', () => live.classList.add('on'));
   es.addEventListener('error', () => live.classList.remove('on'));
+  // the site's own files changed (an asset, a renderer module): the page loads
+  // itself again, unless an open editor is holding words a reload would drop
+  es.addEventListener('reload', () => {
+    if (document.querySelector('.editor')) return;
+    location.reload();
+  });
   es.addEventListener('change', (ev) => {
     let data = {};
     try { data = JSON.parse(ev.data || '{}'); } catch (e) {}

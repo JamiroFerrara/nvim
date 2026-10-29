@@ -11,8 +11,10 @@
 --
 -- Pages follow the vault: an fs watcher over ~/org (helpers/org/watch.lua)
 -- and TextChanged events broadcast on the event stream, and the browser
--- refetches. The server listens on the loopback address only, the way
--- markdown-preview.nvim's does.
+-- refetches. They follow the site too: an edit to an asset or to one of the
+-- renderer modules is broadcast as `reload` (helpers/org/web/hot.lua), and the
+-- open pages load themselves again without a manual refresh. The server
+-- listens on the loopback address only, the way markdown-preview.nvim's does.
 --
 -- The phone reaches the same pages through an ngrok tunnel started beside the
 -- server (helpers/org/web/share.lua): its address and the QR of it are the
@@ -31,6 +33,7 @@ local M = {}
 
 local actions = require 'helpers.org.web.actions'
 local data = require 'helpers.org.web.data'
+local hot = require 'helpers.org.web.hot'
 local http = require 'helpers.org.web.http'
 local page = require 'helpers.org.web.page'
 local roam = require 'helpers.org.web.roam'
@@ -40,7 +43,11 @@ local state = {
   server = nil,
   port = nil,
   timer = nil,
+  hot = nil,
 }
+
+-- where these files live: the site's own assets are the directory beside them
+local web_dir = vim.fs.dirname((debug.getinfo(1, 'S').source:gsub('^@', '')))
 
 local uv = vim.uv or vim.loop
 
@@ -456,6 +463,82 @@ local function broadcast()
   end)
 end
 
+--- The modules a page's redraw can pick up without restarting nvim: the ones
+--- that read the vault or draw it, and hold nothing between requests but a
+--- cache. `init`, `http`, `live` and `share` keep state a reload would lose
+--- (the server itself, the open streams, the runs being watched), so an edit
+--- to one of them waits for the next start.
+local RELOADABLE = {
+  'actions',
+  'clicks',
+  'data',
+  'headings',
+  'highlight',
+  'links',
+  'markdown',
+  'page',
+  'qr',
+  'roam',
+  'turns',
+}
+
+--- Load the renderer modules again, all of them or none: a file with a syntax
+--- error in it leaves the last good set serving the pages, and says so.
+---@return boolean ok, string|nil err
+local function reload_web()
+  local saved = {}
+  for _, name in ipairs(RELOADABLE) do
+    local key = 'helpers.org.web.' .. name
+    saved[key] = package.loaded[key]
+    package.loaded[key] = nil
+  end
+  local ok, fresh = pcall(function()
+    -- the table is built whole or not at all, so no caller is left holding
+    -- half of a new set beside half of the old one
+    return {
+      actions = require 'helpers.org.web.actions',
+      data = require 'helpers.org.web.data',
+      page = require 'helpers.org.web.page',
+      roam = require 'helpers.org.web.roam',
+    }
+  end)
+  if not ok then
+    for key, mod in pairs(saved) do
+      package.loaded[key] = mod
+    end
+    return false, fresh
+  end
+  actions = fresh.actions
+  data = fresh.data
+  page = fresh.page
+  roam = fresh.roam
+  return true
+end
+
+--- The site's own files changed: reload what a page is drawn from, then tell
+--- every open page to load itself again -- the asset it asks for next is read
+--- from disk, so the browser shows the edit without a refresh.
+---@param paths string[]
+local function rebuilt(paths)
+  local code = false
+  for _, path in ipairs(paths) do
+    if path:match '%.lua$' then
+      code = true
+      break
+    end
+  end
+  if code then
+    local ok, err = reload_web()
+    if not ok then
+      vim.notify('org web: ' .. tostring(err), vim.log.levels.WARN)
+      return
+    end
+  end
+  if state.server then
+    state.server.broadcast('reload', '{}')
+  end
+end
+
 --- The port every session listens on. Fixed, so a reload, a bookmark and a
 --- tab left open across a restart of nvim all keep working; only a port
 --- something else already holds falls back to one the system picks.
@@ -493,6 +576,10 @@ local function start()
   -- the watcher needs the tree; the buffer events cover the file being
   -- edited, and both are cheap
   require('helpers.org.watch').start(root, broadcast)
+
+  -- the site's own files, so an edit to an asset or a renderer module shows up
+  -- in the open pages without a refresh
+  state.hot = hot.start({ web_dir, web_dir .. '/assets' }, rebuilt)
 
   -- and the tunnel the phone reaches it through, unless `g:org_web_share` is
   -- off: it starts beside the server, so the address exists as soon as a page
@@ -630,6 +717,10 @@ function M.stop()
     state.timer:stop()
     state.timer:close()
     state.timer = nil
+  end
+  if state.hot then
+    state.hot()
+    state.hot = nil
   end
   pcall(vim.api.nvim_del_augroup_by_name, 'OrgWebViews')
   require('helpers.org.watch').unsubscribe(broadcast)
