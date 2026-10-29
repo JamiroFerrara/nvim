@@ -153,7 +153,9 @@
     // listen that is still running
     sendRow.hidden = phase !== 'review';
 
-    const run = runText(status);
+    // the run line is about words that already left: drawn under a sentence
+    // still waiting on the send button it would describe the one before it
+    const run = phase === 'sent' ? runText(status) : '';
     runLine.hidden = !shown || run === '';
     runLine.textContent = run;
     runLine.classList.toggle('run-done', Boolean(status.run) && !status.run.alive);
