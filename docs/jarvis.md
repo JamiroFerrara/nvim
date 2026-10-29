@@ -99,11 +99,32 @@ a half.
 4. When the listening window ends (or a second click stops it), the whole wav
    goes to whisper.cpp, to a command of the user's, or to Windows' own
    recognizer run on the file. The transcript is the words the run receives.
+   whisper.cpp reads the finished sentence with the best English model on the
+   machine (`ggml-small.en.bin` before `ggml-base.en.bin`, and so on up to
+   `ggml-medium.en.bin`; `OMP_VOICE_WHISPER_MODEL` or `whisper_model` in setup
+   overrides), and the sentence while it is still being said with
+   `ggml-base.en.bin` if it is there: reading a recording costs the same
+   whatever its length — whisper encodes a fixed thirty seconds — so the words
+   on the card come from the quick model and the words that start a run come
+   from the accurate one. A read of a sentence takes a few seconds on a CPU;
+   it is the only slow part of a listen.
 5. The words go to a fresh `omp` pane (`helpers/org/ai.lua`'s `open_prompt`),
    carrying one line of context — that they were said on the dashboard, the
    view's name, and where the vault is. From there the run decides what to do
    inside the org system; the card's part ends. When the voice is on, the
    transcript is spoken back first.
+
+A recording that never rose above the meter's floor is an error, not a listen:
+a transcriber asked about silence still answers — whisper makes a word of it,
+`you`, or `(crickets chirping)` — and non-speech markers like that are cut from
+the words before they are used.
+
+The transcriber is whisper.cpp when the machine has it — `whisper-cli` on
+`PATH`, and a `ggml-*.bin` model in `~/.local/share/whisper`, `~/.cache/whisper`
+or `/usr/share/whisper.cpp` — and Windows' own recognizer when it does not. The
+Windows one is the reason the model matters: it reads clear speech and then
+loses the sentence in room noise (`this is a vocal command test` came back as
+`was the motive mom's house`), where whisper gets it right on the same audio.
 
 Overrides, when detection guesses wrong: `OMP_VOICE_SPEAK`, `OMP_VOICE_TTS`,
 `OMP_VOICE_STT`, `OMP_VOICE_WHISPER_MODEL`, `OMP_VOICE_LANG`,

@@ -242,37 +242,73 @@ local function audio_env()
   return nil
 end
 
+--- The directories a whisper model is looked for in, and the English models in
+--- the order they are wanted: the words are what the run acts on, so the
+--- better model wins. Only the `.en` models are named -- the rest are picked up
+--- by the glob when a machine has nothing else.
+local WHISPER_DIRS = { '~/.local/share/whisper', '~/.cache/whisper', '/usr/share/whisper.cpp' }
+local WHISPER_MODELS = {
+  'ggml-medium.en.bin',
+  'ggml-small.en.bin',
+  'ggml-small.en-q5_1.bin',
+  'ggml-base.en.bin',
+  'ggml-base.en-q5_1.bin',
+}
+
+--- The first readable path among `names` under the whisper directories.
+---@param names string[]
+---@return string|nil
+local function whisper_find(names)
+  for _, name in ipairs(names) do
+    for _, dir in ipairs(WHISPER_DIRS) do
+      local path = vim.fn.expand(dir .. '/' .. name)
+      if vim.fn.filereadable(path) == 1 then
+        return path
+      end
+    end
+  end
+end
+
 --- Where whisper.cpp's model lives, if the machine has one: the explicit
---- setting first (opts, then the environment), then the places people usually
---- put it, then any `ggml-*.bin` under the usual share directories.
+--- setting first (opts, then the environment), then the English models in
+--- order of what they hear best, then any `ggml-*.bin` under the usual share
+--- directories.
 local model -- found once: a glob per status poll would walk the share dirs 3x a second
 local function whisper_model()
   if model ~= nil then
     return model ~= '' and model or nil
   end
-  local candidates = {
-    opts.whisper_model,
-    vim.env.OMP_VOICE_WHISPER_MODEL,
-    vim.fn.expand '~/.local/share/whisper/ggml-base.en.bin',
-    vim.fn.expand '~/.local/share/whisper/ggml-small.en.bin',
-    vim.fn.expand '~/.cache/whisper/ggml-base.en.bin',
-    '/usr/share/whisper.cpp/ggml-base.en.bin',
-  }
-  for _, path in ipairs(candidates) do
+  local explicit = { opts.whisper_model, vim.env.OMP_VOICE_WHISPER_MODEL }
+  for _, path in ipairs(explicit) do
     if path and path ~= '' and vim.fn.filereadable(path) == 1 then
       model = path
       return model
     end
   end
-  for _, dir in ipairs { '~/.local/share/whisper', '~/.cache/whisper', '/usr/share/whisper.cpp' } do
-    local found = vim.fn.glob(vim.fn.expand(dir) .. '/ggml-*.bin', false, true)[1]
-    if found then
-      model = found
-      return model
+  model = whisper_find(WHISPER_MODELS) or ''
+  if model == '' then
+    for _, dir in ipairs(WHISPER_DIRS) do
+      local found = vim.fn.glob(vim.fn.expand(dir) .. '/ggml-*.bin', false, true)[1]
+      if found then
+        model = found
+        break
+      end
     end
   end
-  model = ''
-  return nil
+  return model ~= '' and model or nil
+end
+
+--- The model a sentence still being said is read with: the quicker one, so the
+--- words reach the card while there is still time to read them. Reading a
+--- recording costs the same whatever its length -- whisper encodes a fixed
+--- thirty seconds -- so the sentence being said is the place to spend less.
+local peek_model
+local function whisper_peek_model()
+  if peek_model ~= nil then
+    return peek_model ~= '' and peek_model or nil
+  end
+  peek_model = whisper_find { 'ggml-base.en.bin', 'ggml-base.en-q5_1.bin' } or whisper_model() or ''
+  return peek_model ~= '' and peek_model or nil
 end
 
 --- The listening half's transcriber: whisper.cpp when the machine has both
@@ -413,14 +449,21 @@ end
 --- The words of the sentence so far, read again every `partial_seconds` while
 --- the recording runs, so the screen can show what was heard while it is still
 --- being said. One read at a time: a transcriber slower than the clock skips a
---- turn instead of piling up behind itself.
-local partial = { timer = nil, busy = false }
+--- turn instead of piling up behind itself. `proc` is the read in flight, so
+--- the whole sentence's own read does not have to wait for a guess about half
+--- of it: that read is cut short when the sentence ends.
+local partial = { timer = nil, busy = false, proc = nil }
 
 local function drop_partial()
   if partial.timer then
     pcall(partial.timer.stop, partial.timer)
     pcall(partial.timer.close, partial.timer)
     partial.timer = nil
+  end
+  if partial.proc then
+    local handle = partial.proc
+    partial.proc = nil
+    pcall(handle.kill, handle, 'sigterm')
   end
 end
 
@@ -433,7 +476,9 @@ local reader_start, reader_stop, reader_exit, reader_ask, reader_parse
 --- cap firing, a program failing -- comes through here, so the phase always
 --- returns to idle. A recording whose every sample was digital silence is an
 --- error, not a quiet listen: it is the one signal that the microphone itself
---- is not delivering anything.
+--- is not delivering anything. A transcriber asked about silence still answers
+--- -- whisper makes a word of it, `you` or `(crickets chirping)` -- so the
+--- meter, not the words, decides whether anything was said.
 ---@param text string
 ---@param done fun(text: string)
 local function heard(text, done)
@@ -449,13 +494,35 @@ local function heard(text, done)
   state.level_db = nil
   state.partial = ''
   local said = vim.trim((text or ''):gsub('%s+', ' '))
-  if said == '' and not state.signal then
+  if not state.signal then
     set_phase('error', { heard = '', error = 'the microphone delivered no sound' })
     done ''
     return
   end
   set_phase(said == '' and 'idle' or 'thinking', { heard = said })
   done(said)
+end
+
+--- Words with whisper's non-speech markers cut out. A recording that holds no
+--- speech at all still gets an answer -- `(crickets chirping)`,
+--- `(blender whirring)`, `[BLANK_AUDIO]` -- and that is its guess at the room,
+--- not the sentence: left in, it would reach the run as the words said.
+---@param text string
+---@return string
+local function spoken(text)
+  local said = vim.trim((text or ''):gsub('%b[]', ''):gsub('%b()', ''):gsub('♪', ''):gsub('%s+', ' '))
+  if said:gsub('[%p%s]', '') == '' then
+    return ''
+  end
+  return said
+end
+
+--- The threads a whisper read is given: one per core, up to eight, so a read
+--- is quicker than the sentence it reads without leaving nvim without a core.
+---@return string
+local function whisper_threads()
+  local cores = vim.uv.available_parallelism and vim.uv.available_parallelism() or 4
+  return tostring(math.max(1, math.min(8, cores)))
 end
 
 --- Read `wav` back into words: the user's own command (`OMP_VOICE_STT`, the
@@ -490,16 +557,30 @@ local function transcribe(wav, backend, done, quiet)
     end)
     cmd = { 'powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script }
   else
-    cmd = { exe 'whisper-cli' and 'whisper-cli' or 'main', '-m', whisper_model(), '-f', wav, '-nt', '-np' }
+    local model = (quiet and whisper_peek_model()) or whisper_model()
+    cmd = {
+      exe 'whisper-cli' and 'whisper-cli' or 'main',
+      '-m',
+      model,
+      '-f',
+      wav,
+      '-nt',
+      '-np',
+      '-t',
+      whisper_threads(),
+    }
     local lang = opts.lang or vim.env.OMP_VOICE_LANG
     if lang then
       vim.list_extend(cmd, { '-l', lang })
     end
     env = audio_env()
   end
-  pcall(vim.system, cmd, { text = true, env = env }, function(obj)
+  local started, handle = pcall(vim.system, cmd, { text = true, env = env }, function(obj)
     pcall(uv.fs_unlink, wav)
     local text = text_of(obj)
+    if backend == 'whisper' then
+      text = spoken(text)
+    end
     vim.schedule(function()
       if quiet then
         done(text)
@@ -508,6 +589,7 @@ local function transcribe(wav, backend, done, quiet)
       end
     end)
   end)
+  return started and handle or nil
 end
 
 --- Write the two sizes into the wav's header, so the file names its own length
@@ -753,7 +835,7 @@ function reader_parse()
     local words = vim.trim((line:sub(2):gsub('%s+$', '')))
     if kind == '\1' then
       partial.busy, partial.asked = false, nil
-      if state.phase == 'listening' and words ~= '' then
+      if state.phase == 'listening' and words ~= '' and state.signal then
         state.partial = words
       end
     elseif kind == '\2' then
@@ -766,6 +848,16 @@ function reader_parse()
   end
 end
 
+--- Is there enough of the sentence to read yet? The first tenths of a second
+--- are noise and a breath, and a transcriber asked about them guesses -- a
+--- stray `you` at the top of every sentence -- where a second and a half
+--- already holds the opening words. Asked and answered while the recording
+--- runs, so the card starts on the words and not on a guess.
+---@return boolean
+local function enough_to_read()
+  return (job.bytes or 0) >= PCM.rate * 2 * 1.5
+end
+
 --- Read the growing recording again and again, so the card shows the words
 --- while they are still being said. A read at a time: a recognizer slower than
 --- the clock skips a turn instead of piling up behind itself, and one that
@@ -775,7 +867,7 @@ local function peek_open()
   partial.timer = uv.new_timer()
   partial.timer:start(step * 1000, step * 1000, function()
     vim.schedule(function()
-      if state.phase ~= 'listening' then
+      if state.phase ~= 'listening' or not enough_to_read() then
         return
       end
       if partial.busy then
@@ -810,7 +902,7 @@ local function peek(backend)
   partial.timer = uv.new_timer()
   partial.timer:start(opts.partial_seconds * 1000, opts.partial_seconds * 1000, function()
     vim.schedule(function()
-      if state.phase ~= 'listening' or partial.busy then
+      if state.phase ~= 'listening' or partial.busy or not enough_to_read() then
         return
       end
       local path = snapshot()
@@ -818,10 +910,10 @@ local function peek(backend)
         return
       end
       partial.busy = true
-      transcribe(path, backend, function(text)
-        partial.busy = false
+      partial.proc = transcribe(path, backend, function(text)
+        partial.busy, partial.proc = false, nil
         local words = vim.trim((text or ''):gsub('%s+', ' '))
-        if state.phase == 'listening' and words ~= '' then
+        if state.phase == 'listening' and words ~= '' and state.signal then
           state.partial = words
         end
       end, true)
