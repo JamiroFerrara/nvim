@@ -357,6 +357,17 @@ local function done_recency(a, b)
   return ma < mb and -1 or 1
 end
 
+-- An `http:` / `https:` link opens in the desktop's browser through the door
+-- the browser views already use (helpers/org/web: wslview, else `cmd.exe /c
+-- start` on WSL). org.nvim's own path is `vim.ui.open`, which picks xdg-open
+-- on this machine -- a WSL kernel with no X server -- so the browser never
+-- came up. Anything that is not a web address keeps org.nvim's handling, and a
+-- failed open says so: the helper notifies when no door works.
+local function open_web(_, link)
+  require('helpers.org.web').open_url(link.target)
+  return true
+end
+
 return {
   'xheisenbugx/org.nvim',
   main = 'org',
@@ -901,6 +912,9 @@ return {
     links = {
       -- <CR> on a file:/id: link replaces the current window
       frame_setup = { file = 'current' },
+      -- A web address -- followed with <CR> or clicked -- opens in the
+      -- browser, not through vim.ui.open's xdg-open.
+      types = { http = open_web, https = open_web },
     },
     mappings = {
       -- Global actions, not buffer-local. pick_project_todo is
