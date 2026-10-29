@@ -688,6 +688,29 @@ function M.roam()
   return url
 end
 
+--- Read the site's own files again in a server that is already running: the
+--- renderer modules come off disk anew, the page watcher is restarted, and
+--- every open page is told to load itself again. The server itself and the
+--- phone's tunnel stay where they are, so the address on the phone is the same
+--- one after this (`:OrgWebReload`).
+---@return boolean ok, string|nil err
+function M.reload()
+  if not state.server then
+    start()
+    return true
+  end
+  local ok, err = reload_web()
+  if not ok then
+    return false, err
+  end
+  if state.hot then
+    state.hot()
+  end
+  state.hot = hot.start({ web_dir, web_dir .. '/assets' }, rebuilt)
+  state.server.broadcast('reload', '{}')
+  return true
+end
+
 --- Put the dashboard on a public address and hand it over: the ngrok URL is
 --- copied and the page that draws its QR opens in the browser (the
 --- `:OrgWebShare` command). Wait a moment for the agent to come up.

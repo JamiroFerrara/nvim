@@ -32,6 +32,13 @@ function M.setup()
     require('helpers.org.web').stop()
   end, { desc = 'Stop the org browser server' })
 
+  vim.api.nvim_create_user_command('OrgWebReload', function()
+    local ok, err = require('helpers.org.web').reload()
+    if not ok then
+      vim.notify('org web: ' .. tostring(err), vim.log.levels.WARN)
+    end
+  end, { desc = 'Read the org web pages again without restarting the server or the tunnel' })
+
   vim.api.nvim_create_autocmd('FileType', {
     group = vim.api.nvim_create_augroup('OrgRender', { clear = true }),
     pattern = { 'org' },
