@@ -233,6 +233,8 @@ local function talk_rules()
     '- edit an org file, a ticket, or a code file by hand;',
     '- look at tmux panes, jobs, logs or other runs;',
     '- start subagents or tasks;',
+    '- ask me anything back: a question costs me a whole second turn, so the plainest reading is yours',
+    '  to take, and what you took is one line of your reply;',
     '- repair, retitle, reopen or re-file anything said earlier.',
     '',
     'A message is the words, the view they were said on, their org file (or none), the entry they hang',
@@ -246,18 +248,18 @@ local function talk_rules()
     ':ID:, the launch state, the checkpoint, a pane of its own -- and the run it starts is the worker.',
     'You write no org text and do none of the work.',
     '',
-    'When the message says the org file is none, the words did not say which project they belong to.',
-    'Ask one line, "which file?", and stop. Never go looking. When the answer comes, run the same',
-    'command with it:',
+    'When the message says the org file is none, run the same command with no file argument: it files',
+    'the words in the board this shell stands in, and its one line says which. Do not ask which file --',
+    'the only message that carries one is the words naming it themselves:',
     '',
     "    nvim --headless -c \"lua require('helpers.org.ai').talk('<spec path>', '<file>')\" -c 'qa!'",
     '',
     'Words that are plainly two separate jobs: the command twice, once each.',
     '',
-    'A question: at most three lines, from the words and this conversation alone. If the answer needs a',
-    'look at anything, file it as work instead of looking. A remark to you: one line, what you take from',
-    "it. A correction to an earlier ticket: file it as new work -- the ticket it corrects is a run's, not",
-    'yours.',
+    'A question from me: at most three lines, from the words and this conversation alone. If the answer',
+    'needs a look at anything, file it as work instead of looking. You answer questions; you never ask',
+    'one. A remark to you: one line, what you take from it. A correction to an earlier ticket: file it',
+    "as new work -- the ticket it corrects is a run's, not yours.",
     '',
     'The command settles a repeat itself: when it says the words are already a ticket, quote that and',
     'write nothing.',
@@ -403,6 +405,25 @@ end
 ---@return boolean
 local function has_session(dir)
   return #vim.fn.glob(dir .. '/*.jsonl', false, true) > 0
+end
+
+--- The board a line with no destination of its own belongs in: the project
+--- file the working directory is in (helpers/org/project.lua's claim, or the
+--- repo's own board when it claims nothing) -- the same project a capture
+--- started there would file against. The talking instance is told a file every
+--- time, so the one thing it never has to do is ask which one; nil when the
+--- directory belongs to no project, or the board it names is a file no one has
+--- written yet, and the caller says so in a line instead.
+---@return string|nil
+local function home_board()
+  local ok, project = pcall(function()
+    return require('helpers.org.project').current()
+  end)
+  local file = ok and project and project.file
+  if type(file) == 'string' and file ~= '' and vim.uv.fs_stat(file) then
+    return vim.fs.normalize(file)
+  end
+  return nil
 end
 
 ---@class OrgTicket
@@ -1948,7 +1969,9 @@ end
 --- The words ride along as a spec file, written beside the message: the words
 --- themselves, the view they were said on, and -- when the dashboard had an
 --- entry highlighted -- the file and the entry's :ID:, which is where the
---- ticket they become will hang. The instance reads the spec when it files
+--- ticket they become will hang; with nothing highlighted, the file is the
+--- project's own, the one this nvim is working in (`home_board`), so the
+--- spec always names a destination. The instance reads the spec when it files
 --- them (`M.talk`), so no quote of them has to survive a shell or a prompt.
 ---@param text string the words themselves
 ---@param target? { file: string, line?: integer, id?: string } what the
@@ -1973,6 +1996,12 @@ function M.open_prompt(text, target, view)
   if target then
     spec.file = target.file
     spec.under = target.id
+  else
+    -- nothing was highlighted, so the words name no board of their own: they
+    -- go where a capture from this directory would, and the instance is handed
+    -- that file like any other -- it never has to ask which project they
+    -- belong to, a question that would cost a whole second listen
+    spec.file = home_board()
   end
   -- the words are written down where they outlive this nvim: the talking
   -- instance reads the spec when it files them, and the specs of a day are what
@@ -2072,11 +2101,12 @@ end
 --- `<leader>ai`.
 ---
 --- The spec carries the words, the file they belong to and the :ID: of the
---- entry they hang under (`M.open_prompt` writes it). `file` is the one thing
---- the talking instance may have to supply, as its second argument, when the
---- spec names none: a listen with nothing highlighted does not say which
---- project the words belong to, and the instance asks the user for it rather
---- than going to look (the vault is not its to read).
+--- entry they hang under (`M.open_prompt` writes it, and it names a file even
+--- with nothing highlighted). A spec that names none here -- one written by an
+--- older editor, or by a line whose nvim stood in no project -- is filed in the
+--- board this shell stands in (`home_board`): a wrong board is said in one line
+--- and corrected by saying so, where a question would cost the user a second
+--- listen, and the vault is not the instance's to read either way.
 ---
 --- This is called by the talking instance, from the shell of a headless nvim
 --- (`nvim --headless -c "lua require('helpers.org.ai').talk('<spec>')" -c
@@ -2117,7 +2147,10 @@ function M.talk(spec_path, file)
   end
   local dest = (file and file ~= '') and file or spec.file
   if type(dest) ~= 'string' or dest == '' then
-    say 'no org file for the words: pass one as the second argument'
+    dest = home_board()
+  end
+  if type(dest) ~= 'string' or dest == '' then
+    say 'nowhere to file the words: this shell stands in no project'
     return nil
   end
   local under = type(spec.under) == 'string' and spec.under ~= '' and spec.under or nil
