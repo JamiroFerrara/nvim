@@ -179,6 +179,14 @@ function M.preview(opts)
   const entry = { file: file, line: params.get('line'), id: params.get('id') || undefined };
   OrgActions.bind(document, entry);
 
+  // `✕` on a headline deleted it: the node itself is gone, so the page goes
+  // back to the board; a headline inside it only needs the document drawn
+  // again
+  document.addEventListener('org:reload', (ev) => {
+    if (ev.detail && ev.detail.entry) location.assign('/');
+    else refresh();
+  });
+
   // `i` edits the node in place: the editor holds the node's own lines and
   // writes them back through nvim, which saves the file like any view
   // action. Everything else on the page stays read-only.
@@ -221,6 +229,8 @@ function M.preview(opts)
       // keyword moves
       const title = document.querySelector('.node-title');
       if (json.title && title) title.outerHTML = json.title;
+      // a redrawn document has no buttons of its own: they are drawn here
+      OrgActions.bind(document, entry);
     } catch (e) {}
   }
 

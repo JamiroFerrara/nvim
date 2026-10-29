@@ -1758,6 +1758,15 @@ async function onKey(ev) {
 
 document.addEventListener('keydown', onKey);
 
+// A rendered ticket in the detail pane closed itself with `✓`, or was deleted
+// with `✕` (assets/org-actions.js). The board is drawn again, and `reload`
+// draws the pane over the entry as the file now has it; a ticket that is gone
+// takes the pane with it.
+document.addEventListener('org:reload', async (ev) => {
+  if (ev.detail && ev.detail.entry) closeDetail();
+  await reload();
+});
+
 // ---- snippets -----------------------------------------------------------
 
 // A snippet's copy button takes the code it sits over -- what the page shows,

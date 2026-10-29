@@ -196,11 +196,39 @@ function M.set_state(spec, state)
   return change_state(r.bufnr, r.hl, state)
 end
 
---- The keyword of one headline under the entry becomes `state`. The page
---- names the headline by its place (`index`, 1-based, as written by
---- helpers/org/web/clicks) and the title it drew, so a file that moved under
---- the render still changes the headline it was asked for -- and one that no
---- longer holds that title is refused rather than changed.
+--- The headline of the entry's body a page means: its place (`index`,
+--- 1-based, as written by helpers/org/web/clicks) and the title it drew, so
+--- a file that moved under the render still names the headline it was asked
+--- for, and one that no longer holds that title is refused rather than
+--- guessed at.
+---@param bufnr integer
+---@param hl org.Headline
+---@param index integer|string
+---@param text string|nil
+---@return org.Headline|nil hl, string|nil error
+local function pick_under(bufnr, hl, index, text)
+  local list = under(bufnr, hl)
+  local pick = list[tonumber(index) or 0]
+  if text and not (pick and alike(text, pick.title)) then
+    local found
+    for _, h in ipairs(list) do
+      if alike(text, h.title) then
+        if found then
+          found = nil
+          break
+        end
+        found = h
+      end
+    end
+    pick = found
+  end
+  if not pick then
+    return nil, 'that headline has moved; reload the page'
+  end
+  return pick
+end
+
+--- The keyword of one headline under the entry becomes `state`.
 ---@param spec { file: string, line?: integer, id?: string }
 ---@param index integer
 ---@param text string|nil
@@ -214,23 +242,9 @@ function M.heading_state(spec, index, text, state)
   if not r.hl then
     return nil, 'entry not found'
   end
-  local list = under(r.bufnr, r.hl)
-  local hl = list[tonumber(index) or 0]
-  if text and not (hl and alike(text, hl.title)) then
-    local found
-    for _, h in ipairs(list) do
-      if alike(text, h.title) then
-        if found then
-          found = nil
-          break
-        end
-        found = h
-      end
-    end
-    hl = found
-  end
+  local hl, pick_err = pick_under(r.bufnr, r.hl, index, text)
   if not hl then
-    return nil, 'that headline has moved; reload the page'
+    return nil, pick_err
   end
   local new, err, warning = change_state(r.bufnr, hl, state)
   if err then
@@ -484,6 +498,25 @@ function M.archive(spec)
   return { ok = true }, save_err
 end
 
+--- The lines of one headline's subtree, and the blank line it leaves behind,
+--- out of the buffer.
+---@param bufnr integer
+---@param hl org.Headline
+---@return string|nil error
+local function remove_subtree(bufnr, hl)
+  local last = hl.end_line
+  -- the blank line the subtree leaves behind goes with it
+  local total = vim.api.nvim_buf_line_count(bufnr)
+  if last < total and (vim.api.nvim_buf_get_lines(bufnr, last, last + 1, false)[1] or '') == '' then
+    last = last + 1
+  end
+  local ok, err = pcall(vim.api.nvim_buf_set_lines, bufnr, hl.line - 1, last, false, {})
+  if not ok then
+    return tostring(err)
+  end
+  return nil
+end
+
 --- `dd`: delete the entry's whole subtree, like the view's kill action.
 ---@param spec { file: string, line?: integer, id?: string }
 ---@return { ok: boolean }|nil out, string|nil error
@@ -495,15 +528,35 @@ function M.kill(spec)
   if not r.hl then
     return nil, 'entry not found'
   end
-  local last = r.hl.end_line
-  -- the blank line the subtree leaves behind goes with it
-  local total = vim.api.nvim_buf_line_count(r.bufnr)
-  if last < total and (vim.api.nvim_buf_get_lines(r.bufnr, last, last + 1, false)[1] or '') == '' then
-    last = last + 1
+  local remove_err = remove_subtree(r.bufnr, r.hl)
+  if remove_err then
+    return nil, remove_err
   end
-  local ok, err = pcall(vim.api.nvim_buf_set_lines, r.bufnr, r.hl.line - 1, last, false, {})
-  if not ok then
-    return nil, tostring(err)
+  local _, save_err = commit(r.bufnr)
+  return { ok = true }, save_err
+end
+
+--- The `✕` of a rendered headline: delete the whole subtree of the headline
+--- under the entry that the page names, the way `dd` deletes the entry's own.
+---@param spec { file: string, line?: integer, id?: string }
+---@param index integer
+---@param text string|nil
+---@return { ok: boolean }|nil out, string|nil error
+function M.heading_kill(spec, index, text)
+  local r = resolve(spec)
+  if not r then
+    return nil, 'unknown file'
+  end
+  if not r.hl then
+    return nil, 'entry not found'
+  end
+  local hl, pick_err = pick_under(r.bufnr, r.hl, index, text)
+  if not hl then
+    return nil, pick_err
+  end
+  local remove_err = remove_subtree(r.bufnr, hl)
+  if remove_err then
+    return nil, remove_err
   end
   local _, save_err = commit(r.bufnr)
   return { ok = true }, save_err

@@ -330,9 +330,16 @@ local function handle(req, res)
     return
   end
 
+  -- the entry's own subtree, or -- with a `heading` -- the subtree of one
+  -- headline drawn inside its body
   if req.method == 'POST' and path == '/api/kill' then
     local body = payload_of(req)
-    local out, err = actions.kill(body)
+    local out, err
+    if body.heading ~= nil then
+      out, err = actions.heading_kill(body, body.heading, body.text)
+    else
+      out, err = actions.kill(body)
+    end
     json(res, vim.tbl_extend('force', { error = err }, out or {}))
     return
   end

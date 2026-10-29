@@ -144,6 +144,63 @@
   padding: 0.05em 0.55em;
 }
 
+/* The two buttons a writable ticket carries in the browser views
+   (assets/org-actions.js): `✓` closes it and `↺` opens it again, `✕` deletes
+   it. Quiet until the line is under the pointer, and shown outright where
+   there is no pointer to hover with, so a phone can tap them. */
+.headline-acts {
+  display: inline-flex;
+  gap: 0.3em;
+  margin-left: 0.1em;
+  font-family: var(--font);
+  font-size: 0.68em;
+}
+
+.headline-acts button {
+  border: 1px solid color-mix(in srgb, var(--surface) 65%, transparent);
+  background: transparent;
+  color: var(--overlay);
+  border-radius: 999px;
+  padding: 0 0.55em;
+  line-height: 1.7;
+  font: inherit;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.headline:hover .headline-acts button,
+.headline-acts button:focus-visible {
+  opacity: 1;
+}
+
+.headline-acts .flip:hover {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.headline-acts .flip.closed:hover {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+
+.headline-acts .kill:hover,
+.headline-acts .kill.armed {
+  color: var(--red);
+  border-color: var(--red);
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .headline-acts button {
+    opacity: 0.75;
+    /* a thumb, not a pointer: the row grows to the size a finger needs */
+    padding: 0.15em 0.7em;
+    min-height: 26px;
+    min-width: 26px;
+  }
+}
+
 .org h1 { font-size: 1.7em; }
 .org h2 { font-size: 1.42em; }
 .org h3 { font-size: 1.2em; }
