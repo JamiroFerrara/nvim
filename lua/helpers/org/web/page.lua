@@ -117,6 +117,7 @@ function M.preview(opts)
 <title>%s</title>
 <link rel="stylesheet" href="/assets/org.css">
 <link rel="stylesheet" href="/assets/editor.css">
+<link rel="stylesheet" href="/assets/jarvis.css">
 <style>
   html { background: #11111b; -webkit-text-size-adjust: 100%%; text-size-adjust: 100%%; }
   body { margin: 0; }
@@ -165,6 +166,7 @@ function M.preview(opts)
 </div>
 <script src="/assets/org-actions.js"></script>
 <script src="/assets/editor.js"></script>
+<script src="/assets/jarvis.js"></script>
 <script>
   const query = %s;
   const file = %s;
@@ -178,6 +180,17 @@ function M.preview(opts)
   const params = new URLSearchParams(query);
   const entry = { file: file, line: params.get('line'), id: params.get('id') || undefined };
   OrgActions.bind(document, entry);
+
+  // The microphone card (assets/jarvis.js): this page is one node, so a line
+  // said here is about the node itself rather than a highlighted row -- the
+  // words are filed under this headline, the way a click on the board files
+  // them under the row it selected.
+  window.orgVoiceEntry = {
+    file: file,
+    line: entry.line,
+    id: entry.id || '',
+    title: document.querySelector('.node-title .title')?.textContent || '',
+  };
 
   // `✕` on a headline deleted it: the node itself is gone, so the page goes
   // back to the board; a headline inside it only needs the document drawn

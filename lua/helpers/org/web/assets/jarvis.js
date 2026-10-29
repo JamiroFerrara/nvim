@@ -312,16 +312,17 @@
   }
 
   // What the list has highlighted: the words become a ticket under it, so the
-  // run is pre-selected inside the project the page is showing. A page with
-  // nothing highlighted sends none, and the run works the words out itself.
+  // run is pre-selected inside the project the page is showing. A page that is
+  // one node -- the renderer's detail page -- puts that node here instead of a
+  // row (`window.orgVoiceEntry`), and a page with neither sends nothing: the
+  // run works the words out itself.
   // Only the identity travels -- the file, the line, the :ID: and the title --
   // and nvim resolves it against the vault (helpers/org/web/actions.lua), so a
   // page cannot name a headline it did not draw.
   function highlighted() {
-    if (typeof state === 'undefined' || !state || !state.selectedEntry) return null;
-    const entry = state.selectedEntry;
-    if (!entry || !entry.file) return null;
-    return { file: entry.file, line: entry.line, id: entry.id || '', title: entry.title || '' };
+    const picked = (typeof state !== 'undefined' && state && state.selectedEntry) || window.orgVoiceEntry;
+    if (!picked || !picked.file) return null;
+    return { file: picked.file, line: picked.line, id: picked.id || '', title: picked.title || '' };
   }
 
   // ------------------------------------------------------------------- loop
