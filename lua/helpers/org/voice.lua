@@ -392,10 +392,20 @@ end
 --- of transcribe.cpp, the engine Handy ships. Handy keeps its models in the
 --- Windows profile's Hugging Face cache and names the one in use in its
 --- settings, so sharing the model is a matter of reading that name: whichever
---- model is picked in Handy is the one this reads with.
+--- model is picked in Handy is the one this copies over.
+---
+--- The copy is the one read with, and it lives at a fixed path under
+--- `~/.local/share`, not on the Windows drive: `transcribe-cli` is a native
+--- binary, so that directory alone makes dictation work off WSL. The copy in
+--- `HANDY_CACHE` came before that path and is still read, so an existing one is
+--- not downloaded twice. When neither holds a model, `HANDY_URL` is fetched
+--- into the fixed path once.
 local HANDY_SETTINGS = '/AppData/Roaming/com.pais.handy/settings_store.json'
 local HANDY_MODELS = '/AppData/Roaming/com.pais.handy/models'
+local HANDY_DIR = '~/.local/share/omp/voice'
 local HANDY_CACHE = '~/.cache/omp/voice'
+local HANDY_FILE = 'parakeet-unified-en-0.6b-Q8_0.gguf'
+local HANDY_URL = 'https://huggingface.co/handy-computer/parakeet-unified-en-0.6b-gguf/resolve/main/' .. HANDY_FILE
 
 --- A whole file as a string, read through libuv so the same call works on
 --- either side of the Windows share.
@@ -441,7 +451,66 @@ end
 --- its own, and an older Handy kept them under its own models directory.
 --- `src` is that path once it has been looked for: nil until then, empty when
 --- there is none, so a machine without Handy is not searched twice.
-local handy = { src = nil, model = nil, copying = false, warned = false }
+local handy = { src = nil, model = nil, copying = false, fetching = false, warned = false }
+
+--- The first whole `.gguf` in `dir`, or nil.
+---@param dir string
+---@return string|nil
+local function model_in(dir)
+  for _, name in ipairs(listdir(dir)) do
+    if name:sub(-5) == '.gguf' then
+      local path = dir .. '/' .. name
+      local stat = uv.fs_stat(path)
+      if stat and stat.size > 0 then
+        return path
+      end
+    end
+  end
+end
+
+--- A dictation model on this side, readable without the Windows drive: the one
+--- in the fixed directory, else the copy older versions kept in the cache,
+--- moved there the first time it is found so there is never a second 698 MB of
+--- it. This is what the search below fills on a first run, so once a model is
+--- here a launch reads one directory on this disk and nothing else.
+---@return string|nil
+local function cached_model()
+  local dir = vim.fn.expand(HANDY_DIR)
+  local found = model_in(dir)
+  if found then
+    return found
+  end
+  local legacy = model_in(vim.fn.expand(HANDY_CACHE))
+  if not legacy then
+    return nil
+  end
+  vim.fn.mkdir(dir, 'p')
+  local moved = dir .. '/' .. vim.fn.fnamemodify(legacy, ':t')
+  local ok, done = pcall(uv.fs_rename, legacy, moved)
+  if ok and done and uv.fs_stat(moved) then
+    return moved
+  end
+  return legacy
+end
+
+--- Fetch the model into `HANDY_DIR`, once, in the background: detached, so
+--- quitting nvim does not cut the download, and written beside the final name
+--- then renamed only when the whole file is there, so a half download is never
+--- read as a model. `true` when one was started.
+---@return boolean
+local function download_model()
+  local curl = exe 'curl'
+  local wget = not curl and exe 'wget'
+  if not (curl or wget) then
+    return false
+  end
+  local dir = vim.fn.expand(HANDY_DIR)
+  vim.fn.mkdir(dir, 'p')
+  local dst = dir .. '/' .. HANDY_FILE
+  local fetch = curl and 'curl -fsSL -o "$1.part" "$2" && mv -f "$1.part" "$1"' or 'wget -qO "$1.part" "$2" && mv -f "$1.part" "$1"'
+  pcall(vim.system, { 'sh', '-c', fetch, 'sh', dst, HANDY_URL }, { detach = true })
+  return true
+end
 
 ---@return string|nil
 local function handy_source()
@@ -453,6 +522,11 @@ local function handy_source()
       handy.src = path
       return handy.src
     end
+  end
+  local local_model = cached_model()
+  if local_model then
+    handy.src = local_model
+    return handy.src
   end
   for _, name in ipairs(listdir '/mnt/c/Users') do
     local user = '/mnt/c/Users/' .. name
@@ -491,14 +565,26 @@ local function handy_source()
     end
   end
   handy.src = ''
+  -- nothing on this side and nothing to copy off the Windows one: fetch the
+  -- model once, in the background, into the fixed directory. It is the engine
+  -- that decides -- without `transcribe-cli` there is nothing to read a gguf
+  -- with -- and a fetch that never lands is retried by the next launch.
+  if not handy.fetching and exe 'transcribe-cli' then
+    handy.fetching = download_model()
+    if handy.fetching then
+      vim.schedule(function()
+        notify('voice: fetching the dictation model, dictation works once it lands', vim.log.levels.INFO)
+      end)
+    end
+  end
   return nil
 end
 
 --- Handy's model, readable from this side. A model read straight off the
 --- Windows drive is memory-mapped through the 9p share, and that is the whole
 --- difference between a sentence taking a second and taking half a minute: the
---- file is copied across once, into the Linux cache, and read from there after
---- that. Until the copy lands there is nothing to read with, so the listen
+--- file is copied across once, into the fixed directory, and read from there
+--- after that. Until it lands there is nothing to read with, so the listen
 --- falls back to the transcriber that was there before.
 ---@return string|nil
 local function handy_model()
@@ -513,7 +599,7 @@ local function handy_model()
     handy.model = src
     return src
   end
-  local dir = vim.fn.expand(HANDY_CACHE)
+  local dir = vim.fn.expand(HANDY_DIR)
   vim.fn.mkdir(dir, 'p')
   local dst = dir .. '/' .. vim.fn.fnamemodify(src, ':t')
   local there, here = uv.fs_stat(src), uv.fs_stat(dst)
