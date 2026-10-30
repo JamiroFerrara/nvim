@@ -57,8 +57,8 @@
 --                   unfocused, a desktop one -- off the tree watcher, by
 --                   comparing each changed file's `:ID:` entries with the
 --                   states read last time. The status line keeps a count of
---                   them (`~/.cache/nvim/org-alerts`, printed by
---                   `status-right`) until the ticket leaves that state
+--                   them (`@omp_alert`, printed by `status-right`) until the
+--                   ticket leaves that state
 --   wayfinder.lua   a wayfinder ticket kind (`wf_<type>`, or the longer
 --                   `wayfinder_<type>` of the first maps) drawn as its icon
 --                   on the entry line, right before the state keyword -- a
