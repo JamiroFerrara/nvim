@@ -19,9 +19,9 @@
 --                   finished, and the reopen of a finished parent when a
 --                   capture files an open entry under it
 --   agenda.lua      `D` toggle_done and `T` set_todo actions, the `<CR>`
---                   entry scratch (a
---                   TODO view's checkbox line takes `<CR>` for the toggle,
---                   helpers/org/tree.lua) and
+--                   entry scratch action (the scratch itself is entry.lua;
+--                   a TODO view's checkbox line takes `<CR>` for the
+--                   toggle, helpers/org/tree.lua) and
 --                   the `L` preview pane beside the view, the fold state
 --                   after entering an entry from the list, the category
 --                   column of the entry lists (widened to the longest
@@ -33,6 +33,13 @@
 --   links.lua       a `file:` link's description shows the name of the file
 --                   it ends in (`AgentListener.php:51`), its directories
 --                   concealed, the link's target left whole in the file
+--   entry.lua       the `org-entry://` scratch: one entry's own lines on
+--                   their own, editable, written back into its file. The
+--                   agenda's `<CR>` opens one (agenda.lua), and so does
+--                   following a link that names a single entry -- an `id:`
+--                   link, or a `file:` link with a line, headline or custom
+--                   id after `::` -- because reading one ticket never needs
+--                   the rest of its board loaded around it
 --   mappings.lua    buffer-local <CR> (normal/insert): follow the link
 --                   under the cursor, else toggle/make a checkbox or
 --                   fold a headline; dd-on-headline, `c`-on-headline
@@ -1415,6 +1422,7 @@ return {
     require('helpers.org.blocks').setup()
     require('helpers.org.decorations').setup()
     require('helpers.org.links').setup()
+    require('helpers.org.entry').setup()
     require('helpers.org.commits').setup()
     require('helpers.org.wrap').setup()
     -- the group view's `changed-down` sorting strategy: it reads the same

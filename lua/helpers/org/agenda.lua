@@ -32,10 +32,6 @@
 -- previous buffer back (view/window.lua, mode "current").
 local M = {}
 
--- the entry scratch's write-back goes through it: the file it splices into is
--- written by the agents of the tickets running too (helpers/org/write.lua)
-local write = require 'helpers.org.write'
-
 -- `D` in the agenda toggles an entry between DONE and TODO: a done entry
 -- goes back to TODO, anything else (open, or no keyword at all) becomes
 -- DONE. change_state runs the full org semantics (CLOSED timestamp, state
@@ -214,29 +210,17 @@ end
 -- behaviour -- switch_to, the entry opened in its file -- moves to <S-CR>
 -- and `o` (mappings.agenda.switch_to below, with the default `show`
 -- unbound to free the key). <Space> stays the leader in the view: no key
--- binds it there. The buffer is a scratch: acwrite (so `:w` runs
--- the write hook below instead of touching a file), wiped when
--- left, `q` puts the view back (`buffer #`, the hidden agenda). It takes the
--- entry's own lines from its file -- headline through the end of its
--- subtree -- so it shows what the file holds now, unsaved edits included. It
--- is editable: `:w` splices the buffer back into its file in place of the
--- entry and writes it. The entry's start is marked with an extmark in the
--- source buffer, so a write after edits elsewhere in the file still lands on
--- the entry; the subtree range is recomputed at the mark each time. The
--- window wraps by default, its previous wrap value restored when the scratch
--- goes. Leaving the scratch never asks to save it (nothing about it looks
--- unsaved to nvim, see the guard below) and keeps the edits: the buffer is
--- written back on the way out as well as on `:w`, so `q` and every buffer
--- command answer nvim's "Save changes to ...?" with yes instead of raising
--- it. Registered as an agenda action named in the spec, the way toggle_done
--- is above.
+-- binds it there. The scratch is helpers/org/entry.lua's (`org-entry://`
+-- buffer, editable, written back into its file); this is only the action that
+-- opens the entry at the cursor in it. Registered as an agenda action named
+-- in the spec, the way toggle_done is above.
 local function setup_entry_scratch()
   require('org.lazy').on_load('org.agenda.view', 'entry_scratch', function(view)
-    local ns = vim.api.nvim_create_namespace 'org_entry_scratch'
     -- `win_override` is the window the scratch goes into; the mapping leaves
     -- it out and the view's own window is taken over. The `L` preview pane
     -- (setup_entry_preview below) passes its own window instead, so the view
-    -- stays on screen.
+    -- stays on screen. The scratch itself is helpers/org/entry.lua, which a
+    -- link that names one entry opens the same way.
     view.actions.entry_scratch = function(win_override)
       local item = view.item_at_cursor()
       if not (item and item.headline) then
@@ -246,149 +230,7 @@ local function setup_entry_scratch()
       if not target then
         return
       end
-      local src = target.bufnr
-      local hl = require('org.files').get_buffer(src):headline_at(target.lnum)
-      if not hl then
-        return
-      end
-      local lines = vim.api.nvim_buf_get_lines(src, hl.line - 1, hl.end_line, false)
-      local span = hl.end_line - hl.line + 1
-      local mark = vim.api.nvim_buf_set_extmark(src, ns, hl.line - 1, 0, { right_gravity = false })
-
-      local win = win_override or vim.api.nvim_get_current_win()
-      local prev_wrap = vim.wo[win].wrap
-      local buf = vim.api.nvim_create_buf(false, true)
-      vim.bo[buf].buftype = 'acwrite'
-      vim.bo[buf].bufhidden = 'wipe'
-      vim.bo[buf].swapfile = false
-      vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-      local base = (hl.title and hl.title ~= '' and hl.title or 'entry'):gsub('[%s/\\]', '_')
-      -- A scratch of the same entry -- or of one sharing its title -- can
-      -- still be alive when this one is built: the `L` pane rebuilds its
-      -- scratch when the entry it holds changes under it
-      -- (setup_entry_preview). nvim refuses to give two buffers one name, so
-      -- take the first free one rather than leave the new scratch unnamed
-      -- (its name is how the pane and `:ls` tell it apart).
-      local name = 'org-entry://' .. base
-      local n = 1
-      local function taken(nm)
-        for _, b in ipairs(vim.api.nvim_list_bufs()) do
-          if vim.api.nvim_buf_get_name(b) == nm then
-            return true
-          end
-        end
-        return false
-      end
-      while taken(name) do
-        n = n + 1
-        name = 'org-entry://' .. base .. '#' .. n
-      end
-      pcall(vim.api.nvim_buf_set_name, buf, name)
-      -- Remember where the copy came from. The buffer is a preview of one
-      -- source entry, so entry commands that read the buffer under the
-      -- cursor (helpers/org/ai.lua's <leader>ai) must resolve to `src` --
-      -- and to the entry's first line, kept by the extmark as the file is
-      -- edited -- instead of treating the scratch's `org-entry://` name as a
-      -- file. Write_back reads the same pair.
-      vim.b[buf].org_entry_source = src
-      vim.b[buf].org_entry_mark = mark
-      -- Show the buffer before it becomes an org buffer: the FileType hooks
-      -- (org.nvim's buffer setup, helpers/org/mappings.lua) reach for the
-      -- buffer with nvim_buf_call, and on a buffer no window shows that call
-      -- opens a temporary window at the top left (aucmd_prepbuf), which a
-      -- redraw in the hook then paints over the view -- a flash the preview
-      -- pane, which builds one scratch per entry, would show on every move.
-      vim.api.nvim_win_set_buf(win, buf)
-      vim.bo[buf].filetype = 'org'
-      vim.wo[win].wrap = true
-      -- The preview is a scratch holding a copy of the entry; it is written
-      -- back into the source file in place of the entry (the extmark keeps
-      -- the position across edits elsewhere in the file).
-      local dirty = false
-      local function write_back()
-        if not vim.api.nvim_buf_is_valid(src) or not vim.api.nvim_buf_is_valid(buf) then
-          return
-        end
-        local pos = vim.api.nvim_buf_get_extmark_by_id(src, ns, mark, {})
-        local line = (pos[1] or (hl.line - 1)) + 1
-        local cur = require('org.files').get_buffer(src):headline_at(line)
-        local from = cur and cur.line or line
-        local to = cur and cur.end_line or (from + span - 1)
-        vim.api.nvim_buf_set_lines(src, from - 1, to, false, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
-        vim.api.nvim_buf_set_extmark(src, ns, from - 1, 0, { id = mark, right_gravity = false })
-        if vim.api.nvim_buf_get_name(src) ~= '' then
-          write.save(src)
-        end
-        dirty = false
-        vim.b[buf].org_entry_dirty = nil
-      end
-
-      -- nvim must never believe the preview holds unsaved work. With
-      -- `confirm` on it checks the modified flag for every command that
-      -- drops a buffer -- `:bdelete`, `:bwipeout`, `:edit`, `:enew`,
-      -- `:close` -- before any buffer autocommand fires, so clearing it in
-      -- QuitPre (which only covers `:q` / `:wq` / `:qa`) left the rest
-      -- asking "Save changes to ...?". The flag is dropped again after
-      -- every change and the buffer is tracked as `dirty` instead: the
-      -- answer to that question is always yes -- `:w` and leaving the
-      -- preview both write the edits back (write_back), so nothing is lost
-      -- and the prompt cannot come back. `:w` still runs the write hook
-      -- (BufWriteCmd fires on an unmodified acwrite buffer). `dirty` is kept
-      -- on the buffer as well (`org_entry_dirty`), because the preview pane
-      -- (setup_entry_preview below) replaces the buffer under its caller's
-      -- feet: a buffer swapped out from inside an autocommand is wiped
-      -- without its BufHidden / BufWipeout running, so the pane writes the
-      -- edits back itself before the swap instead of leaving it to the
-      -- handlers below.
-      local function unmodify()
-        dirty = true
-        vim.b[buf].org_entry_dirty = true
-        vim.bo[buf].modified = false
-      end
-      vim.bo[buf].modified = false
-      -- on_lines sees every change to the buffer, keystroke or API alike
-      vim.api.nvim_buf_attach(buf, false, {
-        on_lines = function()
-          unmodify()
-        end,
-      })
-      vim.keymap.set('n', 'q', function()
-        vim.cmd 'buffer! #'
-      end, { buffer = buf, desc = 'org: close the entry view' })
-      vim.api.nvim_create_autocmd('BufWriteCmd', {
-        buffer = buf,
-        callback = function()
-          write_back()
-          vim.bo[buf].modified = false
-        end,
-      })
-      vim.api.nvim_create_autocmd({ 'QuitPre', 'BufHidden', 'BufWipeout' }, {
-        buffer = buf,
-        callback = function()
-          -- leaving the preview is the other "yes": an edited preview is
-          -- written back rather than dropped -- but only while it still
-          -- holds the entry. `:edit` on the scratch reloads the
-          -- (nonexistent) file and empties it, and writing that back would
-          -- wipe the entry out of its file. QuitPre is here for `:q` on the
-          -- last window, where the buffer never gets hidden (nvim exits
-          -- first).
-          local first = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]
-          if dirty and first ~= nil and first:find '^%*+%s' then
-            pcall(write_back)
-          end
-        end,
-      })
-      vim.api.nvim_create_autocmd('BufWipeout', {
-        buffer = buf,
-        callback = function()
-          if vim.api.nvim_win_is_valid(win) then
-            vim.wo[win].wrap = prev_wrap
-          end
-          if vim.api.nvim_buf_is_valid(src) then
-            pcall(vim.api.nvim_buf_del_extmark, src, ns, mark)
-          end
-        end,
-      })
+      require('helpers.org.entry').open(target.bufnr, target.lnum, { win = win_override })
     end
   end)
 end
