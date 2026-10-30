@@ -82,10 +82,11 @@
 -- quotes the launcher's one line back. One instance keeps one conversation,
 -- which is what lets "that one too" mean anything, and the org write lands
 -- before the run is dispatched, so the board shows the work started as soon as
--- the words are filed. It is also the one instance that speaks: its argv
--- carries a speech overlay (`talk_config_path`) and the audio socket WSLg
--- holds the machine's speakers on (`audio_env`), so the reply to a spoken
--- line is heard as well as read.
+-- the words are filed. It is also the one instance built to speak: its argv
+-- can carry a speech overlay (`talk_config_path`) and the audio socket WSLg
+-- holds the machine's speakers on (`audio_env`), so the reply to a spoken line
+-- is heard as well as read -- off for now by `TALK_SPEAKS`, and back by one
+-- word when the voice stops being in the way.
 --
 -- The words carry the selection: the dashboard's highlighted entry, or the
 -- headline at point when the command ran in the editor (`M.entry_at_point`). A
@@ -209,6 +210,15 @@ local ORCHESTRATOR = vim.fn.expand '~/.agents/skills/omp-orchestrator/SKILL.md'
 --- runs window reads its transcript like any other run's.
 local TALK_KEY = 'talk/one'
 
+--- Does the talking instance say its reply out loud? Off for now, by the
+--- user's word on the ticket that built it: the voice turned out to be in the
+--- way of the conversation. The switch is one word on purpose -- the speech
+--- overlay, the audio socket and the spoken register of the rules are all
+--- still here, and `true` brings the speaking back -- and the rest of the
+--- instance is unaffected: it still knows where things stand, files the work
+--- and looks when a question needs it.
+local TALK_SPEAKS = false
+
 --- How many of the talking instance's spec files are kept: the words of the
 --- last lines said, which outlive the editor (Open_Prompt's own note).
 local SPECS_KEPT = 200
@@ -233,7 +243,7 @@ local FILE_GRACE = 45
 --- look, and nothing else.
 ---@return string
 local function talk_rules()
-  return table.concat({
+  local rules = {
     'You are the talking instance of the org renderer: the one omp every spoken or typed line reaches',
     '(the voice card, :OrgVoice, :OrgVoiceSay), and the orchestrator of what gets said here. There is',
     'one of you, and there stays one.',
@@ -299,10 +309,15 @@ local function talk_rules()
     'write nothing.',
     '',
     "Reply short: the command's line, or the answer, and nothing around it.",
-    '',
-    'Your reply is read out loud to me. Say it the way you would say it across a table: whole',
-    'sentences, no markdown, no lists, no code blocks, no file paths, no ids, no symbols.',
-  }, '\n')
+  }
+  if TALK_SPEAKS then
+    vim.list_extend(rules, {
+      '',
+      'Your reply is read out loud to me. Say it the way you would say it across a table: whole',
+      'sentences, no markdown, no lists, no code blocks, no file paths, no ids, no symbols.',
+    })
+  end
+  return table.concat(rules, '\n')
 end
 
 -- every write of a ticket file goes through it: the file is written by the
@@ -1225,11 +1240,12 @@ end
 --- talking rules already keep short.
 ---
 --- The switch is an overlay on this instance's argv, not a setting the agent
---- directory carries: only the instance that is talked to speaks. Every other
---- run is a worker whose replies are read on the board, and a machine that
---- narrates its own work is one the user turns off. Written to a file for the
---- reason the rules are (`talk_rules_path`): the argv is shellescaped into the
---- pane's script, and a newline in an argument would end it there.
+--- directory carries: only the instance that is talked to speaks, and only
+--- while `TALK_SPEAKS` is on. Every other run is a worker whose replies are
+--- read on the board, and a machine that narrates its own work is one the user
+--- turns off. Written to a file for the reason the rules are
+--- (`talk_rules_path`): the argv is shellescaped into the pane's script, and a
+--- newline in an argument would end it there.
 ---@return string
 local function talk_config_path()
   local path = vim.fs.dirname(session_dir(TALK_KEY)) .. '/speech.yml'
@@ -1265,10 +1281,10 @@ end
 
 --- The omp argv of the talking instance: its one session, the talking rules
 --- (written out first, `talk_rules_path`), the speech overlay
---- (`talk_config_path`), and the words. `--continue` resumes
---- the same session on every later line, which is what makes it one instance
---- with one conversation instead of one per utterance. A nil `message` opens
---- the session alone.
+--- (`talk_config_path`, only while `TALK_SPEAKS`), and the words. `--continue`
+--- resumes the same session on every later line, which is what makes it one
+--- instance with one conversation instead of one per utterance. A nil
+--- `message` opens the session alone.
 ---
 --- The rules *replace* the coding assistant's prompt (`--system-prompt`, not
 --- `--append-system-prompt`): a router told half its rules by a coding prompt
@@ -1281,7 +1297,7 @@ end
 ---@return string[]
 local function talk_argv(message)
   local dir = session_dir(TALK_KEY)
-  local env = audio_env()
+  local env = TALK_SPEAKS and audio_env() or nil
   local argv = env and { 'env', env, 'omp', '--session-dir', dir } or { 'omp', '--session-dir', dir }
   if has_session(dir) then
     argv[#argv + 1] = '--continue'
@@ -1292,11 +1308,11 @@ local function talk_argv(message)
     '--no-rules',
     '--no-context-files',
     '--thinking=off',
-    '--config',
-    talk_config_path(),
-    '--system-prompt',
-    talk_rules_path(),
   })
+  if TALK_SPEAKS then
+    vim.list_extend(argv, { '--config', talk_config_path() })
+  end
+  vim.list_extend(argv, { '--system-prompt', talk_rules_path() })
   if message then
     argv[#argv + 1] = message
   end
