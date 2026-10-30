@@ -17,6 +17,7 @@ const state = {
   runStream: null, // the open event stream of the run the detail pane shows
   runDetail: null, // the run the detail pane is showing, when it is one
   historyOpen: false, // the detail pane is a history step (a phone's back)
+  detailWide: true, // the entry covers the screen; `z` puts it beside the list
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -826,6 +827,52 @@ function runMeta(run) {
   return parts.join('  ·  ');
 }
 
+// The entry covers the screen by default: a ticket is read, not glanced at.
+// `z` puts it back beside the list for a look at a neighbour, and the choice
+// is remembered -- it is a way of reading, not a one-off. A phone has no room
+// for two panes, so there it stays full screen and the button is not drawn.
+const WIDE_KEY = 'orgWebDetailWide';
+
+function readWide() {
+  try {
+    const saved = localStorage.getItem(WIDE_KEY);
+    if (saved !== null) return saved !== '0';
+  } catch (err) {
+    // a browser that keeps no storage still reads full screen
+  }
+  return true;
+}
+
+function widthLabel(button) {
+  button.textContent = state.detailWide ? 'beside list' : 'full screen';
+  button.title = state.detailWide ? 'z  read it beside the list' : 'z  read it full screen';
+}
+
+function applyDetailWide() {
+  document.body.classList.toggle('detail-side', !state.detailWide);
+  for (const button of document.querySelectorAll('#detail header .width')) widthLabel(button);
+}
+
+function toggleDetailWide() {
+  if (isPhone() || $('#detail').hidden) return;
+  state.detailWide = !state.detailWide;
+  try {
+    localStorage.setItem(WIDE_KEY, state.detailWide ? '1' : '0');
+  } catch (err) {
+    // the choice stands for this page even when it cannot be kept
+  }
+  applyDetailWide();
+}
+
+// The detail header's way between the two widths, beside the `✕`.
+function widthButton() {
+  const button = el('button', 'width');
+  button.type = 'button';
+  widthLabel(button);
+  button.addEventListener('click', () => toggleDetailWide());
+  return button;
+}
+
 // The detail pane's window on a run itself, from the Runs view: what the
 // instance is doing, step by step, as it writes it. Works for a run that is on
 // a ticket and for one that is not (the talking instance, a batch's
@@ -885,7 +932,9 @@ function showRun(run) {
   close.type = 'button';
   close.title = 'q  close';
   close.addEventListener('click', () => closeDetail());
-  actions.append(cancel, close);
+  actions.append(cancel);
+  if (!isPhone()) actions.append(widthButton());
+  actions.append(close);
   header.append(actions);
   detail.append(header);
 
@@ -928,7 +977,9 @@ async function showDetail(entry, focusNote) {
   const close = el('button', '', '✕');
   close.title = 'q  close';
   close.addEventListener('click', () => closeDetail());
-  actions.append(edit, open, close);
+  actions.append(edit, open);
+  if (!isPhone()) actions.append(widthButton());
+  actions.append(close);
   header.append(actions);
   detail.append(header);
   const body = el('div', 'body');
@@ -1955,6 +2006,7 @@ const HELP = [
   ['r', 'refile: then <CR> on the destination'],
   ['/ / ?', 'filter the view / this help'],
   ['<C-p>', 'search every ticket of the vault'],
+  ['z', 'read the entry full screen or beside the list'],
   ['<Space>ow / oa / oo / of / og / op / oy', 'board / agenda / open / in flight / by state / priorities / wayfinder'],
   ['<Space>ai / <Space>aj', 'launch a run on the entry / jump to it'],
   ['the run button on a row', 'start a run on that ticket; jump goes to the run it has'],
@@ -2246,6 +2298,11 @@ async function onKey(ev) {
       showHelp();
       done();
       return;
+    case 'z':
+      ev.preventDefault();
+      toggleDetailWide();
+      done();
+      return;
     default:
       break;
   }
@@ -2534,6 +2591,11 @@ live.addEventListener('error', () => {
   dropped = true;
   $('#live').classList.remove('on');
 });
+
+// the width the entry was last read at is restored before anything is drawn,
+// so the pane never appears full screen and shrinks a moment later
+state.detailWide = readWide();
+applyDetailWide();
 
 load();
 loadShare();

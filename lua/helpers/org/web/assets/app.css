@@ -642,6 +642,35 @@ li.agenda-now .rule::after {
   color: var(--text);
 }
 
+/* `z`, or the header's button, puts the entry back beside the list: the
+   preview it used to be, for reading one line against a neighbour. A phone
+   has no room for two panes, so there it keeps the screen. */
+@media (min-width: 721px) {
+  body.detail-open.detail-side {
+    grid-template-columns: 230px minmax(0, 1fr) minmax(320px, 34vw);
+  }
+
+  body.detail-open.detail-side #detail {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    width: auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  body.detail-open.detail-side #detail .body {
+    /* the column is the pane's now: 1000px of prose has nowhere to go */
+    max-width: none;
+    margin: 0;
+  }
+
+  /* the list is on screen, so it scrolls while the pane is open */
+  body.detail-open.detail-side #views {
+    overflow-y: auto;
+  }
+}
+
 /* ---- modal keys --------------------------------------------------------- */
 
 li.entry .fold {
