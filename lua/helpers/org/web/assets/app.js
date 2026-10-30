@@ -2258,6 +2258,9 @@ function renderShare(share) {
     note.textContent = 'Scan with your phone camera, or open the link.';
     power.textContent = 'stop';
     body.hidden = false;
+    // the address changes when the tunnel has to be made again, so the code
+    // on screen follows it instead of waiting for the card to be reopened
+    shareTimer = setInterval(loadShare, 10000);
     return;
   }
 
@@ -2270,10 +2273,15 @@ function renderShare(share) {
   link.removeAttribute('href');
   link.textContent = '';
   if (share.status === 'starting') {
-    note.textContent = 'putting a public address up…';
+    note.textContent = share.error
+      ? 'putting a public address up… (' + share.error + ')'
+      : 'putting a public address up…';
     shareTimer = setInterval(loadShare, 1200);
   } else if (share.status === 'error') {
     note.textContent = 'no public address: ' + (share.error || 'ngrok failed');
+    // the agent is brought back on its own while the door is wanted; a page
+    // left open follows it instead of staying on the error
+    shareTimer = setInterval(loadShare, 6000);
   } else {
     note.textContent = 'sharing is off';
   }
