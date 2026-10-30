@@ -278,6 +278,10 @@ function render() {
   renderSidebar();
   renderTabs();
   renderViews();
+  // the payload follows the vault: a ticket that just opened, closed or lost
+  // its title is a different answer to the same search
+  const box = $('#tsearch');
+  if (box) paintSearch(box.querySelector('input').value);
 }
 
 // The rail's two numbers: what a run is on (NEXT, TEST, WARN) and what is
@@ -982,6 +986,12 @@ function closeDetail(fromHistory) {
     // the entry was opened as a history step; closing it by the button or `q`
     // takes that step back, so a later back press does not close nothing
     if (!fromHistory) history.back();
+  }
+  // an entry opened from the search leaves the search where it found it, so
+  // the next ticket is one keystroke away rather than a fresh query
+  if (!fromHistory && searchReturn) {
+    searchReturn = false;
+    openTicketSearch();
   }
 }
 
@@ -1772,6 +1782,9 @@ function cycleAllFolds() {
 
 // the entry on screen was opened from the search: closing it goes back
 let searchReturn = false;
+// what was typed: a ticket read from the search leaves the query standing, so
+// the next match is one Enter away rather than a second search
+let searchQuery = '';
 
 // open tickets first, in the order a run looks at them, then the closed ones
 const SEARCH_RANK = { NEXT: 0, TEST: 1, WARN: 2, PEND: 3, TODO: 4 };
@@ -1863,7 +1876,10 @@ function openTicketSearch() {
   panel.append(input, list, el('p', 'hint', '↑ ↓ move · Enter open · Esc close'));
   box.append(panel);
   document.body.append(box);
-  input.addEventListener('input', () => paintSearch(input.value));
+  input.addEventListener('input', () => {
+    searchQuery = input.value;
+    paintSearch(searchQuery);
+  });
   input.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape') {
       ev.preventDefault();
@@ -1883,13 +1899,15 @@ function openTicketSearch() {
   box.addEventListener('mousedown', (ev) => {
     if (ev.target === box) closeTicketSearch();
   });
-  paintSearch('');
+  input.value = searchQuery;
+  paintSearch(searchQuery);
   input.focus();
 }
 
 function closeTicketSearch() {
   $('#tsearch')?.remove();
   searchReturn = false;
+  searchQuery = '';
 }
 
 // ---- the keymap ---------------------------------------------------------
@@ -1917,6 +1935,7 @@ const HELP = [
   ['dd / a', 'delete the entry’s subtree / archive it'],
   ['r', 'refile: then <CR> on the destination'],
   ['/ / ?', 'filter the view / this help'],
+  ['<C-p>', 'search every ticket of the vault'],
   ['<Space>ow / oa / oo / of / og / op / oy', 'board / agenda / open / in flight / by state / priorities / wayfinder'],
   ['<Space>ai / <Space>aj', 'launch a run on the entry / jump to it'],
   ['the run button on a row', 'start a run on that ticket; jump goes to the run it has'],
@@ -2076,6 +2095,12 @@ async function onKey(ev) {
     ev.preventDefault();
     halfPage(key === 'd' ? 1 : -1, state.count || 1);
     resetKeys();
+    return;
+  }
+  // every ticket of the vault, whatever the rail and the tab are showing
+  if (ctrl && (key === 'p' || key === 'P')) {
+    ev.preventDefault();
+    openTicketSearch();
     return;
   }
   if (ctrl || ev.altKey) return;

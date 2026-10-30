@@ -39,8 +39,8 @@ body {
   overflow: hidden;
 }
 
-body.detail-open {
-  grid-template-columns: 230px minmax(0, 1fr) minmax(320px, 34vw);
+body.detail-open #views {
+  overflow: hidden;
 }
 
 button {
@@ -576,10 +576,18 @@ li.agenda-now .rule::after {
   padding: 20px 6px;
 }
 
+/* The entry is a screen of its own: a ticket is read, not glanced at, and a
+   third of the window cut a long hand-back -- a diff, a table -- in half. The
+   list it came from is one Esc (or `q`) away, and the search is the way from
+   one ticket to the next. */
 #detail {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
   background: var(--mantle);
   border-left: 1px solid var(--surface);
   overflow-y: auto;
+  overscroll-behavior: contain;
   min-height: 0;
 }
 
@@ -617,6 +625,10 @@ li.agenda-now .rule::after {
 }
 
 #detail .body {
+  /* the screen is the window's, the text is a column: 1200px of prose is a
+     line the eye loses its place in */
+  max-width: 1000px;
+  margin: 0 auto;
   padding: 8px 18px 40px;
 }
 
@@ -721,6 +733,129 @@ li.entry .fold.empty {
   margin: 12px 0 0;
   font-size: 11px;
   color: var(--overlay);
+}
+
+/* ---- search every ticket (C-p) ------------------------------------------ */
+
+/* over everything, the entry screen included: the search is how one ticket
+   leads to the next, so it must be reachable while one is being read */
+#tsearch {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 9vh 16px 16px;
+  background: rgb(0 0 0 / 45%);
+}
+
+#tsearch .panel {
+  display: flex;
+  flex-direction: column;
+  width: min(880px, 100%);
+  max-height: 78vh;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--base);
+  border: 1px solid var(--surface1);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 55%);
+}
+
+#tsearch input {
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--surface);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  outline: none;
+}
+
+#tsearch input::placeholder {
+  color: var(--overlay);
+}
+
+#tsearch .results {
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+}
+
+#tsearch .results li {
+  display: grid;
+  /* state, title, tags, project */
+  grid-template-columns: 52px minmax(0, 1fr) auto 150px;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#tsearch .results li.sel {
+  background: var(--mantle);
+  box-shadow: inset 2px 0 0 var(--blue);
+}
+
+#tsearch .results li .state {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+#tsearch .results li .state.TODO { color: var(--blue); }
+#tsearch .results li .state.NEXT { color: var(--peach); }
+#tsearch .results li .state.PEND { color: var(--yellow); }
+#tsearch .results li .state.TEST { color: var(--mauve); }
+#tsearch .results li .state.WARN { color: var(--red); }
+#tsearch .results li .state.DONE { color: var(--green); }
+
+#tsearch .results li .title,
+#tsearch .results li .tags,
+#tsearch .results li .project {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#tsearch .results li.done-entry .title {
+  color: var(--subtext);
+}
+
+#tsearch .results li .cookie {
+  color: var(--overlay);
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+}
+
+#tsearch .results li .tags {
+  color: var(--overlay);
+  font-size: 11px;
+}
+
+#tsearch .results li .project {
+  color: var(--overlay);
+  font-size: 11px;
+  text-align: right;
+}
+
+#tsearch .results li.none {
+  display: block;
+  color: var(--overlay);
+  font-style: italic;
+  cursor: default;
+}
+
+#tsearch .hint {
+  margin: 0;
+  padding: 8px 16px 10px;
+  border-top: 1px solid var(--surface);
+  color: var(--overlay);
+  font-size: 11px;
 }
 
 /* ---- capture ---------------------------------------------------------- */
@@ -1674,25 +1809,12 @@ li.entry .live-line {
     font-size: 14px;
   }
 
+  /* the entry already covers the screen (see #detail): a phone only adds the
+     momentum scrolling and the space the home bar needs */
   #detail {
-    position: fixed;
-    inset: 0;
-    z-index: 40;
-    width: auto;
-    height: 100vh;
-    height: 100dvh;
     border-left: 0;
-    background: var(--mantle);
-    overflow-y: auto;
-    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  /* the pane is the screen: the list behind it is not a second thing to
-     scroll while an entry is open */
-  body.detail-open #views {
-    overflow: hidden;
   }
 
   #detail header {
@@ -1772,6 +1894,25 @@ li.entry .live-line {
     transform: none;
     max-height: calc(100dvh - 20px);
     padding: 14px 16px;
+  }
+
+  #tsearch {
+    padding: max(8px, env(safe-area-inset-top)) 8px 8px;
+  }
+
+  #tsearch .panel {
+    max-height: calc(100dvh - 20px);
+  }
+
+  #tsearch .results li {
+    /* the project is what the rail already says on a narrow screen */
+    grid-template-columns: 46px minmax(0, 1fr);
+    padding: 10px 8px;
+  }
+
+  #tsearch .results li .tags,
+  #tsearch .results li .project {
+    display: none;
   }
 
   #cmdline {
