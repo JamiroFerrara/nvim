@@ -1439,5 +1439,6 @@ return {
     require('helpers.org.kb').setup()
     require('helpers.org.actions').setup()
     require('helpers.org.render').setup()
+    require('helpers.org.export').setup()
   end,
 }
