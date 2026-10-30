@@ -51,14 +51,6 @@
 --                   read per entry through the todo `prefix_format` below,
 --                   plus the `changed-up` / `changed-down` sorting strategies
 --                   (the group view's sections)
---   alerts.lua      a ticket a run leaves in a state the user owns --
---                   `TEST`, `WARN`, `PEND` -- is announced: editor
---                   notification, tmux status line and, while nvim is
---                   unfocused, a desktop one -- off the tree watcher, by
---                   comparing each changed file's `:ID:` entries with the
---                   states read last time. The status line keeps a count of
---                   them (`@omp_alert`, printed by `status-right`) until the
---                   ticket leaves that state
 --   wayfinder.lua   a wayfinder ticket kind (`wf_<type>`, or the longer
 --                   `wayfinder_<type>` of the first maps) drawn as its icon
 --                   on the entry line, right before the state keyword -- a
@@ -1443,10 +1435,6 @@ return {
     -- state change in a view, a note, a checkbox, a refile) must not ask about
     -- a file an agent has rewritten under it (helpers/org/write.lua)
     T('helpers.org.write', function() require('helpers.org.write').setup() end)
-    -- a run that finishes writes `TEST` over the `NEXT` it claimed, and the
-    -- user has to be told where they are: editor, tmux status and desktop
-    -- notification, off the same tree watcher ai.setup starts below
-    T('helpers.org.alerts', function() require('helpers.org.alerts').setup() end)
     T('capture', function() capture.setup() end)
     T('helpers.org.mappings', function() require('helpers.org.mappings').setup() end)
     T('helpers.org.folding', function() require('helpers.org.folding').setup() end)

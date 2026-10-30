@@ -60,33 +60,6 @@ local M = {}
 ---@type table<integer, string>
 local reads = {}
 
---- The org files nvim wrote itself, by normalized path, with the loop time of
---- the write: the watcher's event for one of them is nvim's own save, not news
---- from another process. helpers/org/alerts.lua reads the mark (M.wrote) to
---- keep from announcing a state the user just changed in a view back to them.
----@type table<string, integer>
-local wrote = {}
-
---- How long a mark stands for: the burst it belongs to (the watcher debounces
---- at 120 ms) and no longer, so a stale mark cannot swallow a real write.
-local MARK_MS = 2000
-
---- Whether nvim wrote `path` within the current burst, the mark cleared on the
---- way out: one save is one event.
----@param path string
----@return boolean
-function M.wrote(path)
-  local key = vim.fs.normalize(path)
-  local at = wrote[key]
-  wrote[key] = nil
-  return at ~= nil and vim.uv.now() - at < MARK_MS
-end
-
----@param path string
-local function mark_wrote(path)
-  wrote[vim.fs.normalize(path)] = vim.uv.now()
-end
-
 --- The stat of `path` as a comparable string, or nil when it is not there.
 ---@param path string
 ---@return string|nil
@@ -274,7 +247,6 @@ function M.save(bufnr, opts)
     ok, err = pcall(vim.cmd, force and 'silent noautocmd keepalt write!' or 'silent noautocmd keepalt write')
   end)
   if ok then
-    mark_wrote(path)
     require('org.files').invalidate(path)
     M.remember(bufnr)
   end
@@ -293,7 +265,6 @@ function M.setup()
   vim.api.nvim_create_autocmd('BufWritePost', {
     pattern = { '*.org', '*.org_archive' },
     callback = function(ev)
-      mark_wrote(vim.api.nvim_buf_get_name(ev.buf))
       M.remember(ev.buf)
     end,
   })

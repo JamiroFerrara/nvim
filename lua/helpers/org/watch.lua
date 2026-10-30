@@ -21,8 +21,8 @@
 -- shows it, helpers/org/write.lua -- plus an agenda redo) should run once per
 -- quiet period. The callback is scheduled, so it never runs inside the libuv
 -- callback, and it is handed the paths that changed in the burst: a subscriber
--- that reads files rather than buffers (helpers/org/alerts.lua) has no other
--- way to tell which of the tree's files it should look at.
+-- that reads the file rather than the buffer (helpers/org/web/init.lua) has no
+-- other way to tell which of the tree's files it should send.
 local M = {}
 
 local uv = vim.uv or vim.loop
