@@ -1884,7 +1884,7 @@ function openTicketSearch(keep) {
   input.setAttribute('aria-label', 'Search every ticket');
   input.spellcheck = false;
   const list = el('ul', 'results');
-  panel.append(input, list, el('p', 'hint', '↑ ↓ move · Enter open · Esc close'));
+  panel.append(input, list, el('p', 'hint', '↑ ↓ move · Enter open · C-p clear · Esc close'));
   box.append(panel);
   document.body.append(box);
   input.addEventListener('input', () => {
@@ -1902,9 +1902,16 @@ function openTicketSearch(keep) {
     } else if (ev.key === 'ArrowDown' || ev.key === 'Tab' || (ev.ctrlKey && ev.key === 'n')) {
       ev.preventDefault();
       moveSearch(ev.shiftKey ? -1 : 1);
-    } else if (ev.key === 'ArrowUp' || (ev.ctrlKey && ev.key === 'p')) {
+    } else if (ev.key === 'ArrowUp') {
       ev.preventDefault();
       moveSearch(-1);
+    } else if (ev.ctrlKey && ev.key === 'p') {
+      // <C-p> again starts over: the query goes and every ticket comes back,
+      // wherever the box is handed to you
+      ev.preventDefault();
+      input.value = '';
+      searchQuery = '';
+      paintSearch('');
     }
   });
   box.addEventListener('mousedown', (ev) => {
