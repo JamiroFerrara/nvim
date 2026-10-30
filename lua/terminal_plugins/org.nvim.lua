@@ -1415,41 +1415,50 @@ return {
     -- finished parent, refresh the target's statistics cookies) must run
     -- before the agenda's own listener on that event, so the view agenda
     -- re-renders there shows both.
-    require('helpers.org.cookies').setup()
-    require('helpers.org.agenda').setup()
-    require('helpers.org.tree').setup()
-    require('helpers.org.reveal').setup()
-    require('helpers.org.callouts').setup()
-    require('helpers.org.blocks').setup()
-    require('helpers.org.decorations').setup()
-    require('helpers.org.links').setup()
-    require('helpers.org.commits').setup()
-    require('helpers.org.wrap').setup()
+    local uv = vim.uv or vim.loop
+    local function now() return uv.hrtime()/1e6 end
+    local marks = {}
+    local function T(name, fn)
+      local a = now()
+      fn()
+      marks[#marks+1] = string.format('%6.2f %s', now()-a, name)
+    end
+    T('helpers.org.cookies', function() require('helpers.org.cookies').setup() end)
+    T('helpers.org.agenda', function() require('helpers.org.agenda').setup() end)
+    T('helpers.org.tree', function() require('helpers.org.tree').setup() end)
+    T('helpers.org.reveal', function() require('helpers.org.reveal').setup() end)
+    T('helpers.org.callouts', function() require('helpers.org.callouts').setup() end)
+    T('helpers.org.blocks', function() require('helpers.org.blocks').setup() end)
+    T('helpers.org.decorations', function() require('helpers.org.decorations').setup() end)
+    T('helpers.org.links', function() require('helpers.org.links').setup() end)
+    T('helpers.org.commits', function() require('helpers.org.commits').setup() end)
+    T('helpers.org.wrap', function() require('helpers.org.wrap').setup() end)
     -- the group view's `changed-down` sorting strategy: it reads the same
     -- last-changed date the column shows (helpers/org/changed.lua), so it
     -- goes in with the view's own pieces
-    require('helpers.org.changed').setup()
-    require('helpers.org.wayfinder').setup()
-    require('helpers.org.notes').setup()
+    T('helpers.org.changed', function() require('helpers.org.changed').setup() end)
+    T('helpers.org.wayfinder', function() require('helpers.org.wayfinder').setup() end)
+    T('helpers.org.notes', function() require('helpers.org.notes').setup() end)
     -- takes over org.utils.save_buffer: every write org makes on its own (a
     -- state change in a view, a note, a checkbox, a refile) must not ask about
     -- a file an agent has rewritten under it (helpers/org/write.lua)
-    require('helpers.org.write').setup()
+    T('helpers.org.write', function() require('helpers.org.write').setup() end)
     -- a run that finishes writes `TEST` over the `NEXT` it claimed, and the
     -- user has to be told where they are: editor, tmux status and desktop
     -- notification, off the same tree watcher ai.setup starts below
-    require('helpers.org.alerts').setup()
-    capture.setup()
-    require('helpers.org.mappings').setup()
-    require('helpers.org.folding').setup()
-    require('helpers.org.refile').setup()
-    require('helpers.org.ics').setup()
-    require('helpers.org.ai').setup()
-    require('helpers.org.voice').setup()
-    require('helpers.org.runs').setup()
-    require('helpers.org.retro').setup()
-    require('helpers.org.kb').setup()
-    require('helpers.org.actions').setup()
-    require('helpers.org.render').setup()
+    T('helpers.org.alerts', function() require('helpers.org.alerts').setup() end)
+    T('capture', function() capture.setup() end)
+    T('helpers.org.mappings', function() require('helpers.org.mappings').setup() end)
+    T('helpers.org.folding', function() require('helpers.org.folding').setup() end)
+    T('helpers.org.refile', function() require('helpers.org.refile').setup() end)
+    T('helpers.org.ics', function() require('helpers.org.ics').setup() end)
+    T('helpers.org.ai', function() require('helpers.org.ai').setup() end)
+    T('helpers.org.voice', function() require('helpers.org.voice').setup() end)
+    T('helpers.org.runs', function() require('helpers.org.runs').setup() end)
+    T('helpers.org.retro', function() require('helpers.org.retro').setup() end)
+    T('helpers.org.kb', function() require('helpers.org.kb').setup() end)
+    T('helpers.org.actions', function() require('helpers.org.actions').setup() end)
+    T('helpers.org.render', function() require('helpers.org.render').setup() end)
+    vim.g._setup_marks = marks
   end,
 }

@@ -34,6 +34,8 @@ local M = {}
 local watch = require 'helpers.org.watch'
 local write = require 'helpers.org.write'
 
+local uv = vim.uv or vim.loop
+
 --- The states a run leaves behind that are the user's to act on, and how the
 --- status line names them.
 local FINISHED = { TEST = 'to check', WARN = 'failed', PEND = 'waiting on you' }
@@ -95,17 +97,43 @@ local function read(path)
   return states(lines, path)
 end
 
---- Does the file hold a ticket in flight? Everything else -- a node's notes,
+--- The file's whole text, in one libuv read, or nil when it is not readable.
+--- The startup read wants the text, not a list of lines: the split into lines
+--- is only paid for the files that hold a ticket in flight.
+---@param path string
+---@return string|nil
+local function slurp(path)
+  local fd = uv.fs_open(path, 'r', 384)
+  if not fd then
+    return nil
+  end
+  local stat = uv.fs_fstat(fd)
+  local data = stat and stat.size > 0 and uv.fs_read(fd, stat.size, 0) or nil
+  uv.fs_close(fd)
+  return type(data) == 'string' and data or nil
+end
+
+--- Does the text hold a ticket in flight? Everything else -- a node's notes,
 --- the archive -- has no `NEXT` to leave, so the startup read skips parsing it.
----@param lines string[]
+--- The line test (`^%*+ NEXT%s`) run over the whole text, so a file with no
+--- ticket in it is never split into lines.
+---@param text string
 ---@return boolean
-local function in_flight(lines)
-  for _, line in ipairs(lines) do
-    if line:match '^%*+ NEXT%s' then
+local function in_flight(text)
+  if text:match '^%*+ NEXT%s' then
+    return true
+  end
+  local at = 1
+  while true do
+    local s, e = text:find('\n%*+ NEXT', at)
+    if not s then
+      return false
+    end
+    if text:sub(e + 1, e + 1):match '%s' then
       return true
     end
+    at = e
   end
-  return false
 end
 
 --- A desktop notification, detached: a missing notifier (a bare terminal, a
@@ -204,12 +232,27 @@ end
 --- `TEST` a run writes is compared against the `NEXT` it claimed.
 ---@param root string
 local function seed(root)
-  for _, path in ipairs(vim.fn.globpath(root, '**/*.org', false, true)) do
-    local ok, lines = pcall(vim.fn.readfile, path)
-    if ok and type(lines) == 'table' and in_flight(lines) then
-      known[vim.fs.normalize(path)] = states(lines, vim.fs.normalize(path)) or {}
+  local __t = uv.hrtime()
+  local __f = vim.fn.globpath(root, '**/*.org', false, true)
+  print(string.format('glob %.2f n=%d', (uv.hrtime()-__t)/1e6, #__f))
+  for _, path in ipairs(__f) do
+    local __a = uv.hrtime()
+    local text = slurp(path)
+    local __b = uv.hrtime()
+    local __hit = text and in_flight(text)
+    local __c = uv.hrtime()
+    if text and __hit then
+      local lines = vim.split(text, '\n', { plain = true })
+      if lines[#lines] == '' then
+        lines[#lines] = nil
+      end
+      local norm = vim.fs.normalize(path)
+      known[norm] = states(lines, norm) or {}
     end
+    local __d = uv.hrtime()
+    if (__d-__a)/1e6 > 1 then print(string.format('  %5.2f slurp %5.2f scan %5.2f parse %5.2f %s', (__d-__a)/1e6, (__b-__a)/1e6, (__c-__b)/1e6, (__d-__c)/1e6, path)) end
   end
+  print(string.format('seed loop %.2f', (uv.hrtime()-__t)/1e6))
 end
 
 function M.setup()
@@ -235,9 +278,12 @@ function M.setup()
   })
   local ok, cfg = pcall(require, 'org.config')
   local root = vim.fs.normalize(vim.fn.expand((ok and cfg.opts and cfg.opts.org_directory) or '~/org'))
+  local __t = uv.hrtime()
   seed(root)
-  -- a notice left by an nvim that did not get to clear it is not this one's
+  print(string.format('seed total %.2f', (uv.hrtime()-__t)/1e6))
+  __t = uv.hrtime()
   publish()
+  print(string.format('publish %.2f', (uv.hrtime()-__t)/1e6))
   watch.subscribe(M.sync)
 end
 

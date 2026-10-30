@@ -1636,9 +1636,18 @@ function M.setup(user)
     end
   end, { desc = 'voice: send the words the card is holding' })
   -- Handy's model is copied into the Linux side on first use and that copy
-  -- takes a few seconds: start it now, so the first click does not have to
-  -- fall back to whisper while it lands
-  handy_model()
+  -- takes a few seconds, so start it once nvim is up rather than during the
+  -- launch: finding it means walking the Windows drive through the 9p share,
+  -- which is the slowest thing a launch would otherwise do. The first click a
+  -- moment later falls back to whisper only if it beats the copy.
+  local warm = function()
+    vim.defer_fn(handy_model, 500)
+  end
+  if vim.v.vim_did_enter == 1 then
+    warm()
+  else
+    vim.api.nvim_create_autocmd('VimEnter', { once = true, callback = warm, desc = 'voice: warm up the Handy model copy' })
+  end
 end
 
 return M
