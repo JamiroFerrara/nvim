@@ -1,6 +1,9 @@
 return {
   'sindrets/diffview.nvim',
   lazy = true,
+  -- `require('diffview')` is a way in: opening a commit's diff from an org
+  -- entry does not go through a command (helpers/org/commits.lua)
+  module = 'diffview',
   config = function()
     -- Lua
     local actions = require("diffview.actions")

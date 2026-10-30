@@ -51,11 +51,14 @@
 --                   read per entry through the todo `prefix_format` below,
 --                   plus the `changed-up` / `changed-down` sorting strategies
 --                   (the group view's sections)
---   alerts.lua      a ticket that leaves `NEXT` for `TEST` is announced --
---                   editor notification, tmux status line and, while nvim is
+--   alerts.lua      a ticket a run leaves in a state the user owns --
+--                   `TEST`, `WARN`, `PEND` -- is announced: editor
+--                   notification, tmux status line and, while nvim is
 --                   unfocused, a desktop one -- off the tree watcher, by
 --                   comparing each changed file's `:ID:` entries with the
---                   states read last time
+--                   states read last time. The status line keeps a count of
+--                   them (`~/.cache/nvim/org-alerts`, printed by
+--                   `status-right`) until the ticket leaves that state
 --   wayfinder.lua   a wayfinder ticket kind (`wf_<type>`, or the longer
 --                   `wayfinder_<type>` of the first maps) drawn as its icon
 --                   on the entry line, right before the state keyword -- a
@@ -370,6 +373,14 @@ end
 local function open_web(_, link)
   require('helpers.org.web').open_url(link.target)
   return true
+end
+
+-- A `git:` link -- `[[git:fe94d46][fe94d46]]`, and the bare hash a hand-back
+-- writes as `fe94d46` (helpers/org/commits.lua makes that one a link at the
+-- cursor) -- opens the commit as a diff. The repo is found, not assumed: the
+-- ticket's project claims its repos.
+local function open_git(_, link)
+  return require('helpers.org.commits').open(link.path)
 end
 
 return {
@@ -918,7 +929,7 @@ return {
       frame_setup = { file = 'current' },
       -- A web address -- followed with <CR> or clicked -- opens in the
       -- browser, not through vim.ui.open's xdg-open.
-      types = { http = open_web, https = open_web },
+      types = { http = open_web, https = open_web, git = open_git },
     },
     mappings = {
       -- Global actions, not buffer-local. pick_project_todo is
@@ -1412,6 +1423,7 @@ return {
     require('helpers.org.blocks').setup()
     require('helpers.org.decorations').setup()
     require('helpers.org.links').setup()
+    require('helpers.org.commits').setup()
     require('helpers.org.wrap').setup()
     -- the group view's `changed-down` sorting strategy: it reads the same
     -- last-changed date the column shows (helpers/org/changed.lua), so it
