@@ -5,11 +5,12 @@
 -- The conversion itself is not here. `~/dotfiles/pandoc/org2docx.sh` is the
 -- one implementation: it shapes the org text for reading (the top headline as
 -- the document title, keywords and tags off the headings, levels renumbered
--- from 1) and hands it to pandoc with the template as its reference doc, so
--- Word is filled with the template's cover, header, footer and styles. This
--- module is the editor's half -- which lines, which template, which file --
--- and the `org-docx` skill (skill://org-docx) is the agent's half of the same
--- script, so the two never drift apart.
+-- from 1), completes the template with the styles pandoc names and a hand-built
+-- template leaves out, and hands the result to pandoc, so Word is filled with
+-- the template's header, footer and styles. This module is the editor's half --
+-- which lines, which template, which file -- and the `org-docx` skill
+-- (skill://org-docx) is the agent's half of the same script, so the two never
+-- drift apart.
 --
 -- Templates are the .docx files beside the script: `novigo_template.docx` is
 -- the template `novigo`, and the command's completion reads them from the
