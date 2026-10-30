@@ -991,7 +991,7 @@ function closeDetail(fromHistory) {
   // the next ticket is one keystroke away rather than a fresh query
   if (!fromHistory && searchReturn) {
     searchReturn = false;
-    openTicketSearch();
+    openTicketSearch(true);
   }
 }
 
@@ -1782,8 +1782,9 @@ function cycleAllFolds() {
 
 // the entry on screen was opened from the search: closing it goes back
 let searchReturn = false;
-// what was typed: a ticket read from the search leaves the query standing, so
-// the next match is one Enter away rather than a second search
+// what was typed: coming back from a ticket the search opened keeps the query,
+// so the next match is one Enter away. A fresh <C-p> never does -- it starts
+// the box empty, over every ticket.
 let searchQuery = '';
 
 // open tickets first, in the order a run looks at them, then the closed ones
@@ -1855,10 +1856,20 @@ function chooseSearch(entry) {
   selectEntry(entry);
 }
 
-function openTicketSearch() {
+// A press of <C-p> always starts the box empty; only the way back from a
+// ticket the search opened (`keep`) brings the query along.
+function openTicketSearch(keep) {
   const open = $('#tsearch');
   if (open) {
-    open.querySelector('input').focus();
+    // <C-p> again starts the search over: the box left open keeps what was
+    // typed for the ticket it sent you to, not for the next press
+    const input = open.querySelector('input');
+    if (input.value) {
+      input.value = '';
+      searchQuery = '';
+      paintSearch('');
+    }
+    input.focus();
     return;
   }
   closeMenus();
@@ -1899,6 +1910,7 @@ function openTicketSearch() {
   box.addEventListener('mousedown', (ev) => {
     if (ev.target === box) closeTicketSearch();
   });
+  searchQuery = keep ? searchQuery : '';
   input.value = searchQuery;
   paintSearch(searchQuery);
   input.focus();
