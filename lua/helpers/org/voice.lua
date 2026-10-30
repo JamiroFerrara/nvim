@@ -412,6 +412,29 @@ local function slurp(path)
   return type(data) == 'string' and data or nil
 end
 
+--- The names in `dir`, or an empty list when it cannot be read. libuv's
+--- readdir rather than `vim.fn.glob`: the Windows drive answers one directory
+--- listing quickly and every extra stat through the 9p share slowly, and the
+--- glob has to stat each entry it hands back. Looking for Handy is a walk of
+--- four such directories, so the reading is what decides whether the search is
+--- felt at launch.
+---@param dir string
+---@return string[]
+local function listdir(dir)
+  local names = {}
+  local handle = uv.fs_scandir(dir)
+  if not handle then
+    return names
+  end
+  while true do
+    local name = uv.fs_scandir_next(handle)
+    if not name then
+      return names
+    end
+    names[#names + 1] = name
+  end
+end
+
 --- Handy's model as the Windows drive names it, or nil when Handy is not on
 --- this machine. `selected_model` reads `org/repo/file.gguf`; the cache spells
 --- the repo `models--org--repo` and puts the file in a snapshot directory of
@@ -431,18 +454,34 @@ local function handy_source()
       return handy.src
     end
   end
-  for _, user in ipairs(vim.fn.glob('/mnt/c/Users/*', false, true)) do
+  for _, name in ipairs(listdir '/mnt/c/Users') do
+    local user = '/mnt/c/Users/' .. name
     local found = {}
     local selected = (slurp(user .. HANDY_SETTINGS) or ''):match '"selected_model"%s*:%s*"([^"]+)"'
     local org, repo, file = (selected or ''):match '^([^/]+)/([^/]+)/(.+)$'
     if org then
-      vim.list_extend(found, vim.fn.glob(('%s/.cache/huggingface/hub/models--%s--%s/snapshots/*/%s'):format(user, org, repo, file), false, true))
+      local hub = ('%s/.cache/huggingface/hub/models--%s--%s'):format(user, org, repo)
+      for _, snap in ipairs(listdir(hub .. '/snapshots')) do
+        found[#found + 1] = ('%s/snapshots/%s/%s'):format(hub, snap, file)
+      end
       found[#found + 1] = ('%s%s/%s/%s'):format(user, HANDY_MODELS, org, repo, file)
     end
     if #found == 0 then
       -- no settings to read, or a selection whose file is gone: any model
       -- Handy itself downloaded is still a better read than none
-      vim.list_extend(found, vim.fn.glob(user .. '/.cache/huggingface/hub/models--handy-computer--*/snapshots/*/*.gguf', false, true))
+      local hub = user .. '/.cache/huggingface/hub'
+      for _, repo_name in ipairs(listdir(hub)) do
+        if repo_name:match '^models%-%-handy%-computer%-%-' then
+          local snapshots = hub .. '/' .. repo_name .. '/snapshots'
+          for _, snap in ipairs(listdir(snapshots)) do
+            for _, entry in ipairs(listdir(snapshots .. '/' .. snap)) do
+              if entry:sub(-5) == '.gguf' then
+                found[#found + 1] = ('%s/%s/%s'):format(snapshots, snap, entry)
+              end
+            end
+          end
+        end
+      end
     end
     for _, path in ipairs(found) do
       if uv.fs_stat(path) then
@@ -1637,9 +1676,10 @@ function M.setup(user)
   end, { desc = 'voice: send the words the card is holding' })
   -- Handy's model is copied into the Linux side on first use and that copy
   -- takes a few seconds, so start it once nvim is up rather than during the
-  -- launch: finding it means walking the Windows drive through the 9p share,
-  -- which is the slowest thing a launch would otherwise do. The first click a
-  -- moment later falls back to whisper only if it beats the copy.
+  -- launch: looking for it reads a few directories on the Windows drive, and
+  -- every one of them is a round trip through the 9p share a launch should not
+  -- wait on. A first click a moment later falls back to whisper only if it
+  -- beats the copy.
   local warm = function()
     vim.defer_fn(handy_model, 500)
   end
