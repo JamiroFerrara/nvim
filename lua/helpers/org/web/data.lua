@@ -830,6 +830,10 @@ function M.payload(file)
     projects = {},
     totals = { open = open_total, done = done, all = total, flight = moving, pending = waiting },
     views = views,
+    -- every ticket of the vault, whatever the rail is set to: the search
+    -- (`C-p` in the page) is the one list that ignores the selection, so a
+    -- ticket from another project opens without a detour through the rail
+    tickets = entries,
   }
   for _, project in ipairs(projects) do
     local count = counts[project.path] or { open = 0, done = 0, flight = 0, pending = 0 }

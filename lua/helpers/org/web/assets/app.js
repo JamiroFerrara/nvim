@@ -76,8 +76,8 @@ async function load() {
   }
 }
 
-function matches(entry) {
-  const q = state.query.trim().toLowerCase();
+function matchesQuery(entry, query) {
+  const q = (query || '').trim().toLowerCase();
   if (!q) return true;
   const haystack = (entry.title + ' ' + (entry.project || '') + ' ' + (entry.tags || []).join(' ')).toLowerCase();
   // every word has to appear somewhere: "ing tree" finds the tree tickets
@@ -85,6 +85,10 @@ function matches(entry) {
     if (word.startsWith('#')) return (entry.tags || []).some((t) => t.toLowerCase().includes(word.slice(1)));
     return haystack.includes(word);
   });
+}
+
+function matches(entry) {
+  return matchesQuery(entry, state.query);
 }
 
 function entryRow(entry) {
@@ -1755,6 +1759,137 @@ function cycleAllFolds() {
     else state.folded.delete(foldKey(entry));
   }
   renderViews();
+}
+
+// ---- search every ticket ------------------------------------------------
+//
+// The rail, the tabs and the filter all narrow what is on screen, and a
+// ticket from another project is a rail click and a scroll away. Ctrl-P is
+// the way out of that: one box over every ticket of the vault -- whichever
+// project, whichever state, closed ones too -- and the one picked opens on
+// its own screen. It is the key a file finder takes in a terminal, so it is
+// the key the board gives it; the browser's print dialog is what it replaces.
+
+// the entry on screen was opened from the search: closing it goes back
+let searchReturn = false;
+
+// open tickets first, in the order a run looks at them, then the closed ones
+const SEARCH_RANK = { NEXT: 0, TEST: 1, WARN: 2, PEND: 3, TODO: 4 };
+const SEARCH_LIMIT = 200;
+
+function searchHits(query) {
+  const all = (state.data && state.data.tickets) || [];
+  const hits = all.filter((entry) => matchesQuery(entry, query));
+  hits.sort((a, b) => {
+    const done = (a.done ? 1 : 0) - (b.done ? 1 : 0);
+    if (done) return done;
+    const rank = (SEARCH_RANK[a.todo] ?? 5) - (SEARCH_RANK[b.todo] ?? 5);
+    if (rank) return rank;
+    return (a.title || '').localeCompare(b.title || '');
+  });
+  return hits;
+}
+
+function searchRow(entry) {
+  const li = el('li', entry.done ? 'done-entry' : '');
+  li.append(el('span', 'state ' + (entry.todo || ''), entry.todo || '—'));
+  const title = el('span', 'title', entry.title || '');
+  if (entry.cookie) title.append(el('span', 'cookie', ' ' + entry.cookie));
+  li.append(title);
+  const base = ((entry.rel || '').split('/').pop() || '').replace(/\.org$/, '').toLowerCase();
+  const tags = el('span', 'tags');
+  for (const tag of entry.tags || []) {
+    const lower = tag.toLowerCase();
+    if (lower === base || lower === (entry.project || '').toLowerCase()) continue;
+    tags.append(el('span', '', tag));
+  }
+  li.append(tags);
+  li.append(el('span', 'project', entry.project || ''));
+  li._entry = entry;
+  li.addEventListener('click', () => chooseSearch(entry));
+  return li;
+}
+
+function paintSearch(query) {
+  const box = $('#tsearch');
+  if (!box) return;
+  const list = box.querySelector('.results');
+  const hits = searchHits(query);
+  list.replaceChildren();
+  for (const entry of hits.slice(0, SEARCH_LIMIT)) list.append(searchRow(entry));
+  if (hits.length === 0) list.append(el('li', 'none', 'No ticket matches that.'));
+  else if (hits.length > SEARCH_LIMIT) {
+    list.append(el('li', 'none', `and ${hits.length - SEARCH_LIMIT} more: type to narrow`));
+  }
+  list.firstElementChild?.classList.add('sel');
+}
+
+function moveSearch(delta) {
+  const list = $('#tsearch .results');
+  if (!list) return;
+  const rows = [...list.children].filter((li) => li._entry);
+  if (!rows.length) return;
+  const at = rows.findIndex((li) => li.classList.contains('sel'));
+  const next = at === -1 ? (delta > 0 ? 0 : rows.length - 1) : Math.min(Math.max(at + delta, 0), rows.length - 1);
+  for (const li of rows) li.classList.remove('sel');
+  rows[next].classList.add('sel');
+  rows[next].scrollIntoView({ block: 'nearest' });
+}
+
+function chooseSearch(entry) {
+  $('#tsearch')?.remove();
+  searchReturn = true;
+  selectEntry(entry);
+}
+
+function openTicketSearch() {
+  const open = $('#tsearch');
+  if (open) {
+    open.querySelector('input').focus();
+    return;
+  }
+  closeMenus();
+  closePrompt();
+  const box = el('div');
+  box.id = 'tsearch';
+  const panel = el('div', 'panel');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = 'Search every ticket';
+  input.setAttribute('autocomplete', 'off');
+  input.setAttribute('aria-label', 'Search every ticket');
+  input.spellcheck = false;
+  const list = el('ul', 'results');
+  panel.append(input, list, el('p', 'hint', '↑ ↓ move · Enter open · Esc close'));
+  box.append(panel);
+  document.body.append(box);
+  input.addEventListener('input', () => paintSearch(input.value));
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+      ev.preventDefault();
+      closeTicketSearch();
+    } else if (ev.key === 'Enter') {
+      ev.preventDefault();
+      const row = list.querySelector('li.sel');
+      if (row && row._entry) chooseSearch(row._entry);
+    } else if (ev.key === 'ArrowDown' || ev.key === 'Tab' || (ev.ctrlKey && ev.key === 'n')) {
+      ev.preventDefault();
+      moveSearch(ev.shiftKey ? -1 : 1);
+    } else if (ev.key === 'ArrowUp' || (ev.ctrlKey && ev.key === 'p')) {
+      ev.preventDefault();
+      moveSearch(-1);
+    }
+  });
+  box.addEventListener('mousedown', (ev) => {
+    if (ev.target === box) closeTicketSearch();
+  });
+  paintSearch('');
+  input.focus();
+}
+
+function closeTicketSearch() {
+  $('#tsearch')?.remove();
+  searchReturn = false;
 }
 
 // ---- the keymap ---------------------------------------------------------
