@@ -1135,20 +1135,28 @@ return {
         help = { 'g?', '?' },
         show_flagging_note = false,
       },
-      -- Capture buffer keys. The defaults stay: finalize <C-c><C-c> /
-      -- <prefix>w, kill <C-c><C-k> / <prefix>k, refile <C-c><C-w> /
-      -- <prefix>r.
+      -- Capture buffer keys. A bare <C-c> files the capture, replacing the
+      -- Emacs <C-c><C-c> and every other <C-c>-prefixed capture key: the
+      -- capture is a short write, and one key that saves beats a prefix
+      -- chord. The rest live on <prefix>: <prefix>w files, <prefix>r files
+      -- and refiles, <prefix>k aborts (`q` too in normal mode).
       capture = {
         -- <C-s> is the insert-mode save key (lua/mappings.lua); `:w` files
         -- the capture through org.nvim's BufWriteCmd hook, so the key files
         -- it from insert mode already. Bind it in normal mode too, so
-        -- saving files the capture whichever mode the cursor is in.
-        finalize = { '<C-c><C-c>', '<prefix>w', '<C-s>' },
+        -- saving files the capture whichever mode the cursor is in. The
+        -- bare <C-c> is mirrored in insert mode by helpers/org/mappings.lua
+        -- (`<C-c>` leaves insert mode there otherwise and the entry stays
+        -- unfiled).
+        finalize = { '<C-c>', '<prefix>w', '<C-s>' },
         -- `q` aborts the capture and closes its window instead of starting
         -- a macro recording. Normal mode only: helpers/org/mappings.lua
         -- mirrors just the <C-c>-prefixed keys in insert mode, so a typed
         -- `q` stays a character.
-        kill = { '<C-c><C-k>', '<prefix>k', 'q' },
+        kill = { '<prefix>k', 'q' },
+        -- org.nvim's default also had <C-c><C-w>; the prefix chord is gone
+        -- with the others, so the config-wide refile key stays the only one.
+        refile = { '<prefix>r' },
       },
       org = {
         -- <CR> on a checkbox item toggles it, elsewhere cycles visibility

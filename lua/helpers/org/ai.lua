@@ -601,7 +601,7 @@ end
 --- directory's project, the picker otherwise), and the target file is written
 --- by the store itself, so the launch that follows reads a real headline on
 --- disk. Returns nil, with a notification, when nothing was stored -- the
---- capture stays open, with its text, exactly as a failing `<C-c><C-c>`
+--- capture stays open, with its text, exactly as a failing <C-c>
 --- leaves it.
 ---@param buf integer
 ---@return integer|nil bufnr

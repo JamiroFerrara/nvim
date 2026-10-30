@@ -162,39 +162,77 @@ function M.setup()
         vim.api.nvim_win_set_cursor(0, { lnum + 1, #new_line })
       end, { buffer = buf, desc = 'org: continue list (like bullets.vim)' })
 
-      -- Capture buffers: the Emacs capture keys work from insert mode too,
-      -- where the entry is written -- <C-c><C-c> files the capture,
-      -- <C-c><C-k> aborts it, <C-c><C-w> files and refiles it. org.nvim
-      -- binds the configured capture mappings in normal mode only, so
-      -- pressing <C-c><C-c> in insert mode just leaves insert mode and the
-      -- entry stays unfiled. Only the <C-c>-prefixed lhs are bound here:
-      -- the <prefix> (leader) ones are normal-mode sequences that would
-      -- steal ordinary typing. `sessions` is the capture registry, and a
-      -- capture buffer only exists after org.capture loaded, so an org
-      -- file never loads the module.
+      -- Capture buffers: the capture's savings keys work from insert mode
+      -- too, where the entry is written -- the bare <C-c> files the capture
+      -- (<prefix>w, <prefix>r, <prefix>k live on leader). org.nvim binds the
+      -- configured capture mappings in normal mode only, so pressing <C-c>
+      -- in insert mode would just leave insert mode and the entry would stay
+      -- unfiled. Only the <C-c>-prefixed lhs are bound here: the <prefix>
+      -- (leader) ones are normal-mode sequences that would steal ordinary
+      -- typing. `sessions` is the capture registry, and a capture buffer
+      -- only exists after org.capture loaded, so an org file never loads the
+      -- module.
       local capture = package.loaded['org.capture']
       if capture and capture.sessions[buf] then
         local config = require 'org.config'
         local utils = require 'org.utils'
         local maps = config.opts.mappings.capture or {}
 
+        -- The <C-c>-prefixed capture keys are bound in both modes and as
+        -- `nowait`: without it the bare <C-c> sits out 'timeoutlen' waiting
+        -- to see whether an org chord follows before it files the capture.
         local function add(value, fn, desc)
           for _, lhs in ipairs(config.lhs_list(value)) do
             if lhs:find '^<C%-c>' then
-              vim.keymap.set('i', lhs, fn, { buffer = buf, desc = desc })
+              for _, mode in ipairs { 'n', 'i' } do
+                vim.keymap.set(mode, lhs, fn, { buffer = buf, desc = desc, nowait = true })
+              end
             end
           end
         end
 
-        add(maps.finalize, function()
+        local function finalize()
           utils.run(capture.finalize, buf, { jump = vim.v.count > 0 })
-        end, 'org: finalize capture (count: and jump to it)')
+        end
+
+        add(maps.finalize, finalize, 'org: finalize capture (count: and jump to it)')
         add(maps.kill, function()
           capture.kill(buf)
         end, 'org: abort capture')
         add(maps.refile, function()
           utils.run(capture.refile, buf)
         end, 'org: refile capture')
+
+        -- A capture buffer is an org buffer, so org.nvim's own <C-c> prefix
+        -- table (context action, refile, tags, clock, capture, agenda, ...)
+        -- sits in it too. None of those chords belongs to a capture: the bare
+        -- <C-c> files the entry and nothing else, so every other <C-c> key is
+        -- removed. Scheduled because org.nvim binds its capture keys right
+        -- after the buffer's filetype is set -- after this callback, which
+        -- the filetype change triggered -- and those bindings would otherwise
+        -- outlive the removal.
+        vim.schedule(function()
+          -- only the capture's own buffer: an unnarrowed capture registers the
+          -- target file, and its <C-c> chords are org.nvim's to restore.
+          if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].buftype ~= 'acwrite' then
+            return
+          end
+          local keep = {}
+          for _, lhs in ipairs(config.lhs_list(maps.finalize)) do
+            if lhs:lower():find '^<c%-c>$' then
+              keep[lhs:lower()] = true
+            end
+          end
+          for _, mode in ipairs { 'n', 'i' } do
+            for _, m in ipairs(vim.api.nvim_buf_get_keymap(buf, mode)) do
+              local lhs = m.lhs:lower()
+              if lhs:find '^<c%-c>' and not keep[lhs] then
+                pcall(vim.keymap.del, mode, m.lhs, { buffer = buf })
+              end
+            end
+          end
+          add(maps.finalize, finalize, 'org: finalize capture (count: and jump to it)')
+        end)
 
         -- Normal-mode <CR> in a capture buffer opens a new line and leaves
         -- the cursor typing on it: the entry is written in insert mode, and a
