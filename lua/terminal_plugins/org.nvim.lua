@@ -32,15 +32,7 @@
 --                   mode a terminal window would leave in the agenda
 --   tagging.lua     one-key tag/priority toggles (B/F/C, <M-a>/<M-b>/<M-c>)
 --                   in org buffers and, via agenda.lua, in the view
---   decorations.lua checkbox icons (conceal, like the markdown config),
---                   table frames, note-header rules, and the glyph of the
---                   state keyword (`󰔟 NEXT`, the markdown callouts' icon+word
---                   grammar, in the keyword's own face)
---   drawer.lua      a property drawer collapses to one chip at the end of its
---                   headline -- the id mark and the first eight characters of
---                   `:ID:` -- its lines hidden (conceal_lines, so raw while
---                   the cursor is inside it, and nothing hidden at
---                   'conceallevel' 0), the file untouched
+--   decorations.lua checkbox icons (conceal, like the markdown config)
 --   links.lua       a `file:` link's description shows the name of the file
 --                   it ends in (`AgentListener.php:51`), its directories
 --                   concealed, the link's target left whole in the file
@@ -1472,7 +1464,6 @@ return {
     require('helpers.org.callouts').setup()
     require('helpers.org.blocks').setup()
     require('helpers.org.decorations').setup()
-    require('helpers.org.drawer').setup()
     require('helpers.org.links').setup()
     require('helpers.org.entry').setup()
     require('helpers.org.commits').setup()
