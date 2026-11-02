@@ -1166,20 +1166,22 @@ return {
         help = { 'g?', '?' },
         show_flagging_note = false,
       },
-      -- Capture buffer keys. A bare <C-c> files the capture, replacing the
-      -- Emacs <C-c><C-c> and every other <C-c>-prefixed capture key: the
-      -- capture is a short write, and one key that saves beats a prefix
-      -- chord. The rest live on <prefix>: <prefix>w files, <prefix>r files
-      -- and refiles, <prefix>k aborts (`q` too in normal mode).
+      -- Capture buffer keys. <C-c><C-c> files the capture, the Emacs chord
+      -- back in place of the bare <C-c> it replaced for a while: <C-c> is
+      -- the prefix the capture's own chords hang off, and `<C-c><C-n>`
+      -- refiles the entry into the knowledge base. Filing is a plain store
+      -- -- it starts no run; `<leader>ai` is the key that captures and
+      -- starts one. The rest live on <prefix>: <prefix>w files, <prefix>r
+      -- files and refiles, <prefix>k aborts (`q` too in normal mode).
       capture = {
         -- <C-s> is the insert-mode save key (lua/mappings.lua); `:w` files
         -- the capture through org.nvim's BufWriteCmd hook, so the key files
         -- it from insert mode already. Bind it in normal mode too, so
         -- saving files the capture whichever mode the cursor is in. The
-        -- bare <C-c> is mirrored in insert mode by helpers/org/mappings.lua
-        -- (`<C-c>` leaves insert mode there otherwise and the entry stays
-        -- unfiled).
-        finalize = { '<C-c>', '<prefix>w', '<C-s>' },
+        -- <C-c><C-c> chord is mirrored in insert mode by
+        -- helpers/org/mappings.lua, and so is `<C-c><C-n>`, the roam
+        -- refile of the entry the capture holds.
+        finalize = { '<C-c><C-c>', '<prefix>w', '<C-s>' },
         -- `q` aborts the capture and closes its window instead of starting
         -- a macro recording. Normal mode only: helpers/org/mappings.lua
         -- mirrors just the <C-c>-prefixed keys in insert mode, so a typed

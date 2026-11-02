@@ -163,16 +163,32 @@ function M.setup()
         vim.api.nvim_win_set_cursor(0, { lnum + 1, #new_line })
       end, { buffer = buf, desc = 'org: continue list (like bullets.vim)' })
 
-      -- Capture buffers: the capture's savings keys work from insert mode
-      -- too, where the entry is written -- the bare <C-c> files the capture
-      -- (<prefix>w, <prefix>r, <prefix>k live on leader). org.nvim binds the
-      -- configured capture mappings in normal mode only, so pressing <C-c>
-      -- in insert mode would just leave insert mode and the entry would stay
-      -- unfiled. Only the <C-c>-prefixed lhs are bound here: the <prefix>
-      -- (leader) ones are normal-mode sequences that would steal ordinary
-      -- typing. `sessions` is the capture registry, and a capture buffer
-      -- only exists after org.capture loaded, so an org file never loads the
-      -- module.
+      -- <C-c><C-n> writes into the knowledge base (helpers/org/capture.lua
+      -- `roam`): the roam node finder picks the destination -- the base's
+      -- files and their :ID: headlines, fuzzy -- and the entry lands there
+      -- as a plain headline, never a ticket, with the link back to where it
+      -- was written from. On a Visual selection the selection goes in as a
+      -- `#+begin_src` block of its language, so an excerpt arrives with the
+      -- note that explains it. Inside a capture buffer the same chord is the
+      -- other half (`roam_refile`): the entry the capture holds is stored
+      -- and refiled into the node picked there, its TODO keyword taken off
+      -- on the way. Nothing starts an omp run on the stored note -- neither
+      -- path writes the capture buffer (the capture branch below arms the
+      -- launch for a write, and only for the Task template).
+      vim.keymap.set({ 'n', 'x' }, '<C-c><C-n>', function()
+        require('helpers.org.capture').roam()
+      end, { buffer = buf, desc = 'org: capture into a roam node' })
+
+      -- Capture buffers: the capture's own keys work from insert mode too,
+      -- where the entry is written -- <C-c><C-c> files it, <C-c><C-n>
+      -- refiles it into the knowledge base, and <prefix>w, <prefix>r,
+      -- <prefix>k live on leader. org.nvim binds the configured capture
+      -- mappings in normal mode only, so a <C-c> chord typed in insert mode
+      -- would just leave insert mode and the entry would stay unfiled. Only
+      -- the <C-c>-prefixed lhs are bound here: the <prefix> (leader) ones are
+      -- normal-mode sequences that would steal ordinary typing. `sessions` is
+      -- the capture registry, and a capture buffer only exists after
+      -- org.capture loaded, so an org file never loads the module.
       local capture = package.loaded['org.capture']
       if capture and capture.sessions[buf] then
         local config = require 'org.config'
@@ -184,8 +200,7 @@ function M.setup()
         local tpl_key = session.template and session.template.key
 
         -- The <C-c>-prefixed capture keys are bound in both modes and as
-        -- `nowait`: without it the bare <C-c> sits out 'timeoutlen' waiting
-        -- to see whether an org chord follows before it files the capture.
+        -- `nowait`, so a chord fires as soon as its second key is typed.
         local function add(value, fn, desc)
           for _, lhs in ipairs(config.lhs_list(value)) do
             if lhs:find '^<C%-c>' then
@@ -200,18 +215,34 @@ function M.setup()
           utils.run(capture.finalize, buf, { jump = vim.v.count > 0 })
         end
 
-        add(maps.finalize, finalize, 'org: finalize capture (count: and jump to it)')
+        -- The two chords a capture carries out with: <C-c><C-c> stores the
+        -- entry where its template files it (no run started -- that is
+        -- `<leader>ai`'s job), and <C-c><C-n> stores it and refiles it into
+        -- a node of the knowledge base picked from the roam finder
+        -- (helpers/org/capture.lua `roam_refile`). Bound together, because
+        -- the scheduled cleanup below has to put both back after it clears
+        -- org.nvim's own <C-c> table out of the buffer.
+        local function bind_chords()
+          add(maps.finalize, finalize, 'org: finalize capture (count: and jump to it)')
+          for _, mode in ipairs { 'n', 'i' } do
+            vim.keymap.set(mode, '<C-c><C-n>', function()
+              require('helpers.org.capture').roam_refile(buf)
+            end, { buffer = buf, desc = 'org: refile the capture into a roam node', nowait = true })
+          end
+        end
+
         add(maps.kill, function()
           capture.kill(buf)
         end, 'org: abort capture')
         add(maps.refile, function()
           utils.run(capture.refile, buf)
         end, 'org: refile capture')
+        bind_chords()
 
         -- A capture buffer is an org buffer, so org.nvim's own <C-c> prefix
         -- table (context action, refile, tags, clock, capture, agenda, ...)
-        -- sits in it too. None of those chords belongs to a capture: the bare
-        -- <C-c> files the entry and nothing else, so every other <C-c> key is
+        -- sits in it too. None of those chords belongs to a capture -- the
+        -- two above are the whole table -- so every other <C-c> key is
         -- removed. Scheduled because org.nvim binds its capture keys right
         -- after the buffer's filetype is set -- after this callback, which
         -- the filetype change triggered -- and those bindings would otherwise
@@ -222,21 +253,14 @@ function M.setup()
           if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].buftype ~= 'acwrite' then
             return
           end
-          local keep = {}
-          for _, lhs in ipairs(config.lhs_list(maps.finalize)) do
-            if lhs:lower():find '^<c%-c>$' then
-              keep[lhs:lower()] = true
-            end
-          end
           for _, mode in ipairs { 'n', 'i' } do
             for _, m in ipairs(vim.api.nvim_buf_get_keymap(buf, mode)) do
-              local lhs = m.lhs:lower()
-              if lhs:find '^<c%-c>' and not keep[lhs] then
+              if m.lhs:lower():find '^<c%-c>' then
                 pcall(vim.keymap.del, mode, m.lhs, { buffer = buf })
               end
             end
           end
-          add(maps.finalize, finalize, 'org: finalize capture (count: and jump to it)')
+          bind_chords()
         end)
 
         -- Normal-mode <CR> in a capture buffer opens a new line and leaves
@@ -340,19 +364,6 @@ function M.setup()
         end)
         return ''
       end, { buffer = args.buf, expr = true, desc = 'org: capture a child of the headline at point (else change)' })
-
-      -- <C-c><C-n> writes into the knowledge base (helpers/org/capture.lua
-      -- `roam`): the roam node finder picks the destination -- the base's
-      -- files and their :ID: headlines, fuzzy -- and the entry lands there
-      -- as a plain headline, never a ticket, with the link back to where it
-      -- was written from. On a Visual selection the selection goes in as a
-      -- `#+begin_src` block of its language, so an excerpt arrives with the
-      -- note that explains it. Nothing starts an omp run on the stored note
-      -- (the capture branch above arms the launch for the Task template
-      -- alone).
-      vim.keymap.set({ 'n', 'x' }, '<C-c><C-n>', function()
-        require('helpers.org.capture').roam()
-      end, { buffer = buf, desc = 'org: capture into a roam node' })
 
       -- <leader>ai starts an `omp` instance for the headline at point in a
       -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp

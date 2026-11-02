@@ -66,9 +66,13 @@
 -- knowledge base picked from the roam node finder (every file and headed
 -- node of ~/org/roam, fuzzy), its entry a plain headline -- no TODO
 -- keyword, since a note is not a ticket -- with the same `%a` link back and
--- the same selection block. Only the Task template starts an omp run when
--- its capture is stored (helpers/org/mappings.lua), so a roam capture stays
--- a write and nothing more.
+-- the same selection block. `M.roam_refile` is its twin inside a capture:
+-- `<C-c><C-n>` stores the entry the capture holds at the destination the
+-- template names, moves it under the node picked there, and takes the TODO
+-- keyword off its headline on the way. Only the Task template starts an omp
+-- run when its capture is stored (helpers/org/mappings.lua), and neither
+-- the refile nor `<C-c><C-c>` (the capture's own save) is a write, so
+-- nothing starts a run on either.
 local M = {}
 
 local dest
@@ -212,9 +216,9 @@ function M.block(ctx)
   return '\n  %i'
 end
 
---- Capture with the Task template (`t`) from Visual mode: `^` and
---- `<leader>oc` there, the selection carried in as a source block (the
---- template's `%i`), the entry filed at a project's headline as usual.
+--- Capture with the Task template (`t`) from Visual mode: `^` there, the
+--- selection carried in as a source block (the template's `%i`), the entry
+--- filed at a project's headline as usual.
 function M.task()
   local initial = M.selection()
   require('org.utils').run(function()
@@ -248,6 +252,23 @@ local function roam_pick()
   return roam_dest
 end
 
+--- The picked node as a place: its buffer, and the line of the headline to
+--- file under -- nil for a file node, whose entries go at the end of the
+--- file. The picker runs here, once per capture.
+---@return table { buf: integer, lnum: integer|nil }
+local function roam_dest_at()
+  local utils = require 'org.utils'
+  local dest = roam_dest or roam_pick()
+  local buf = utils.load_buffer(dest.file)
+  if dest.level > 0 then
+    local hl = require('org.files').get_buffer(buf):find_by_id(dest.id)
+    if hl then
+      return { buf = buf, lnum = hl.line }
+    end
+  end
+  return { buf = buf }
+end
+
 --- Template `location` of the roam template (`r`): the buffer and line the
 --- entry goes to. A headline node is found again by its `:ID:` -- the index
 --- may be older than the file -- and the entry lands under it, as a child;
@@ -257,16 +278,56 @@ end
 ---@return integer|nil bufnr
 ---@return integer|nil lnum
 function M.roam_location()
-  local utils = require 'org.utils'
-  local dest = roam_dest or roam_pick()
-  local buf = utils.load_buffer(dest.file)
-  if dest.level > 0 then
-    local hl = require('org.files').get_buffer(buf):find_by_id(dest.id)
-    if hl then
-      return buf, hl.line
-    end
+  local dest = roam_dest_at()
+  return dest.buf, dest.lnum or vim.api.nvim_buf_line_count(dest.buf)
+end
+
+--- Take the TODO keyword off the headline at `lnum` of `buf`, keeping its
+--- level, priority and tags: a note filed into the knowledge base is not a
+--- ticket, and the keyword is the one thing the capture template wrote that
+--- does not belong there.
+---@param buf integer
+---@param lnum integer
+local function strip_keyword(buf, lnum)
+  local file = require('org.files').get_buffer(buf)
+  local line = vim.api.nvim_buf_get_lines(buf, lnum - 1, lnum, false)[1]
+  local p = line and require('org.parser').parse_headline_line(line, file.settings and file.settings.todo)
+  if not (p and p.todo) then
+    return
   end
-  return buf, vim.api.nvim_buf_line_count(buf)
+  p.todo = nil
+  vim.api.nvim_buf_set_lines(buf, lnum - 1, lnum, false, { require('org.edit').build_headline(p) })
+end
+
+--- Store the capture open in `buf` and refile the entry it stored into a
+--- node of the knowledge base: `<C-c><C-n>` in a capture buffer, the other
+--- way into the base the roam capture has. The node is picked first, so a
+--- picker cancelled there leaves the capture open with its text; then the
+--- entry is stored where the template files it, moved under the node -- or
+--- to the end of its file -- and the TODO keyword comes off its headline,
+--- since a note is not a ticket. The `%a` link the template wrote stays, so
+--- the note still says where it came from. Nothing starts an omp run on it.
+---@param buf integer
+function M.roam_refile(buf)
+  roam_dest = nil
+  require('org.utils').run(function()
+    local utils = require 'org.utils'
+    local dest = roam_dest_at()
+    local ok, dbuf, dline = pcall(require('org.capture').finalize, buf, { jump = false })
+    if not (ok and dbuf and dline) then
+      utils.warn 'org: the capture was not stored'
+      return
+    end
+    local moved, b, l = pcall(require('org.refile').move, { bufnr = dbuf, lnum = dline }, { bufnr = dest.buf, lnum = dest.lnum })
+    if not moved then
+      utils.warn('org: the entry was not refiled: ' .. tostring(b))
+      return
+    end
+    strip_keyword(b, l)
+    utils.save_buffer_or_warn(dbuf)
+    utils.save_buffer_or_warn(b)
+    utils.notify('org: refiled into ' .. vim.fn.fnamemodify(vim.api.nvim_buf_get_name(b), ':~'))
+  end)
 end
 
 --- Capture into the knowledge base: the `r` template of the config on
