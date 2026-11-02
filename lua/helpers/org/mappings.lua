@@ -83,11 +83,14 @@ function M.setup()
       end
 
       -- Normal-mode <CR>, like obsidian's smart action: follow the link
-      -- under the cursor, else cycle a headline (fold), toggle a checkbox,
-      -- or turn the line into a checkbox -- a plain list item keeps its
-      -- text, any other line is prefixed. The lines that are not "normal"
-      -- org lines (headlines, tables, keywords/comments, drawers, blocks)
-      -- keep the old fold behaviour.
+      -- under the cursor, run the tag under it as a query, else cycle a
+      -- headline (fold), toggle a checkbox, or turn the line into a
+      -- checkbox -- a plain list item keeps its text, any other line is
+      -- prefixed. The lines that are not "normal" org lines (headlines,
+      -- tables, keywords/comments, drawers, blocks) keep the old fold
+      -- behaviour. One mapping, whatever else binds <CR> in an org buffer:
+      -- helpers/org/retro.lua's tag query used to be a later binding that
+      -- shadowed this one whole, and a checkbox line lost its toggle with it.
       vim.keymap.set('n', '<CR>', function()
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         local line = get_line(lnum)
@@ -96,6 +99,14 @@ function M.setup()
         local links = require 'org.links'
         if links.link_at_cursor() then
           links.open_at_point()
+          return
+        end
+        -- A tag under the cursor on a headline runs that tag as a
+        -- knowledge-base query; the same key elsewhere is org's business.
+        local kb = require 'helpers.org.kb'
+        local tag = kb.tag_at_cursor()
+        if tag then
+          kb.query(tag)
           return
         end
         local lists = require 'org.lists'
