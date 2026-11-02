@@ -28,15 +28,6 @@ return { -- You can easily change to a different colorscheme.
           -- read apart from the plain notes' gray Comment.
           OrgAgentTimestamp = { fg = colors.mauve },
           OrgAgentRule = { fg = colors.mauve },
-          -- the chip a collapsed property drawer leaves at the end of its
-          -- headline (helpers/org/drawer.lua): the id mark and the head of
-          -- `:ID:` in the muted text color, so it reads as a reference and
-          -- not as part of the title
-          OrgDrawerChip = { fg = colors.overlay1 },
-          -- a finished headline (org.nvim's OrgHeadlineDone, which it links
-          -- to Comment): dimmed and struck, so a DONE ticket reads as crossed
-          -- out rather than merely less bright
-          OrgHeadlineDone = { fg = colors.overlay1, style = { 'strikethrough' } },
           -- the band behind an org code snippet (helpers/org/blocks.lua): a
           -- step darker than the page, so the snippet reads as a recessed
           -- block the way a markdown fence does. The rules that cap it carry
