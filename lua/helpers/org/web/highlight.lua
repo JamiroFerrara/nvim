@@ -363,21 +363,30 @@ local function unescape(text)
   end))
 end
 
---- A source block drawn as a snippet: a title bar with the language and a
---- button that copies the code, over the coloured block. The button finds
---- the text in the <pre> it sits above (app.js, page.lua), so the markup
---- carries one copy of it.
+--- A source block drawn as a snippet: a title bar with the language -- and the
+--- file the block came from, when it names one -- and a button that copies the
+--- code, over the coloured block. The button finds the text in the <pre> it
+--- sits above (app.js, page.lua), so the markup carries one copy of it.
 ---@param lang string
 ---@param inner string the block's inner HTML, already escaped/coloured
+---@param ref? { label: string, href: string, title: string } the file the block names
 ---@return string
-function M.snippet(lang, inner)
+function M.snippet(lang, inner, ref)
   lang = (lang or ''):gsub('^%s+', ''):gsub('%s+$', '')
   local name = lang ~= '' and escape(lang) or 'code'
+  local file = ''
+  if ref and ref.label then
+    file = ('<span class="snippet-arrow">→</span><a href="%s" class="snippet-file" title="%s">%s</a>'):format(
+      escape(ref.href),
+      escape(ref.title or ref.href),
+      escape(ref.label)
+    )
+  end
   return (
-    '<figure class="snippet"><div class="snippet-bar"><span class="snippet-lang">%s</span>'
+    '<figure class="snippet"><div class="snippet-bar"><span class="snippet-lang">%s</span>%s'
     .. '<button class="snippet-copy" type="button" title="Copy this snippet">copy</button></div>'
     .. '<pre class="src src-%s"><code>%s</code></pre></figure>'
-  ):format(name, name, inner)
+  ):format(name, file, name, inner)
 end
 
 --- Replace every source block of an exported org document with the

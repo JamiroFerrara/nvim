@@ -78,14 +78,44 @@ local function inline(text)
   end))
 end
 
---- A fenced block as a snippet: the title bar names the language, the body is
---- coloured the way the editor colours it.
+--- A fenced block as a snippet: the title bar names the language and, when
+--- the hunk names one, the file it came from; the body is coloured the way
+--- the editor colours it.
 ---@param lang string
 ---@param code string
+---@param ref? { label: string, href: string, title: string }
 ---@return string
-local function fence(lang, code)
+local function fence(lang, code, ref)
   local hl = highlight()
-  return hl.snippet(lang, hl.code(code, lang) or escape(code))
+  return hl.snippet(lang, hl.code(code, lang) or escape(code), ref)
+end
+
+--- The `→ [[file:path::62][label]]` line a hunk is followed by, as the
+--- snippet bar's file. The line number rides as the anchor the browser's link
+--- rewrite reads (helpers/org/web/links), so the name opens the file at the
+--- hunk; a target with no line number is linked as it stands. The rest of the
+--- line comes back too: the link shares it with the sentence it belongs to.
+---@param line string
+---@return { label: string, href: string, title: string }|nil ref, string|nil rest
+local function file_ref(line)
+  local target, label, rest = line:match '^%s*→%s*%[%[file:(.-)%]%[([^%]]*)%]%](.*)$'
+  if not target then
+    return nil
+  end
+  local path, number = target:match '^(.-)::#omp%-l(%d+)$'
+  if not path then
+    path, number = target:match '^(.-)::(%d+)$'
+  end
+  local href = path or target
+  if href:sub(1, 2) == '~/' then
+    href = vim.fn.expand '~' .. href:sub(2)
+  end
+  local ref = {
+    label = label ~= '' and label or target,
+    href = 'file:' .. href .. (path and ('#omp-l' .. number) or ''),
+    title = 'file:' .. target,
+  }
+  return ref, rest
 end
 
 local function fence_open(line)
@@ -195,7 +225,29 @@ function M.render(code)
           i = i + 1
         end
         i = i + 1 -- the closing fence
-        out[#out + 1] = fence(lang, table.concat(body, '\n'))
+        -- a hunk names its file on the line under it, the way a hand-back
+        -- writes it: that name goes into the snippet's bar instead of
+        -- repeating under the code, and what the line says after the link
+        -- stays the paragraph it started
+        local ref
+        local j = i
+        while j <= n and lines[j]:match '^%s*$' do
+          j = j + 1
+        end
+        if j <= n then
+          local rest
+          ref, rest = file_ref(lines[j])
+          if ref then
+            rest = rest:match '^%s*(.-)%s*$'
+            if rest == '' then
+              i = j + 1
+            else
+              lines[j] = rest
+              i = j
+            end
+          end
+        end
+        out[#out + 1] = fence(lang, table.concat(body, '\n'), ref)
       elseif indent then
         local items, item = {}, nil
         while i <= n do

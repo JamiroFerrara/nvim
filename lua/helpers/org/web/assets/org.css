@@ -330,8 +330,7 @@
 .org .snippet-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 0.6em;
   padding: 0.3em 0.5em 0.3em 1em;
   background: var(--mantle);
   border-bottom: 1px solid var(--surface);
@@ -341,7 +340,35 @@
   color: var(--overlay);
 }
 
+/* The file a hunk came from, beside its language: the name is a link into
+   the file viewer at that line, and the arrow says the language leads to it. */
+.org .snippet-bar .snippet-lang,
+.org .snippet-bar .snippet-arrow {
+  flex: none;
+  white-space: nowrap;
+}
+
+.org .snippet-bar .snippet-arrow {
+  color: var(--overlay);
+}
+
+.org .snippet-bar .snippet-file {
+  color: var(--subtext);
+  border-bottom-color: transparent;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org .snippet-bar .snippet-file:hover {
+  color: var(--sky);
+  border-bottom-color: var(--sky);
+}
+
 .org .snippet-bar .snippet-copy {
+  margin-left: auto;
+  flex: none;
   opacity: 0;
   color: var(--overlay);
   font: inherit;
