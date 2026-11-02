@@ -720,8 +720,9 @@ end
 ---
 --- `file` narrows the page to one project (`?file=`): the notes of its
 --- documentation mirror and the topics they point at
---- (helpers.org.web.roam's `payload`). The agenda's `7` opens the cwd
---- project this way.
+--- (helpers.org.web.roam's `payload`). The editor's own roam view --
+--- `7` in the agenda, helpers/org/roam.lua -- takes the same scope from the
+--- same index.
 ---@param file? string a project file, or a path under the roam directory
 ---@return string url
 function M.roam(file)

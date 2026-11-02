@@ -2,12 +2,12 @@
 -- notes and a graph of the links between them, and one note's body with its
 -- `id:` links pointed back at this server (helpers/org/web).
 --
--- The nodes and links are the plugin's own (org.extensions.roam.db), so a
--- note here is a note in the editor: every file and every headline carrying
--- an `:ID:` is a node, and a link is the `id:` link the roam capture wrote.
--- The body is the HTML export the preview uses, with the anchors rewritten
--- so a click stays in the browser instead of asking it for a file it cannot
--- open.
+-- The nodes and links are the plugin's own (org.extensions.roam.db), walked by
+-- helpers/org/roam.lua and read from its cache here, so the page and the
+-- editor's roam view (the same module) see one index: a note here is a note
+-- there. The body is the HTML export the preview uses, with the anchors
+-- rewritten so a click stays in the browser instead of asking it for a file it
+-- cannot open.
 
 local M = {}
 
@@ -19,119 +19,29 @@ local escape = (function()
   end
 end)()
 
---- The roam extension's index, when the extension is configured.
+--- The walked index (helpers.org.roam), or nil with no roam extension.
 ---@return table|nil
-local function index_db()
-  local ok, ext = pcall(require, 'org.extensions')
-  if not ok or not ext.opts 'roam' then
-    return nil
-  end
-  local ok_db, db = pcall(require, 'org.extensions.roam.db')
-  if not ok_db then
-    return nil
-  end
-  return db
+local function cached()
+  return require('helpers.org.roam').index()
 end
 
---- The file a project's knowledge base lives in: the roam directory's
---- `documentation/` mirror of the project's board (`~/org/projects/nvim.org`
---- -> `~/org/roam/documentation/nvim.org`), or `file` itself when it already
---- points inside the roam directory. Nil with no roam extension, or with no
---- `file`.
+--- The file a project's knowledge base lives in.
 ---@param file string|nil
 ---@return string|nil
 local function scope_file(file)
-  if not file or file == '' then
-    return nil
-  end
-  local ok, ext = pcall(require, 'org.extensions')
-  local opts = ok and ext.opts 'roam' or nil
-  if not opts or not opts.directory then
-    return nil
-  end
-  local path = vim.fs.normalize(vim.fn.expand(file))
-  local dir = vim.fs.normalize(vim.fn.expand(opts.directory))
-  if vim.startswith(path, dir .. '/') then
-    return path
-  end
-  return dir .. '/documentation/' .. vim.fs.basename(path)
+  return require('helpers.org.roam').scope_file(file)
 end
 
 --- Path of `path` from the home directory, the way the views name files.
 ---@param path string
 ---@return string
 local function relative(path)
-  local home = vim.fs.normalize(vim.fn.expand '~')
-  if vim.startswith(path, home .. '/') then
-    return path:sub(#home + 2)
-  end
-  return path
+  return require('helpers.org.roam').relative(path)
 end
 
-local cache = { at = 0, value = nil }
-
+--- Forget the walked index: the next read walks the vault again.
 function M.invalidate()
-  cache.value = nil
-end
-
---- The index walked once: nodes by id, the file-level node of every file, the
---- node ids an `id:` link can reach, and the edges between notes.
----@return table|nil
-local function walk()
-  local db = index_db()
-  if not db then
-    return nil
-  end
-  if not pcall(db.sync) then
-    return nil
-  end
-  local nodes = db.nodes() or {}
-  local by_id, by_file = {}, {}
-  for _, node in ipairs(nodes) do
-    by_id[node.id] = node
-    if node.level == 0 then
-      by_file[node.file] = node
-    end
-  end
-  -- one edge per pair: the graph is about notes, not about how many times
-  -- one note says the other's name
-  local edges, seen = {}, {}
-  local outbound, inbound = {}, {}
-  for _, link in ipairs(db.links() or {}) do
-    local target = link.type == 'id' and by_id[link.path] or nil
-    if target and link.source and by_id[link.source] and target.id ~= link.source then
-      local key = link.source .. '\0' .. target.id
-      if not seen[key] then
-        seen[key] = true
-        edges[#edges + 1] = { source = link.source, target = target.id }
-        outbound[link.source] = (outbound[link.source] or 0) + 1
-        inbound[target.id] = (inbound[target.id] or 0) + 1
-      end
-    end
-  end
-  return {
-    nodes = nodes,
-    by_id = by_id,
-    by_file = by_file,
-    edges = edges,
-    outbound = outbound,
-    inbound = inbound,
-  }
-end
-
---- The walked index, cached for a moment so the page and a note's body do
---- not sync the directory twice in one load.
----@return table|nil
-local function cached()
-  local now = (vim.uv or vim.loop).hrtime() / 1e6
-  if cache.value and now - cache.at < 1500 then
-    return cache.value
-  end
-  local value = walk()
-  if value then
-    cache.value, cache.at = value, now
-  end
-  return value
+  require('helpers.org.roam').invalidate()
 end
 
 --- A note's summary, the shape the rail and the graph read.

@@ -626,8 +626,9 @@ end
 -- just the headline cwd's project resolved to -- 5 priorities, 6 the
 -- wayfinder map of the cwd project: the charted tree, then a section
 -- per ticket kind (the `y` command, lua/terminal_plugins/org.nvim.lua),
--- 7 the cwd project's knowledge base in the browser (the roam view, see
--- setup_custom_views below).
+-- 7 the cwd project's knowledge base as a tree in the editor (the roam view,
+-- helpers/org/roam.lua: the notes and the links between them, walked like a
+-- TODO list's tree -- see setup_custom_views below).
 -- Buffer-local to orgagenda -- the TODO view renders into the same buffer,
 -- so it switches from there too -- which is why the keys are the plain
 -- digits and not the `<leader>o` ones: a count typed in the agenda
@@ -818,14 +819,15 @@ local function setup_custom_views()
           open_custom_view(command, label, scope)
         end, { buffer = args.buf, desc = 'org: Agenda view ' .. key .. ' (' .. label .. ')' })
       end
-      -- `7`: the cwd project's knowledge base in the browser -- the roam view
-      -- narrowed to its documentation mirror, the notes and the topics they
-      -- point at (helpers.org.web.roam's scope). It is not an agenda block,
-      -- so it is no custom_commands key like 1-6: the page opens beside the
-      -- board, and `7` again reloads it there.
+      -- `7`: the cwd project's knowledge base as a tree in the editor -- the
+      -- roam view (helpers.org.roam): the notes of the project's documentation
+      -- mirror and the topics they point at, nested the way their files nest
+      -- them, with the links between them folded under each note. It is not
+      -- an agenda block, so it is no custom_commands key like 1-6: the view
+      -- takes the window over the way the board does, and `q` puts the buffer
+      -- it replaced back.
       vim.keymap.set('n', '7', function()
-        local project = require('helpers.org.project').current()
-        require('helpers.org.web').roam(project and project.file)
+        require('helpers.org.roam').project()
       end, { buffer = args.buf, desc = 'org: Roam view 7 (the project knowledge base)' })
     end,
   })
