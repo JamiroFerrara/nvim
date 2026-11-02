@@ -14,8 +14,11 @@
 -- gone, and the language stays readable at the left. When the snippet names the
 -- file it came from on the line under it -- `→ [[file:~/x.lua::62][x.lua:62]]`,
 -- the way a hand-back writes it -- that name joins the language on the opening
--- rule (`──── lua → x.lua:62 ─────…`), so the block says where it came from
--- before the code rather than after it.
+-- rule (`──── lua → x.lua:62 ─────…`), in a link's own face, and the rule is
+-- the link: a click on it opens the file at the line, the same door every
+-- other link click goes through. The line that named it is hidden where
+-- concealing is on -- it is the rule's own text now, and it stays in the file
+-- for a search, a copy, git and the page.
 --
 -- A `src` block holding markdown is not a snippet: it is an entry's prose --
 -- an agent's answer, a note -- written in a block so the markdown plugin
@@ -45,6 +48,11 @@ local BAND = 'OrgBlockBg'
 local RULE = string.rep('─', 400)
 local RULE_GROUP = 'OrgBlockRule'
 local LABEL_GROUP = 'OrgBlockRuleLabel'
+
+-- the file a snippet came from wears the face org.nvim gives a link's
+-- description: the rule reads as the link it is, and a click on it opens what
+-- the line under the snippet names
+local LINK_GROUP = 'OrgLink'
 
 -- over render-markdown's own marks on a fence line (4096), so the rule
 -- replaces the `▘ lua ████…` info row it draws there
@@ -116,10 +124,11 @@ local function closes(line, mark, count)
 end
 
 --- The file a snippet names on the line under it, the way a hand-back writes
---- it -- `→ [[file:~/x.lua::62][x.lua:62]]` -- as the name the rule over the
---- snippet carries, or nil when that line is something else.
+--- it -- `→ [[file:~/x.lua::62][x.lua:62]]` -- as the short name the rule over
+--- the snippet carries and the link a click on that rule opens, or nil when
+--- the line is something else.
 ---@param line string|nil
----@return string|nil
+---@return { name: string, target: string }|nil
 local function file_ref(line)
   if not line then
     return nil
@@ -127,27 +136,39 @@ local function file_ref(line)
   local target, label = line:match '^%s*→%s*%[%[file:(.-)%]%[([^%]]*)%]%]'
   if not target then
     target = line:match '^%s*→%s*%[%[file:([^%]]+)%]%]'
-    return target
+    if not target then
+      return nil
+    end
+    return { name = target, target = 'file:' .. target }
   end
-  return label ~= '' and label or target
+  return { name = label ~= '' and label or target, target = 'file:' .. target }
 end
+
+--- One rule of a snippet's frame.
+---@class OrgBlockRule
+---@field row integer 0-based row the rule is drawn on
+---@field col integer 0-based byte column it starts at
+---@field label string? what the rule names at its head -- a language, or the
+--- block's kind; nil on a closing rule
+---@field file string? the file the snippet came from, as its short name
+---@field target string? the link that file is, which a click opens
+---@field file_row integer? 0-based row that file is named on
 
 --- The rows of every snippet of `buf`, and the rule of each opening and
 --- closing line.
 ---
---- `ranges` holds `{ first, last }` 0-based rows to band, `rules` holds
---- `{ row, col, label }` -- the label nil for a closing rule. Both a snippet's
---- own `#+begin_`/`#+end_` lines and the fences of a markdown body are ruled.
----@return { [1]: integer, [2]: integer }[] ranges, { [1]: integer, [2]: integer, [3]: string? }[] rules
+--- `ranges` holds `{ first, last }` 0-based rows to band, `rules` holds one
+--- entry per opening and closing line. Both a snippet's own
+--- `#+begin_`/`#+end_` lines and the fences of a markdown body are ruled.
+---@return { [1]: integer, [2]: integer }[] ranges, OrgBlockRule[] rules
 local function scan(lines)
   local ranges, rules = {}, {}
   -- nil, 'band' (a snippet being banded) or 'prose' (a markdown body, banded by
   -- the markdown plugin, whose fences are ruled here)
   local mode, kind
   local first, open_col, open_label
-  -- the index of the open snippet's `rules` entry, so the file named under it
-  -- can ride on its opening rule
-  local open_rule
+  -- the open snippet's rule, so the file named under it can ride on it
+  local open
   -- the column, marker and marker length of the open fence of a prose body
   local fence_col, fence_mark, fence_ticks
 
@@ -156,34 +177,40 @@ local function scan(lines)
     if mode == 'band' then
       if ends(line, kind) then
         ranges[#ranges + 1] = { first, row }
-        rules[#rules + 1] = { row, #(line:match '^(%s*)'), nil }
-        if open_rule then
-          rules[open_rule][4] = file_ref(lines[i + 1])
+        rules[#rules + 1] = { row = row, col = #(line:match '^(%s*)') }
+        if open then
+          local ref = file_ref(lines[i + 1])
+          if ref then
+            open.file, open.target, open.file_row = ref.name, ref.target, i
+          end
         end
-        mode, open_rule = nil, nil
+        mode, open = nil, nil
       elseif line:match '^%*+%s' then
         -- a headline ends a block (org.nvim's regions stop there too), so a
         -- block left unterminated is banded up to the line before it
         ranges[#ranges + 1] = { first, row - 1 }
-        mode, open_rule = nil, nil
+        mode, open = nil, nil
       end
     elseif mode == 'prose' then
       if ends(line, kind) or line:match '^%*+%s' then
-        mode, fence_col, open_rule = nil, nil, nil
+        mode, fence_col, open = nil, nil, nil
       elseif fence_col then
         if closes(line, fence_mark, fence_ticks) then
-          rules[#rules + 1] = { row, fence_col, nil }
-          if open_rule then
-            rules[open_rule][4] = file_ref(lines[i + 1])
+          rules[#rules + 1] = { row = row, col = fence_col }
+          if open then
+            local ref = file_ref(lines[i + 1])
+            if ref then
+              open.file, open.target, open.file_row = ref.name, ref.target, i
+            end
           end
-          fence_col, open_rule = nil, nil
+          fence_col, open = nil, nil
         end
       else
         local col, mark, count, info = fence(line)
         if col then
           fence_col, fence_mark, fence_ticks = col, mark, count
-          rules[#rules + 1] = { row, col, info ~= '' and info or nil }
-          open_rule = #rules
+          open = { row = row, col = col, label = info ~= '' and info or nil }
+          rules[#rules + 1] = open
         end
       end
     else
@@ -197,8 +224,8 @@ local function scan(lines)
           mode, first = 'band', row
           open_col = #(line:match '^(%s*)')
           open_label = lang or kind
-          rules[#rules + 1] = { row, open_col, open_label }
-          open_rule = #rules
+          open = { row = row, col = open_col, label = open_label }
+          rules[#rules + 1] = open
         end
       end
     end
@@ -214,34 +241,82 @@ end
 --- the markdown plugin, so only the fence lines are drawn: the opening one
 --- carries the language, the closing one the bare rule -- the frame an org
 --- snippet gets from its `#+begin_src` / `#+end_src` lines.
----@return { [1]: integer, [2]: integer, [3]: string? }[] rules
+---@return OrgBlockRule[] rules
 local function scan_markdown(lines)
   local rules = {}
   -- the indent, marker and marker length of the open fence
   local col, mark, ticks
-  -- the index of the open fence's `rules` entry, for the file named under it
-  local open_rule
+  -- the open fence's rule, for the file named under it
+  local open
 
   for i, line in ipairs(lines) do
     local row = i - 1
     if col then
       if closes(line, mark, ticks) then
-        rules[#rules + 1] = { row, col, nil }
-        if open_rule then
-          rules[open_rule][4] = file_ref(lines[i + 1])
+        rules[#rules + 1] = { row = row, col = col }
+        if open then
+          local ref = file_ref(lines[i + 1])
+          if ref then
+            open.file, open.target, open.file_row = ref.name, ref.target, i
+          end
         end
-        col, open_rule = nil, nil
+        col, open = nil, nil
       end
     else
       local indent, fence_mark, count, info = fence(line)
       if indent then
         col, mark, ticks = indent, fence_mark, count
-        rules[#rules + 1] = { row, indent, info ~= '' and info or nil }
-        open_rule = #rules
+        open = { row = row, col = indent, label = info ~= '' and info or nil }
+        rules[#rules + 1] = open
       end
     end
   end
   return rules
+end
+
+--- The link each clickable rule opens, by buffer and 0-based row: a click on
+--- the rule over a snippet opens the file the snippet names.
+local clicks = {}
+
+--- What a click on the rule at `row` opens, or nil when there is none there.
+---@param bufnr integer
+---@param row integer 0-based row
+---@return string|nil
+local function click_target(bufnr, row)
+  local rows = clicks[bufnr]
+  return rows and rows[row]
+end
+
+--- Open the file the snippet under the cursor names, the way following its
+--- link does (`org.links.open`, the door every other click goes through).
+--- Called after a `<LeftMouse>` click lands the cursor on a rule.
+function M.clicked()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+  local target = click_target(bufnr, row)
+  if not target then
+    return
+  end
+  require('org.lazy').on_load('org.links', 'blocks_click', function(links)
+    links.open(target, { bufnr = bufnr })
+  end)
+end
+
+--- Clicking a snippet's rule is a click on its link: the native click places
+--- the cursor, then the rule under it says what to open. Everything else is
+--- left to the click as it was, org.nvim's own link following included -- its
+--- press bookkeeping (`org.mouse`, a short click follows a link) is kept so a
+--- click on a real link still follows it.
+---@param bufnr integer
+local function map_click(bufnr)
+  vim.keymap.set('n', '<LeftMouse>', function()
+    local ok, mouse = pcall(require, 'org.mouse')
+    if ok and vim.fn.mode() == 'n' then
+      local pos = vim.fn.getmousepos()
+      mouse._press = { time = vim.uv.hrtime() / 1e6, row = pos.screenrow, col = pos.screencol }
+    end
+    return '<LeftMouse><Cmd>lua require("helpers.org.blocks").clicked()<CR>'
+  end, { buffer = bufnr, expr = true, replace_keycodes = true, desc = 'Open the file a snippet names' })
 end
 
 local function paint(buf)
@@ -267,21 +342,45 @@ local function paint(buf)
       vim.api.nvim_buf_set_extmark(buf, NS, row, 0, { line_hl_group = BAND })
     end
   end
+  local rows = {}
   for _, rule in ipairs(rules) do
     local virt_text = {}
-    if rule[3] or rule[4] then
-      local label = '─ ' .. (rule[3] or '')
-      if rule[4] then
-        label = label .. (rule[3] and ' → ' or '') .. rule[4]
-      end
-      virt_text[#virt_text + 1] = { label .. ' ', LABEL_GROUP }
+    if rule.file then
+      -- the language, then the file in the face a link's description wears,
+      -- then the dashes: the one line says what the block is and where it
+      -- came from
+      virt_text[#virt_text + 1] = { '─ ' .. (rule.label and (rule.label .. ' → ') or ''), LABEL_GROUP }
+      virt_text[#virt_text + 1] = { rule.file .. ' ', LINK_GROUP }
+    elseif rule.label then
+      virt_text[#virt_text + 1] = { '─ ' .. rule.label .. ' ', LABEL_GROUP }
     end
     virt_text[#virt_text + 1] = { RULE, RULE_GROUP }
-    vim.api.nvim_buf_set_extmark(buf, NS, rule[1], rule[2], {
+    vim.api.nvim_buf_set_extmark(buf, NS, rule.row, rule.col, {
       virt_text = virt_text,
       virt_text_pos = 'overlay',
       priority = RULE_PRIORITY,
     })
+    if rule.target then
+      rows[rule.row] = rule.target
+    end
+    if rule.file_row then
+      -- the line naming the file is the rule's own now: it is hidden where
+      -- concealing is on, as the delimiters it frames are, and stays in the
+      -- file for a search, a copy, git and the page
+      local line = lines[rule.file_row + 1] or ''
+      vim.api.nvim_buf_set_extmark(buf, NS, rule.file_row, 0, {
+        end_row = rule.file_row,
+        end_col = #line,
+        conceal_lines = '',
+        invalidate = true,
+        undo_restore = false,
+      })
+    end
+  end
+  clicks[buf] = next(rows) and rows or nil
+  if not vim.b[buf].org_blocks_click then
+    vim.b[buf].org_blocks_click = true
+    map_click(buf)
   end
 end
 
@@ -341,6 +440,7 @@ function M.setup()
     callback = function(args)
       painted[args.buf] = nil
       pending[args.buf] = nil
+      clicks[args.buf] = nil
     end,
   })
 end
