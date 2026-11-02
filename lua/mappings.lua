@@ -376,6 +376,16 @@ return {
     ['ga'] = { '%', desc = 'Jump to matching bracket' },
     ['gA'] = { '%%', desc = 'Jump to matching bracket' },
 
+    -- Capture: the same key as in normal mode, the selection carried into
+    -- the capture as a `#+begin_src` block of its language
+    -- (helpers/org/capture.lua `task`), so an excerpt keeps its code.
+    ['^'] = {
+      function()
+        require('helpers.org.capture').task()
+      end,
+      desc = 'Org capture (selection as a source block)',
+    },
+
     -- Number marks
     ['|'] = { '1', desc = 'Pipe' },
     ['?'] = { '2', desc = 'Question mark' },

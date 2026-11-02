@@ -54,6 +54,21 @@
 -- the text of the node at point into its own body, in the capture buffer or
 -- after storing. `M.under` (the `c` / <leader>aC capture-under-entry)
 -- builds on the same template, so either way in obeys the same rule.
+--
+-- A capture started in Visual mode carries the selection: `M.selection`
+-- turns it into a `#+begin_src` block of the buffer's language, and the
+-- template's `%i` puts it at the end of the entry. `^` in Visual mode
+-- (`M.task`) and the roam capture below both go through it, so the code a
+-- note is about travels with the note instead of being retyped.
+--
+-- `M.roam` is the other way in (`<C-c><C-n>`, `C-c C-n` in a board file):
+-- the `r` template of the config, whose destination is a node of the
+-- knowledge base picked from the roam node finder (every file and headed
+-- node of ~/org/roam, fuzzy), its entry a plain headline -- no TODO
+-- keyword, since a note is not a ticket -- with the same `%a` link back and
+-- the same selection block. Only the Task template starts an omp run when
+-- its capture is stored (helpers/org/mappings.lua), so a roam capture stays
+-- a write and nothing more.
 local M = {}
 
 local dest
@@ -133,6 +148,139 @@ function M.under(hl, filename)
   olp[#olp + 1] = hl:plain_title()
   tpl.olp = olp
   require('org.capture').capture(tpl)
+end
+
+--- The language a `#+begin_src` block of `buf` opens with: its filetype,
+--- with the names org spells differently. A buffer whose filetype is plain
+--- `text` opens a block with no language at all.
+---@param buf integer
+---@return string
+local function src_lang(buf)
+  local names = {
+    bash = 'sh',
+    cs = 'csharp',
+    javascriptreact = 'jsx',
+    text = '',
+    typescriptreact = 'tsx',
+    zsh = 'sh',
+  }
+  local ft = vim.bo[buf].filetype
+  if names[ft] ~= nil then
+    return names[ft]
+  end
+  return ft
+end
+
+--- The Visual selection as the capture's starting content: its lines in a
+--- `#+begin_src` block of the origin buffer's language, at column 0 -- the
+--- template's `  %i` indents every line with the lead the escape is spelled
+--- with. Empty when the capture was not started on a selection, so a
+--- template carries `%i` either way and shows nothing without one.
+---@return string
+function M.selection()
+  local mode = vim.fn.mode()
+  if mode ~= 'v' and mode ~= 'V' and mode ~= '\22' then
+    return ''
+  end
+  local utils = require 'org.utils'
+  local buf = vim.api.nvim_get_current_buf()
+  local srow, scol, erow, ecol = utils.visual_range()
+  utils.exit_visual()
+  local lines = vim.api.nvim_buf_get_lines(buf, srow - 1, erow, false)
+  if mode == 'v' and #lines > 0 then
+    lines[#lines] = lines[#lines]:sub(1, ecol)
+    lines[1] = lines[1]:sub(scol)
+  end
+  local lang = src_lang(buf)
+  local out = { '#+begin_src' .. (lang ~= '' and (' ' .. lang) or '') }
+  vim.list_extend(out, lines)
+  out[#out + 1] = '#+end_src'
+  return table.concat(out, '\n')
+end
+
+--- The template text that carries the Visual selection: the `%i` line the
+--- templates append when the capture was started on a selection
+--- (`M.selection`), empty otherwise. `%i` repeats the lead it is spelled
+--- with on every line of the block, so the block is indented like the entry
+--- body around it.
+---@param ctx table
+---@return string
+function M.block(ctx)
+  if not (ctx and ctx.initial and ctx.initial ~= '') then
+    return ''
+  end
+  return '\n  %i'
+end
+
+--- Capture with the Task template (`t`) from Visual mode: `^` and
+--- `<leader>oc` there, the selection carried in as a source block (the
+--- template's `%i`), the entry filed at a project's headline as usual.
+function M.task()
+  local initial = M.selection()
+  require('org.utils').run(function()
+    require('org.capture').capture('t', { initial = initial })
+  end)
+end
+
+--- The destination of the roam capture, picked once per capture: the node
+--- the finder answered and the line it sits on in its file (nil for a file
+--- node, whose entries go at the end of the file).
+local roam_dest
+
+--- Ask the roam node finder for the destination: every node of the knowledge
+--- base -- a file, or a headline carrying an `:ID:` -- by its title or an
+--- alias, fuzzy like the other roam pickers. Aborts the capture when the
+--- picker is cancelled or answers nothing.
+---@return table|nil
+local function roam_pick()
+  local utils = require 'org.utils'
+  local ok, node = pcall(require, 'org.extensions.roam.node')
+  if not ok then
+    utils.warn 'org: the roam extension is not enabled'
+    utils.abort()
+  end
+  local choice = node.read { prompt = 'Refile to', allow_new = false }
+  if not (choice and choice.node) then
+    utils.abort()
+  end
+  local n = choice.node
+  roam_dest = { file = n.file, id = n.id, level = n.level or 0 }
+  return roam_dest
+end
+
+--- Template `location` of the roam template (`r`): the buffer and line the
+--- entry goes to. A headline node is found again by its `:ID:` -- the index
+--- may be older than the file -- and the entry lands under it, as a child;
+--- a file node is the whole file, so the entry goes at its end, beside the
+--- last top-level entry. The node is picked here, when the capture starts,
+--- so a capture cancelled in the finder never opens a buffer.
+---@return integer|nil bufnr
+---@return integer|nil lnum
+function M.roam_location()
+  local utils = require 'org.utils'
+  local dest = roam_dest or roam_pick()
+  local buf = utils.load_buffer(dest.file)
+  if dest.level > 0 then
+    local hl = require('org.files').get_buffer(buf):find_by_id(dest.id)
+    if hl then
+      return buf, hl.line
+    end
+  end
+  return buf, vim.api.nvim_buf_line_count(buf)
+end
+
+--- Capture into the knowledge base: the `r` template of the config on
+--- `<C-c><C-n>`, the entry a plain headline (no TODO keyword) under the node
+--- the roam finder answers, linked back to where it came from (`%a`) and
+--- carrying the Visual selection as a source block when there is one.
+--- Nothing is started on the stored entry -- the run is the Task template's
+--- alone (helpers/org/mappings.lua).
+function M.roam()
+  roam_dest = nil
+  local initial = M.selection()
+  require('org.utils').run(function()
+    require('org.capture').capture('r', { initial = initial })
+  end)
 end
 
 --- The date header line of a captured entry: `[<timestamp>] <rule>`.

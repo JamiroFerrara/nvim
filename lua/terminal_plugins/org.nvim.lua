@@ -12,7 +12,10 @@
 --                   nearest `.git` root. The capture destination, the
 --                   project-scoped views and the `^` write side use it
 --   capture.lua     capture under a headline (`c`, and the capture-task
---                   destination of level-1 project headlines)
+--                   destination of level-1 project headlines), the Visual
+--                   selection as a `#+begin_src` block of its language, and
+--                   the knowledge-base capture of `<C-c><C-n>` (`r`: a roam
+--                   node picked fuzzy, a plain headline, no run started)
 --   ics.lua         iCalendar subscriptions + event-detail scratch viewer
 --   cookies.lua     automatic statistics cookies, the checkbox auto-DONE,
 --                   the auto-DONE of an entry whose child headlines are all
@@ -823,10 +826,38 @@ return {
             if capture.origin_link(ctx) then
               text = text .. '\n  %a'
             end
-            return text
+            return text .. (capture.block(ctx) or '')
           end,
           -- Keep the buffer in title/header/description order while the
           -- entry is typed (lua/helpers/org/capture.lua `hook`).
+          hook = capture.hook,
+        },
+        -- The knowledge-base capture (`<C-c><C-n>`, helpers/org/capture.lua
+        -- `roam`): the entry lands under a node of ~/org/roam picked from
+        -- the roam node finder -- every file and headed node of the base,
+        -- fuzzy -- and is a note, not a ticket: a plain headline with no
+        -- TODO keyword, and no omp run started when it is stored (the launch
+        -- in helpers/org/mappings.lua is the Task template's alone). The
+        -- `%a` line is the same link back the Task template keeps, so the
+        -- note says which file and line it was written from; `%i` is the
+        -- Visual selection, a `#+begin_src` block of its language
+        -- (`capture.block`), so a code excerpt travels with its note.
+        -- `location` rather than `target`/`olp`: the node is a line of a
+        -- file, and the capture's target resolution takes a place, not a
+        -- title to match (`capture.roam_location`).
+        r = {
+          description = 'Roam',
+          type = 'entry',
+          location = function()
+            return capture.roam_location()
+          end,
+          template = function(ctx)
+            local text = '* %?\n  %U ' .. string.rep('-', notes.DASHES)
+            if capture.origin_link(ctx) then
+              text = text .. '\n  %a'
+            end
+            return text .. (capture.block(ctx) or '')
+          end,
           hook = capture.hook,
         },
       },

@@ -6,7 +6,8 @@
 -- following
 -- the link under the cursor, insert-mode <CR> continuing lists like
 -- bullets.vim, dd deleting a whole subtree, the
--- one-key tag/priority toggles (helpers/org/tagging.lua), and the
+-- one-key tag/priority toggles (helpers/org/tagging.lua), the roam capture
+-- on <C-c><C-n> (helpers/org/capture.lua `roam`), and the
 -- insert-mode capture keys (org.nvim binds those in normal mode only).
 -- Registered on FileType org so they land after org.nvim attaches its own
 -- buffer mappings.
@@ -177,6 +178,10 @@ function M.setup()
         local config = require 'org.config'
         local utils = require 'org.utils'
         local maps = config.opts.mappings.capture or {}
+        -- the template this capture was started with: the Task one (`t`)
+        -- files a ticket, every other one a note (the roam capture, `r`)
+        local session = capture.sessions[buf]
+        local tpl_key = session.template and session.template.key
 
         -- The <C-c>-prefixed capture keys are bound in both modes and as
         -- `nowait`: without it the bare <C-c> sits out 'timeoutlen' waiting
@@ -252,16 +257,21 @@ function M.setup()
         -- event `OrgCaptureAfterFinalize` (with the target buffer and line).
         -- This only marks the write as a launch -- the storing stays
         -- org.nvim's own -- and the hook in M.setup starts the run once the
-        -- entry exists, the same launch `<leader>ai` gives. The mark is
-        -- dropped on the next loop, so a write that could not store anything
-        -- leaves no launch armed for a later finalize.
+        -- entry exists, the same launch `<leader>ai` gives. Only the Task
+        -- template's capture is a ticket to run: the roam capture (`r`,
+        -- <C-c><C-n>) writes a note into the knowledge base and starts
+        -- nothing, so its write leaves the mark alone. The mark is dropped
+        -- on the next loop, so a write that could not store anything leaves
+        -- no launch armed for a later finalize.
         vim.api.nvim_create_autocmd('BufWriteCmd', {
           buffer = buf,
           callback = function()
-            write_launch = true
-            vim.schedule(function()
-              write_launch = false
-            end)
+            if tpl_key == 't' or tpl_key == nil then
+              write_launch = true
+              vim.schedule(function()
+                write_launch = false
+              end)
+            end
           end,
           desc = 'org: mark the capture write as a launch',
         })
@@ -330,6 +340,19 @@ function M.setup()
         end)
         return ''
       end, { buffer = args.buf, expr = true, desc = 'org: capture a child of the headline at point (else change)' })
+
+      -- <C-c><C-n> writes into the knowledge base (helpers/org/capture.lua
+      -- `roam`): the roam node finder picks the destination -- the base's
+      -- files and their :ID: headlines, fuzzy -- and the entry lands there
+      -- as a plain headline, never a ticket, with the link back to where it
+      -- was written from. On a Visual selection the selection goes in as a
+      -- `#+begin_src` block of its language, so an excerpt arrives with the
+      -- note that explains it. Nothing starts an omp run on the stored note
+      -- (the capture branch above arms the launch for the Task template
+      -- alone).
+      vim.keymap.set({ 'n', 'x' }, '<C-c><C-n>', function()
+        require('helpers.org.capture').roam()
+      end, { buffer = buf, desc = 'org: capture into a roam node' })
 
       -- <leader>ai starts an `omp` instance for the headline at point in a
       -- tmux pane (helpers/org/ai.lua), shadowing the global plain-omp
