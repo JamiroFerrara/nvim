@@ -616,6 +616,47 @@ local function setup_open()
   end)
 end
 
+-- `o` (`switch_to`) leaves the view behind: the entry opens in its own file
+-- in the window the view held, and the list is a hidden buffer the window no
+-- longer shows. Getting back is the key the list itself quits with, `q`, on
+-- the file that just took the window -- a buffer-local mapping on that file
+-- and nothing else, so the list's own `q` and an ordinary `q` elsewhere are
+-- untouched. The mapping is one shot: it puts the view's buffer back in the
+-- window and unbinds itself, so `q` is a macro again once the list is on
+-- screen. Only a TODO view arms it -- the entry list is what `o` leaves, and
+-- an agenda day grid is not a place a file was opened from.
+local function arm_switch_back(buf, vbuf)
+  vim.keymap.set('n', 'q', function()
+    pcall(vim.api.nvim_buf_del_keymap, buf, 'n', 'q')
+    local win = vim.api.nvim_get_current_win()
+    if vim.api.nvim_buf_is_valid(vbuf) and vim.api.nvim_win_get_buf(win) == buf then
+      vim.api.nvim_win_set_buf(win, vbuf)
+      return
+    end
+    -- the buffer is gone, or the window moved on: `q` is the plain key again
+    vim.api.nvim_feedkeys('q', 'n', false)
+  end, { buffer = buf, desc = 'org: back to the TODO view' })
+end
+
+local function setup_switch_back()
+  require('org.lazy').on_load('org.agenda.view', 'switch_back', function(view)
+    local switch_to = view.actions.switch_to
+    if not switch_to then
+      return
+    end
+    view.actions.switch_to = function(...)
+      local vbuf = vim.api.nvim_get_current_buf()
+      local state = view.state_of(vbuf)
+      local result = switch_to(...)
+      local buf = vim.api.nvim_get_current_buf()
+      if buf ~= vbuf and state and is_todo_view(state.view) and vim.bo[buf].buftype == '' then
+        arm_switch_back(buf, vbuf)
+      end
+      return result
+    end
+  end)
+end
+
 -- Number keys open the custom views configured in
 -- lua/terminal_plugins/org.nvim.lua (agenda.custom_commands): 1 all open
 -- TODOs across every project, 2 the same cross-project list cut to the
@@ -1531,6 +1572,7 @@ function M.setup()
   setup_redo_stay()
   setup_one_key()
   setup_entry_folds()
+  setup_switch_back()
   setup_entry_scratch()
   setup_entry_preview()
   setup_open()
