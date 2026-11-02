@@ -43,7 +43,8 @@ function M.open()
 
   -- `belowright` forces the new window to the right regardless of `splitright`
   vim.cmd 'belowright vsplit'
-  vim.cmd 'terminal omp'
+  local argv = vim.list_extend({ 'omp' }, require('helpers.omp_theme').argv())
+  vim.cmd('terminal ' .. table.concat(vim.tbl_map(vim.fn.shellescape, argv), ' '))
   local buf = vim.api.nvim_get_current_buf()
   pcall(vim.api.nvim_buf_set_name, buf, TERM_NAME .. buf)
   vim.bo[buf].bufhidden = 'hide'

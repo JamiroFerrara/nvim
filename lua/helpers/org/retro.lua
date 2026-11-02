@@ -164,6 +164,14 @@ local function spawn(argv)
   })
 end
 
+-- The omp argv under the editor's theme, so this pane paints like the buffer
+-- it was started from (helpers/omp_theme.lua).
+local function omp_argv(args)
+  local argv = vim.list_extend({ 'omp' }, require('helpers.omp_theme').argv())
+  vim.list_extend(argv, args)
+  return argv
+end
+
 --- `OrgRetro`: one retrospective over the sessions of every finished ticket.
 function M.run()
   local tickets = finished()
@@ -176,7 +184,7 @@ function M.run()
   for _, t in ipairs(tickets) do
     total = total + #t.sessions
   end
-  spawn { 'omp', '--append-system-prompt', SKILL, prompt(tickets, report) }
+  spawn(omp_argv { '--append-system-prompt', SKILL, prompt(tickets, report) })
   notify(string.format('org retro: %d ticket(s), %d session(s) → %s', #tickets, total, report))
 end
 
@@ -193,14 +201,6 @@ local function board()
   return project and project.file or nil
 end
 
--- The omp argv under the editor's theme, so this pane paints like the buffer
--- it was started from (helpers/omp_theme.lua).
-local function omp_argv(args)
-  local argv = vim.list_extend({ 'omp' }, require('helpers.omp_theme').argv())
-  vim.list_extend(argv, args)
-  return argv
-end
-
 --- The message a consolidation omp starts with (one line: see `prompt`).
 ---@param board_path string
 ---@return string
@@ -210,12 +210,16 @@ local function kb_prompt(board_path)
     'Knowledge-base consolidation requested from nvim for ' .. client .. '.',
     'The kb skill is appended to your system prompt: follow its "Consolidating" section.',
     'Board: ' .. board_path .. ' -- the tickets of this project, open and closed.',
-    'Knowledge base: ' .. vim.fn.expand('~/org/roam/documentation/' .. client .. '.org')
-      .. ' (create it from the board\'s level-1 headings if it is not there yet).',
-    'The closed tickets are in ' .. vim.fn.expand('~/org/archive/' .. client .. '/*.org_archive')
-      .. ' and, for the ones rolled before that, in ' .. vim.fn.expand('~/org/projects/' .. client .. '.org_archive') .. '.',
+    'Knowledge base: '
+      .. vim.fn.expand('~/org/roam/documentation/' .. client .. '.org')
+      .. " (create it from the board's level-1 headings if it is not there yet).",
+    'The closed tickets are in '
+      .. vim.fn.expand('~/org/archive/' .. client .. '/*.org_archive')
+      .. ' and, for the ones rolled before that, in '
+      .. vim.fn.expand('~/org/projects/' .. client .. '.org_archive')
+      .. '.',
     'The scope is the whole project, not one headline: the single-ticket rule of the omp-org-ticket contract does not apply to this run.',
-    'Rebuild the hub when you are done: nvim --headless -c \'lua require("helpers.org.kb").index()\' -c \'qa!\'.',
+    "Rebuild the hub when you are done: nvim --headless -c 'lua require(\"helpers.org.kb\").index()' -c 'qa!'.",
     'Your final message is one line: what merged, what you added, what is still a draft.',
   }, ' ')
 end
@@ -232,7 +236,7 @@ function M.consolidate()
     notify('org kb: ' .. KB_SKILL .. ' is missing', vim.log.levels.ERROR)
     return
   end
-  spawn { 'omp', '--append-system-prompt', KB_SKILL, kb_prompt(path) }
+  spawn(omp_argv { '--append-system-prompt', KB_SKILL, kb_prompt(path) })
   notify('org kb: consolidating ' .. vim.fn.fnamemodify(path, ':t') .. ' into ' .. vim.fn.expand '~/org/roam/documentation/')
 end
 
