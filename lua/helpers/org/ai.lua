@@ -324,6 +324,11 @@ end
 -- agents of the tickets already running too (helpers/org/write.lua)
 local write = require 'helpers.org.write'
 
+--- The theme overlay every instance this launcher starts carries: nvim's own
+--- colorscheme, so the pane beside the editor paints the same surface
+--- (helpers/omp_theme.lua).
+local omp_theme = require 'helpers.omp_theme'
+
 local function notify(msg, level)
   require('org.utils').notify(msg, level)
 end
@@ -1201,6 +1206,7 @@ end
 local function session_argv(key, rules, message)
   local dir = session_dir(key)
   local argv = { 'omp', '--session-dir', dir }
+  vim.list_extend(argv, omp_theme.argv())
   if has_session(dir) then
     argv[#argv + 1] = '--continue'
   end
@@ -1302,6 +1308,7 @@ local function talk_argv(message)
   if has_session(dir) then
     argv[#argv + 1] = '--continue'
   end
+  vim.list_extend(argv, omp_theme.argv())
   vim.list_extend(argv, {
     '--tools=bash,task,read',
     '--no-skills',
@@ -1329,9 +1336,12 @@ local function omp_argv(ticket)
   end
   local dir = key and session_dir(key)
   if not dir then
-    return { 'omp', '--append-system-prompt', SKILL, prompt(ticket) }
+    local argv = vim.list_extend({ 'omp' }, omp_theme.argv())
+    vim.list_extend(argv, { '--append-system-prompt', SKILL, prompt(ticket) })
+    return argv
   end
   local argv = { 'omp', '--session-dir', dir }
+  vim.list_extend(argv, omp_theme.argv())
   if has_session(dir) then
     argv[#argv + 1] = '--continue'
   end
@@ -1386,9 +1396,10 @@ local function resume_argv(ticket)
   end
   local dir = key and session_dir(key)
   if dir and has_session(dir) then
-    return { 'omp', '--session-dir', dir, '--continue' }
+    return vim.list_extend({ 'omp', '--session-dir', dir, '--continue' }, omp_theme.argv())
   end
   local argv = { 'omp' }
+  vim.list_extend(argv, omp_theme.argv())
   if dir then
     argv[#argv + 1] = '--session-dir'
     argv[#argv + 1] = dir

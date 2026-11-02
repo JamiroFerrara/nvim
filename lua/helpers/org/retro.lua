@@ -193,6 +193,14 @@ local function board()
   return project and project.file or nil
 end
 
+-- The omp argv under the editor's theme, so this pane paints like the buffer
+-- it was started from (helpers/omp_theme.lua).
+local function omp_argv(args)
+  local argv = vim.list_extend({ 'omp' }, require('helpers.omp_theme').argv())
+  vim.list_extend(argv, args)
+  return argv
+end
+
 --- The message a consolidation omp starts with (one line: see `prompt`).
 ---@param board_path string
 ---@return string
