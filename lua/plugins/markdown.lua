@@ -61,8 +61,11 @@ return {
     code = {
       -- Turn on / off code block & inline code rendering
       enabled = true,
-      -- Turn on / off any sign column related rendering
-      sign = true,
+      -- Turn on / off any sign column related rendering: the fence line
+      -- carries the language instead (the rule helpers/org/blocks.lua draws
+      -- over it), and an org snippet has no sign column of its own, so an
+      -- icon there would be the one part of the frame that does not match.
+      sign = false,
       -- Determines how code blocks & inline code are rendered:
       --  none: disables all rendering
       --  normal: adds highlight group to code blocks & inline code, adds padding to code blocks

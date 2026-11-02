@@ -20,6 +20,12 @@
 -- `OrgBlockBg`) and ruled here, so band and rules land on the snippet and
 -- never on the answer around it.
 --
+-- A markdown buffer (MARKDOWN below: a `.md` file, an agent's output pane) gets
+-- the same treatment for its fenced code blocks: the band is the markdown
+-- plugin's, and the fence lines are ruled here, so a snippet reads the same
+-- way in either filetype -- one rule over it carrying the language, one under
+-- it -- instead of the plugin's `▘ lua ████…` info row.
+--
 -- The colors live in the theme (`OrgBlockBg`, lua/terminal_plugins/
 -- theme_catpuccin.lua); nothing here depends on them.
 local M = {}
@@ -50,6 +56,12 @@ local VERBATIM = { src = true, example = true, export = true, comment = true }
 -- code blocks
 local PROSE = { markdown = true, md = true }
 
+-- the filetypes whose fenced code is markdown the plugin renders: a `.md`
+-- file, and the output pane the agent views write into (`file_types` in
+-- lua/plugins/markdown.lua). Their blocks are banded by the plugin, so only
+-- their fences are ruled here.
+local MARKDOWN = { markdown = true, opencode_output = true }
+
 local pending = {}
 
 -- what was last painted, per buffer: typing inside a block (most of what
@@ -76,11 +88,27 @@ local function ends(line, kind)
   return rest ~= nil and rest:find('^' .. vim.pesc(kind) .. '%f[%A]') ~= nil
 end
 
---- A fence line of a markdown body: its indent, its backticks and the
---- language of its info string.
+--- A fence line of markdown -- a `.md` file, or the prose body of a `src`
+--- block: its indent, its marker's character, the marker's length and the
+--- language of its info string, or nil when the line opens no fence. Markdown
+--- allows either backticks or tildes, three or more.
 local function fence(line)
   local indent, ticks, info = line:match '^(%s*)(```+)(%S*)'
-  return indent and #indent, ticks and #ticks, info
+  if not indent then
+    indent, ticks, info = line:match '^(%s*)(~~~+)(%S*)'
+  end
+  if not indent then
+    return nil
+  end
+  return #indent, ticks:sub(1, 1), #ticks, info
+end
+
+--- Whether `line` closes the fence `mark` of `count` characters: the same
+--- character, at least as many of them (` ``` ` never closes a ` ```` `), and
+--- nothing after them.
+local function closes(line, mark, count)
+  local close = line:match '^%s*([`~]+)%s*$'
+  return close ~= nil and close:sub(1, 1) == mark and #close >= count
 end
 
 --- The rows of every snippet of `buf`, and the rule of each opening and
@@ -96,8 +124,8 @@ local function scan(lines)
   -- the markdown plugin, whose fences are ruled here)
   local mode, kind
   local first, open_col, open_label
-  -- the column and the backticks of the open fence of a prose body
-  local fence_col, fence_ticks
+  -- the column, marker and marker length of the open fence of a prose body
+  local fence_col, fence_mark, fence_ticks
 
   for i, line in ipairs(lines) do
     local row = i - 1
@@ -116,17 +144,14 @@ local function scan(lines)
       if ends(line, kind) or line:match '^%*+%s' then
         mode, fence_col = nil, nil
       elseif fence_col then
-        -- a fence closes on its own width or more (` ``` ` never closes a
-        -- ` ```` `), so a nested fence in the body does not cut it short
-        local ticks = line:match '^%s*(```+)%s*$'
-        if ticks and #ticks >= fence_ticks then
+        if closes(line, fence_mark, fence_ticks) then
           rules[#rules + 1] = { row, fence_col, nil }
           fence_col = nil
         end
       else
-        local col, ticks, info = fence(line)
+        local col, mark, count, info = fence(line)
         if col then
-          fence_col, fence_ticks = col, ticks
+          fence_col, fence_mark, fence_ticks = col, mark, count
           rules[#rules + 1] = { row, col, info ~= '' and info or nil }
         end
       end
@@ -153,13 +178,47 @@ local function scan(lines)
   return ranges, rules
 end
 
+--- The rules of the fenced code of a markdown buffer. The body is banded by
+--- the markdown plugin, so only the fence lines are drawn: the opening one
+--- carries the language, the closing one the bare rule -- the frame an org
+--- snippet gets from its `#+begin_src` / `#+end_src` lines.
+---@return { [1]: integer, [2]: integer, [3]: string? }[] rules
+local function scan_markdown(lines)
+  local rules = {}
+  -- the indent, marker and marker length of the open fence
+  local col, mark, ticks
+
+  for i, line in ipairs(lines) do
+    local row = i - 1
+    if col then
+      if closes(line, mark, ticks) then
+        rules[#rules + 1] = { row, col, nil }
+        col = nil
+      end
+    else
+      local indent, fence_mark, count, info = fence(line)
+      if indent then
+        col, mark, ticks = indent, fence_mark, count
+        rules[#rules + 1] = { row, indent, info ~= '' and info or nil }
+      end
+    end
+  end
+  return rules
+end
+
 local function paint(buf)
   pending[buf] = nil
   if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_buf_is_loaded(buf) then
     painted[buf] = nil
     return
   end
-  local ranges, rules = scan(vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local ranges, rules = {}, {}
+  if MARKDOWN[vim.bo[buf].filetype] then
+    rules = scan_markdown(lines)
+  else
+    ranges, rules = scan(lines)
+  end
   if painted[buf] and vim.deep_equal(ranges, painted[buf][1]) and vim.deep_equal(rules, painted[buf][2]) then
     return
   end
@@ -196,22 +255,30 @@ local function schedule(buf)
   end)
 end
 
+--- Whether `buf` is one this paints: an org file (snippets, the fences of its
+--- prose bodies) or a markdown file (the fences of its code blocks).
+local function painted_ft(buf)
+  local ft = vim.bo[buf].filetype
+  return ft == 'org' or MARKDOWN[ft] == true
+end
+
 function M.setup()
   local group = vim.api.nvim_create_augroup('org_block_bg', { clear = true })
   vim.api.nvim_create_autocmd('FileType', {
     group = group,
-    pattern = 'org',
-    desc = 'Band the org code snippets',
+    pattern = 'org,markdown,opencode_output',
+    desc = 'Band the org code snippets and rule the markdown fences',
     callback = function(args)
       schedule(args.buf)
     end,
   })
   -- opening a new `#+begin_src`, closing one, or deleting a delimiter all
-  -- change which rows belong to a snippet
+  -- change which rows belong to a snippet; a fence added or removed does the
+  -- same to a markdown block
   vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'InsertLeave' }, {
     group = group,
     callback = function(args)
-      if vim.bo[args.buf].filetype == 'org' then
+      if painted_ft(args.buf) then
         schedule(args.buf)
       end
     end,
@@ -222,7 +289,7 @@ function M.setup()
     group = group,
     callback = function(args)
       painted[args.buf] = nil
-      if vim.bo[args.buf].filetype == 'org' then
+      if painted_ft(args.buf) then
         schedule(args.buf)
       end
     end,
