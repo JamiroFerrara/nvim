@@ -388,6 +388,82 @@ local function tables(bufnr, first, last, rows)
   end
 end
 
+-- The state's glyph, in front of the keyword: the icon + word the markdown
+-- callouts are drawn in (`󰋽 Note`), so a headline reads `󰔟 NEXT …` the way a
+-- callout reads `󰌶 Tip`. The glyphs are Nerd Fonts' `md-*` icons, one cell
+-- wide each, so the keyword column does not move; the mark is inline virtual
+-- text, so the file keeps the plain `NEXT` a search, a copy or another
+-- program reads.
+local STATE_ICONS = {
+  TODO = '󰄱',
+  NEXT = '󰔟',
+  PEND = '󰦖',
+  TEST = '󰄬',
+  WARN = '󰀪',
+  DONE = '󰄭',
+}
+
+--- The face of a state keyword: the keyword's own face when the config
+--- defines one (`ui.todo_keyword_faces`, which org.nvim defines as
+--- `orgTodoKw_<NAME>`), else its theme face -- `OrgDone` for a keyword the
+--- file counts as finished, `OrgTodo` for the rest.
+---@param bufnr integer
+---@param keyword string
+---@return string
+local function state_group(bufnr, keyword)
+  local custom = 'orgTodoKw_' .. keyword
+  if vim.fn.hlexists(custom) == 1 then
+    return custom
+  end
+  local ok, file = pcall(function()
+    return require('org.files').get_buffer(bufnr)
+  end)
+  local done = false
+  if ok and file then
+    local good, is = pcall(function()
+      return file.settings.todo:is_done(keyword)
+    end)
+    done = good and is == true
+  end
+  return done and 'OrgDone' or 'OrgTodo'
+end
+
+--- Draw the glyph of the keyword of every headline of rows [first, last].
+---@param bufnr integer
+---@param first integer
+---@param last integer
+---@param rows table<integer, table[]>
+local function state_icons(bufnr, first, last, rows)
+  local n = vim.api.nvim_buf_line_count(bufnr)
+  local lo = math.max(0, first)
+  local hi = math.min(n - 1, last)
+  if lo > hi then
+    return
+  end
+  for k, line in ipairs(vim.api.nvim_buf_get_lines(bufnr, lo, hi + 1, false)) do
+    local stars, keyword = line:match '^(%*+)%s+(%u[%u%d_]*)%s'
+    local icon = stars and STATE_ICONS[keyword]
+    if icon then
+      local row = lo + k - 1
+      local marks = rows[row]
+      if not marks then
+        marks = {}
+        rows[row] = marks
+      end
+      -- the keyword starts one column past its stars
+      marks[#marks + 1] = {
+        #stars + 1,
+        {
+          virt_text = { { icon .. ' ', state_group(bufnr, keyword) } },
+          virt_text_pos = 'inline',
+          right_gravity = false,
+        },
+        true,
+      }
+    end
+  end
+end
+
 function M.setup()
   -- Agent note blocks: any colorscheme can repaint them (catppuccin's
   -- custom_highlights does, in terminal_plugins/theme_catpuccin.lua); these
@@ -421,6 +497,7 @@ function M.setup()
       local hi = math.min(n - 1, last or n - 1)
       note_headers(bufnr, lo, hi, rows)
       tables(bufnr, lo, hi, rows)
+      state_icons(bufnr, lo, hi, rows)
       return rows
     end
     -- A table row's marks depend on the revealed row (see `revealed_row`),
