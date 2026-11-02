@@ -18,6 +18,11 @@
 -- the file itself. <Tab> / `l` expand, <S-Tab> / `h` collapse, `R` reads the
 -- vault again and redraws in place, `q` closes the view and puts the buffer
 -- it replaced back.
+--
+-- The view is one of the boards' views, not a screen of its own: the agenda's
+-- numbers mean here what they mean there (helpers.org.agenda's CUSTOM_VIEWS),
+-- so `3` on this tree swaps the window to the board, `1` to the cross-project
+-- list, and `7` reads the vault again.
 local M = {}
 
 --- The roam extension's database, or nil when the extension is not
@@ -678,6 +683,18 @@ function M.open(file)
     toggle(false)
   end, { buffer = buf, desc = 'roam: collapse the note' })
   vim.keymap.set('n', 'R', M.refresh, { buffer = buf, desc = 'roam: read the vault again' })
+  -- the agenda's numbers mean the same views here: pressing `3` on the tree
+  -- swaps the window over to the board, `1` to the cross-project list, and
+  -- `7` is this view again -- one keyboard for every view, whichever one is
+  -- on screen
+  for digit = 1, 6 do
+    local key = tostring(digit)
+    vim.keymap.set('n', key, function()
+      M.close()
+      require('helpers.org.agenda').digit(key)
+    end, { buffer = buf, desc = 'roam: switch to view ' .. digit })
+  end
+  vim.keymap.set('n', '7', M.refresh, { buffer = buf, desc = 'roam: read the vault again' })
   vim.api.nvim_create_autocmd('BufWipeout', {
     buffer = buf,
     callback = close_preview,

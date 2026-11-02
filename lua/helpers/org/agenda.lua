@@ -850,6 +850,22 @@ function M.custom_view(key, scope)
   open_custom_view(key, key, scope or 'project')
 end
 
+--- Open the view a number key of the agenda opens -- `1`-`6`, the list
+--- setup_custom_views binds in the agenda buffer. The roam view's own digits
+--- come through here (helpers/org/roam.lua), so a number means one view
+--- wherever it is pressed.
+---@param key string a digit of CUSTOM_VIEWS
+---@return boolean opened
+function M.digit(key)
+  for _, view in ipairs(CUSTOM_VIEWS) do
+    if view[1] == key then
+      open_custom_view(view[2], view[3], view[4] or 'project')
+      return true
+    end
+  end
+  return false
+end
+
 local function setup_custom_views()
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'orgagenda',
