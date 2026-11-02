@@ -833,18 +833,20 @@ return {
           hook = capture.hook,
         },
         -- The knowledge-base capture (`<C-c><C-n>`, helpers/org/capture.lua
-        -- `roam`): the entry lands under a node of ~/org/roam picked from
-        -- the roam node finder -- every file and headed node of the base,
-        -- fuzzy -- and is a note, not a ticket: a plain headline with no
-        -- TODO keyword, and no omp run started when it is stored (the launch
-        -- in helpers/org/mappings.lua is the Task template's alone). The
+        -- `roam`): the entry lands under a headline of ~/org/roam picked
+        -- from a fuzzy finder over every file of the base and every headline
+        -- in it -- a capture target is a line of a file, so a base whose
+        -- headlines carry no `:ID:` is still searchable -- and is a note,
+        -- not a ticket: a plain headline with no TODO keyword, and no omp
+        -- run started when it is stored (the launch in
+        -- helpers/org/mappings.lua is the Task template's alone). The
         -- `%a` line is the same link back the Task template keeps, so the
         -- note says which file and line it was written from; `%i` is the
         -- Visual selection, a `#+begin_src` block of its language
         -- (`capture.block`), so a code excerpt travels with its note.
-        -- `location` rather than `target`/`olp`: the node is a line of a
-        -- file, and the capture's target resolution takes a place, not a
-        -- title to match (`capture.roam_location`).
+        -- `location` rather than `target`/`olp`: the destination is a line
+        -- of a file, and the capture's target resolution takes a place, not
+        -- a title to match (`capture.roam_location`).
         r = {
           description = 'Roam',
           type = 'entry',

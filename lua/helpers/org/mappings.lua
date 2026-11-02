@@ -164,8 +164,9 @@ function M.setup()
       end, { buffer = buf, desc = 'org: continue list (like bullets.vim)' })
 
       -- <C-c><C-n> writes into the knowledge base (helpers/org/capture.lua
-      -- `roam`): the roam node finder picks the destination -- the base's
-      -- files and their :ID: headlines, fuzzy -- and the entry lands there
+      -- `roam`): a fuzzy finder picks the destination over the base's files
+      -- and every headline in them -- level 2 and deeper included, whether
+      -- or not the headline carries an `:ID:` -- and the entry lands there
       -- as a plain headline, never a ticket, with the link back to where it
       -- was written from. On a Visual selection the selection goes in as a
       -- `#+begin_src` block of its language, so an excerpt arrives with the

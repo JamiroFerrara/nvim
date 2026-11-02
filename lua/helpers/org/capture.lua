@@ -62,11 +62,11 @@
 -- note is about travels with the note instead of being retyped.
 --
 -- `M.roam` is the other way in (`<C-c><C-n>`, `C-c C-n` in a board file):
--- the `r` template of the config, whose destination is a node of the
--- knowledge base picked from the roam node finder (every file and headed
--- node of ~/org/roam, fuzzy), its entry a plain headline -- no TODO
--- keyword, since a note is not a ticket -- with the same `%a` link back and
--- the same selection block. `M.roam_refile` is its twin inside a capture:
+-- the `r` template of the config, whose destination is a place in the
+-- knowledge base picked from a fuzzy finder over every file of ~/org/roam
+-- and every headline in it, its entry a plain headline -- no TODO keyword,
+-- since a note is not a ticket -- with the same `%a` link back and the same
+-- selection block. `M.roam_refile` is its twin inside a capture:
 -- `<C-c><C-n>` stores the entry the capture holds at the destination the
 -- template names, moves it under the node picked there, and takes the TODO
 -- keyword off its headline on the way. Only the Task template starts an omp
@@ -226,55 +226,89 @@ function M.task()
   end)
 end
 
---- The destination of the roam capture, picked once per capture: the node
---- the finder answered and the line it sits on in its file (nil for a file
---- node, whose entries go at the end of the file).
+--- The destination of the roam capture, picked once per capture: the file
+--- the note goes to, and the line of the headline it is filed under (nil
+--- for the file itself, whose entries go at its end).
 local roam_dest
 
---- Ask the roam node finder for the destination: every node of the knowledge
---- base -- a file, or a headline carrying an `:ID:` -- by its title or an
---- alias, fuzzy like the other roam pickers. Aborts the capture when the
---- picker is cancelled or answers nothing.
+--- Every place a note can be filed into: each file of the knowledge base,
+--- and every headline under it, level by level with its outline path. The
+--- list is the files, not the roam index: a node needs an `:ID:` on its
+--- headline, and a base written by hand or by an agent has few, so an
+--- index-only finder would offer the files and almost nothing inside them.
+--- A capture target needs no `:ID:` -- it is a line of a file.
+---@return { name: string, file: string, rel: string, lnum?: integer, olp: string[] }[]
+local function roam_candidates()
+  local db = require 'org.extensions.roam.db'
+  local out = {}
+  local function walk(path, rel, hl, parents)
+    local title = hl:plain_title()
+    local here = parents
+    if title and title ~= '' and not hl.inlinetask then
+      here = vim.list_extend(vim.deepcopy(parents), { title })
+      out[#out + 1] = { name = title, file = path, rel = rel, lnum = hl.line, olp = here }
+    end
+    for _, child in ipairs(hl.children or {}) do
+      walk(path, rel, child, here)
+    end
+  end
+  for _, path in ipairs(db.list_files()) do
+    local rel = db.relative(path) or vim.fn.fnamemodify(path, ':t')
+    local file = require('org.files').get(path)
+    local title = vim.trim((file.settings and file.settings.title) or '')
+    out[#out + 1] = { name = title ~= '' and title or vim.fn.fnamemodify(path, ':t:r'), file = path, rel = rel, olp = {} }
+    -- the top-level headlines carry the rest as children; a flat list of
+    -- every headline would walk the subtrees twice
+    for _, hl in ipairs(file.headlines) do
+      if (hl.level or 1) == 1 then
+        walk(path, rel, hl, {})
+      end
+    end
+  end
+  return out
+end
+
+--- Ask the picker for the destination: every file and headline of the
+--- knowledge base, searched fuzzily by title, each with the file (and the
+--- outline path) it lives in beside it. Aborts the capture when the picker
+--- is cancelled or answers nothing.
 ---@return table|nil
 local function roam_pick()
   local utils = require 'org.utils'
-  local ok, node = pcall(require, 'org.extensions.roam.node')
-  if not ok then
-    utils.warn 'org: the roam extension is not enabled'
+  local items = {}
+  for _, c in ipairs(roam_candidates()) do
+    local where = c.rel .. (#c.olp > 0 and (' › ' .. table.concat(c.olp, ' › ')) or '')
+    items[#items + 1] = {
+      display = { { c.name, 'Title' }, { '  ' .. where, 'Comment' } },
+      text = c.name .. ' ' .. where,
+      filename = c.file,
+      lnum = c.lnum,
+      value = c,
+    }
+  end
+  local choice = require('org.pickers').choose { title = 'Refile to', items = items }
+  if not (choice and choice[1]) then
     utils.abort()
   end
-  local choice = node.read { prompt = 'Refile to', allow_new = false }
-  if not (choice and choice.node) then
-    utils.abort()
-  end
-  local n = choice.node
-  roam_dest = { file = n.file, id = n.id, level = n.level or 0 }
+  local picked = choice[1].value
+  roam_dest = { file = picked.file, lnum = picked.lnum }
   return roam_dest
 end
 
---- The picked node as a place: its buffer, and the line of the headline to
---- file under -- nil for a file node, whose entries go at the end of the
---- file. The picker runs here, once per capture.
+--- The picked destination as a place: its buffer, and the line of the
+--- headline to file under -- nil for a file, whose entries go at the end of
+--- it. The picker runs here, once per capture.
 ---@return table { buf: integer, lnum: integer|nil }
 local function roam_dest_at()
-  local utils = require 'org.utils'
   local dest = roam_dest or roam_pick()
-  local buf = utils.load_buffer(dest.file)
-  if dest.level > 0 then
-    local hl = require('org.files').get_buffer(buf):find_by_id(dest.id)
-    if hl then
-      return { buf = buf, lnum = hl.line }
-    end
-  end
-  return { buf = buf }
+  return { buf = require('org.utils').load_buffer(dest.file), lnum = dest.lnum }
 end
 
 --- Template `location` of the roam template (`r`): the buffer and line the
---- entry goes to. A headline node is found again by its `:ID:` -- the index
---- may be older than the file -- and the entry lands under it, as a child;
---- a file node is the whole file, so the entry goes at its end, beside the
---- last top-level entry. The node is picked here, when the capture starts,
---- so a capture cancelled in the finder never opens a buffer.
+--- entry goes to. A headline picked in the finder files the entry under it,
+--- as a child; a file files it at the end, beside the last top-level entry.
+--- The place is picked here, when the capture starts, so a capture
+--- cancelled in the finder never opens a buffer.
 ---@return integer|nil bufnr
 ---@return integer|nil lnum
 function M.roam_location()
