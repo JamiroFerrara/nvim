@@ -4,6 +4,13 @@
 // its `id:` links pointed back at this page (/api/roam/note). Routes are the
 // hash: #n=<id> a note, #g the whole graph, #g=<id> the graph around a note.
 
+// The page can be narrowed to one project (`/roam?file=<project file>`): the
+// notes of its documentation mirror and the topics they point at, as the
+// server scopes them. The scope rides every index fetch so a redraw stays on
+// the project; a note is fetched by id, which needs no scope.
+const scope = new URLSearchParams(location.search).get('file') || '';
+const scoped = (path) => (scope ? path + (path.includes('?') ? '&' : '?') + 'file=' + encodeURIComponent(scope) : path);
+
 const state = {
   data: null,
   query: '',
@@ -139,7 +146,12 @@ function renderRail(current) {
     }
   }
   if (notes.length === 0) {
-    nav.append(el('div', 'group', state.data?.available ? 'No note matches' : 'org-roam is not configured'));
+    const empty = !state.data?.available
+      ? 'org-roam is not configured'
+      : state.data?.scope && !state.query.trim()
+        ? `No note for ${state.data.scope.name} yet`
+        : 'No note matches';
+    nav.append(el('div', 'group', empty));
   }
   const stats = $('#stats');
   stats.replaceChildren();
@@ -325,7 +337,11 @@ function render() {
 
 async function load() {
   try {
-    const data = await api('/api/roam');
+    const data = await api(scoped('/api/roam'));
+    // a project's page says which project it is, in the tab and in the rail
+    const mode = $('.mode');
+    if (mode) mode.textContent = data.scope ? `roam · ${data.scope.name}` : 'roam';
+    document.title = data.scope ? `org — ${data.scope.name} roam` : 'org — roam';
     // the vault saves constantly, and most of it is not a note: redraw the
     // graph only when the notes or their links actually changed, so a
     // sibling's save does not set the picture moving again

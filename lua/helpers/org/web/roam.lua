@@ -33,6 +33,30 @@ local function index_db()
   return db
 end
 
+--- The file a project's knowledge base lives in: the roam directory's
+--- `documentation/` mirror of the project's board (`~/org/projects/nvim.org`
+--- -> `~/org/roam/documentation/nvim.org`), or `file` itself when it already
+--- points inside the roam directory. Nil with no roam extension, or with no
+--- `file`.
+---@param file string|nil
+---@return string|nil
+local function scope_file(file)
+  if not file or file == '' then
+    return nil
+  end
+  local ok, ext = pcall(require, 'org.extensions')
+  local opts = ok and ext.opts 'roam' or nil
+  if not opts or not opts.directory then
+    return nil
+  end
+  local path = vim.fs.normalize(vim.fn.expand(file))
+  local dir = vim.fs.normalize(vim.fn.expand(opts.directory))
+  if vim.startswith(path, dir .. '/') then
+    return path
+  end
+  return dir .. '/documentation/' .. vim.fs.basename(path)
+end
+
 --- Path of `path` from the home directory, the way the views name files.
 ---@param path string
 ---@return string
@@ -63,13 +87,11 @@ local function walk()
   end
   local nodes = db.nodes() or {}
   local by_id, by_file = {}, {}
-  local files = {}
   for _, node in ipairs(nodes) do
     by_id[node.id] = node
     if node.level == 0 then
       by_file[node.file] = node
     end
-    files[node.file] = true
   end
   -- one edge per pair: the graph is about notes, not about how many times
   -- one note says the other's name
@@ -87,10 +109,6 @@ local function walk()
       end
     end
   end
-  local nfiles = 0
-  for _ in pairs(files) do
-    nfiles = nfiles + 1
-  end
   return {
     nodes = nodes,
     by_id = by_id,
@@ -98,7 +116,6 @@ local function walk()
     edges = edges,
     outbound = outbound,
     inbound = inbound,
-    stats = { nodes = #nodes, links = #edges, files = nfiles },
   }
 end
 
@@ -138,20 +155,76 @@ local function summary(node, idx)
 end
 
 --- Every note and every link between them: the roam page's whole shape.
+---
+--- `file` narrows the page to one project: the notes of its documentation
+--- mirror (`scope_file`), plus the notes those point at -- the topics a
+--- project's knowledge rests on -- with the links among the survivors. The
+--- file node of a project that has no mirror yet is no node either, so the
+--- scope comes out empty rather than the whole vault: a page opened on one
+--- project never lists another's notes. `scope` says which project it is,
+--- so the page can say so too.
+---@param file string|nil a project file, or a path under the roam directory
 ---@return table
-function M.payload()
+function M.payload(file)
   local idx = cached()
   if not idx then
     return { available = false, notes = {}, links = {}, stats = { nodes = 0, links = 0, files = 0 } }
   end
-  local notes = {}
+  local scope
+  local keep
+  if file and file ~= '' then
+    scope = scope_file(file)
+    if scope then
+      local own = {}
+      for _, node in ipairs(idx.nodes) do
+        if node.file == scope then
+          own[node.id] = true
+        end
+      end
+      -- the project's own notes, then one hop out: the topics they name.
+      -- `own` stays read-only, so a topic's own links do not pull the whole
+      -- graph back in
+      keep = {}
+      for id in pairs(own) do
+        keep[id] = true
+      end
+      for _, edge in ipairs(idx.edges) do
+        if own[edge.source] then
+          keep[edge.target] = true
+        end
+      end
+    end
+  end
+  local links = {}
+  for _, edge in ipairs(idx.edges) do
+    if not keep or (keep[edge.source] and keep[edge.target]) then
+      links[#links + 1] = edge
+    end
+  end
+  local notes, files = {}, {}
   for _, node in ipairs(idx.nodes) do
-    notes[#notes + 1] = summary(node, idx)
+    if not keep or keep[node.id] then
+      notes[#notes + 1] = summary(node, idx)
+      files[node.file] = true
+    end
   end
   table.sort(notes, function(a, b)
     return a.title:lower() < b.title:lower()
   end)
-  return { available = true, notes = notes, links = idx.edges, stats = idx.stats }
+  local nfiles = 0
+  for _ in pairs(files) do
+    nfiles = nfiles + 1
+  end
+  local out = {
+    available = true,
+    notes = notes,
+    links = links,
+    stats = { nodes = #notes, links = #links, files = nfiles },
+  }
+  if scope then
+    out.scope = { file = scope, name = (vim.fs.basename(scope):gsub('%.org$', '')) }
+  end
+  return out
 end
 
 --- Point the anchors of an exported body at this server.

@@ -128,7 +128,7 @@ local function handle(req, res)
   end
 
   if req.method == 'GET' and path == '/api/roam' then
-    json(res, roam.payload())
+    json(res, roam.payload(req.query.file))
     return
   end
 
@@ -717,9 +717,15 @@ end
 --- Open the roam mode in the browser (the `:OrgRoam` command): the notes
 --- under the roam directory, each rendered with its links, and the graph of
 --- the links between them.
+---
+--- `file` narrows the page to one project (`?file=`): the notes of its
+--- documentation mirror and the topics they point at
+--- (helpers.org.web.roam's `payload`). The agenda's `7` opens the cwd
+--- project this way.
+---@param file? string a project file, or a path under the roam directory
 ---@return string url
-function M.roam()
-  local url = M.url '/roam'
+function M.roam(file)
+  local url = M.url('/roam' .. (file and file ~= '' and ('?file=' .. encode(file)) or ''))
   open_url(url)
   return url
 end
