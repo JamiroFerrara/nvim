@@ -11,7 +11,11 @@
 -- included, and keeps that shape at any width or with any window showing it.
 -- Its opening and closing lines carry a rule (`──── lua ─────…`) instead of
 -- `#+begin_src lua` / `#+end_src`: the block is framed, the delimiter noise is
--- gone, and the language stays readable at the left.
+-- gone, and the language stays readable at the left. When the snippet names the
+-- file it came from on the line under it -- `→ [[file:~/x.lua::62][x.lua:62]]`,
+-- the way a hand-back writes it -- that name joins the language on the opening
+-- rule (`──── lua → x.lua:62 ─────…`), so the block says where it came from
+-- before the code rather than after it.
 --
 -- A `src` block holding markdown is not a snippet: it is an entry's prose --
 -- an agent's answer, a note -- written in a block so the markdown plugin
@@ -111,6 +115,23 @@ local function closes(line, mark, count)
   return close ~= nil and close:sub(1, 1) == mark and #close >= count
 end
 
+--- The file a snippet names on the line under it, the way a hand-back writes
+--- it -- `→ [[file:~/x.lua::62][x.lua:62]]` -- as the name the rule over the
+--- snippet carries, or nil when that line is something else.
+---@param line string|nil
+---@return string|nil
+local function file_ref(line)
+  if not line then
+    return nil
+  end
+  local target, label = line:match '^%s*→%s*%[%[file:(.-)%]%[([^%]]*)%]%]'
+  if not target then
+    target = line:match '^%s*→%s*%[%[file:([^%]]+)%]%]'
+    return target
+  end
+  return label ~= '' and label or target
+end
+
 --- The rows of every snippet of `buf`, and the rule of each opening and
 --- closing line.
 ---
@@ -124,6 +145,9 @@ local function scan(lines)
   -- the markdown plugin, whose fences are ruled here)
   local mode, kind
   local first, open_col, open_label
+  -- the index of the open snippet's `rules` entry, so the file named under it
+  -- can ride on its opening rule
+  local open_rule
   -- the column, marker and marker length of the open fence of a prose body
   local fence_col, fence_mark, fence_ticks
 
@@ -133,26 +157,33 @@ local function scan(lines)
       if ends(line, kind) then
         ranges[#ranges + 1] = { first, row }
         rules[#rules + 1] = { row, #(line:match '^(%s*)'), nil }
-        mode = nil
+        if open_rule then
+          rules[open_rule][4] = file_ref(lines[i + 1])
+        end
+        mode, open_rule = nil, nil
       elseif line:match '^%*+%s' then
         -- a headline ends a block (org.nvim's regions stop there too), so a
         -- block left unterminated is banded up to the line before it
         ranges[#ranges + 1] = { first, row - 1 }
-        mode = nil
+        mode, open_rule = nil, nil
       end
     elseif mode == 'prose' then
       if ends(line, kind) or line:match '^%*+%s' then
-        mode, fence_col = nil, nil
+        mode, fence_col, open_rule = nil, nil, nil
       elseif fence_col then
         if closes(line, fence_mark, fence_ticks) then
           rules[#rules + 1] = { row, fence_col, nil }
-          fence_col = nil
+          if open_rule then
+            rules[open_rule][4] = file_ref(lines[i + 1])
+          end
+          fence_col, open_rule = nil, nil
         end
       else
         local col, mark, count, info = fence(line)
         if col then
           fence_col, fence_mark, fence_ticks = col, mark, count
           rules[#rules + 1] = { row, col, info ~= '' and info or nil }
+          open_rule = #rules
         end
       end
     else
@@ -167,6 +198,7 @@ local function scan(lines)
           open_col = #(line:match '^(%s*)')
           open_label = lang or kind
           rules[#rules + 1] = { row, open_col, open_label }
+          open_rule = #rules
         end
       end
     end
@@ -187,19 +219,25 @@ local function scan_markdown(lines)
   local rules = {}
   -- the indent, marker and marker length of the open fence
   local col, mark, ticks
+  -- the index of the open fence's `rules` entry, for the file named under it
+  local open_rule
 
   for i, line in ipairs(lines) do
     local row = i - 1
     if col then
       if closes(line, mark, ticks) then
         rules[#rules + 1] = { row, col, nil }
-        col = nil
+        if open_rule then
+          rules[open_rule][4] = file_ref(lines[i + 1])
+        end
+        col, open_rule = nil, nil
       end
     else
       local indent, fence_mark, count, info = fence(line)
       if indent then
         col, mark, ticks = indent, fence_mark, count
         rules[#rules + 1] = { row, indent, info ~= '' and info or nil }
+        open_rule = #rules
       end
     end
   end
@@ -231,8 +269,12 @@ local function paint(buf)
   end
   for _, rule in ipairs(rules) do
     local virt_text = {}
-    if rule[3] then
-      virt_text[#virt_text + 1] = { '─ ' .. rule[3] .. ' ', LABEL_GROUP }
+    if rule[3] or rule[4] then
+      local label = '─ ' .. (rule[3] or '')
+      if rule[4] then
+        label = label .. (rule[3] and ' → ' or '') .. rule[4]
+      end
+      virt_text[#virt_text + 1] = { label .. ' ', LABEL_GROUP }
     end
     virt_text[#virt_text + 1] = { RULE, RULE_GROUP }
     vim.api.nvim_buf_set_extmark(buf, NS, rule[1], rule[2], {
