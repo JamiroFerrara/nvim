@@ -21,14 +21,14 @@ return {
     workspaces = {
       {
         name = 'personal',
-        path = '~/vault',
+        path = vim.fn.expand '~/vault',
       },
       {
         name = 'no-vault',
         path = function()
           -- alternatively use the CWD:
           -- return assert(vim.fn.getcwd())
-          return '~'
+          return vim.fn.expand '~'
         end,
         overrides = {
           notes_subdir = vim.NIL, -- have to use 'vim.NIL' instead of 'nil'
@@ -40,7 +40,7 @@ return {
           disable_frontmatter = true,
           note_path_func = function(spec)
             -- This is equivalent to the default behavior.
-            local path = '~/vault/' .. tostring(spec.id)
+            local path = vim.fn.expand('~/vault/' .. tostring(spec.id))
             return path .. '.md'
           end,
         },
@@ -161,7 +161,7 @@ return {
 
     -- Optional, for templates (see below).
     templates = {
-      folder = '~/vault/.templates',
+      folder = vim.fn.expand '~/vault/.templates',
       date_format = '%Y-%m-%d',
       time_format = '%H:%M',
       -- A map for custom variables, the key should be the variable and the value a function
