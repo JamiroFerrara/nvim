@@ -60,7 +60,8 @@ vim.opt.fixendofline = false
 vim.opt.startofline = false
 vim.opt.shiftround = true
 vim.opt.backspace = 'indent,eol,start'
-vim.opt.backupdir = '~/.local/share/nvim/backup//'
+-- absolute: nvim never expands `~` in 'backupdir', and would create a literal `~` dir in the cwd
+vim.opt.backupdir = vim.fs.joinpath(vim.fn.stdpath 'data', 'backup') .. '//'
 vim.opt.joinspaces = false
 vim.opt.wildmode = 'longest:full,full'
 vim.opt.mouse = 'a'
