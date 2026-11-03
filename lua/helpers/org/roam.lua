@@ -4,9 +4,10 @@
 -- `7` in the agenda opens it for the cwd project's knowledge base -- the
 -- documentation mirror of its board plus the topics those notes point at
 -- (M.scope_file), the same scope the browser's roam page takes
--- (helpers/org/web/roam.lua). Both read the plugin's index through M.index,
--- so a note here is a note there: every file and every headline carrying an
--- `:ID:` is a node, and a link is the `id:` link the roam capture wrote.
+-- (helpers/org/web/roam.lua) -- and `8` opens the whole vault: every note
+-- below the roam directory. Both read the plugin's index through M.index, so a
+-- note here is a note there: every file and every headline carrying an `:ID:`
+-- is a node, and a link is the `id:` link the roam capture wrote.
 --
 -- A row is a note, nested the way its file nests it. Expanding a note also
 -- lists the notes it links to (`→`) and the notes that link back (`←`), so
@@ -21,8 +22,9 @@
 --
 -- The view is one of the boards' views, not a screen of its own: the agenda's
 -- numbers mean here what they mean there (helpers.org.agenda's CUSTOM_VIEWS),
--- so `3` on this tree swaps the window to the board, `1` to the cross-project
--- list, and `7` reads the vault again.
+-- so `3` on this tree swaps the window to the board and `1` to the
+-- cross-project list, while `7` and `8` pick the tree's own two scopes back up
+-- -- the project's notes, or every note there is.
 local M = {}
 
 --- The roam extension's database, or nil when the extension is not
@@ -440,8 +442,10 @@ local function render(want)
     if ctx.scope then
       lines[1] = 'nothing in the knowledge base for ' .. ctx.name .. ' yet'
       lines[2] = '  ' .. M.relative(ctx.scope)
+      lines[3] = '  seed it from the board: ~/org/scripts/roam-seed/seed.py --write'
       marks[1] = { 1, 0, #lines[1], 'Comment' }
       marks[2] = { 2, 0, #lines[2], 'Comment' }
+      marks[3] = { 3, 0, #lines[3], 'Comment' }
     else
       lines[1] = 'nothing in the knowledge base yet'
       marks[1] = { 1, 0, #lines[1], 'Comment' }
@@ -684,9 +688,10 @@ function M.open(file)
   end, { buffer = buf, desc = 'roam: collapse the note' })
   vim.keymap.set('n', 'R', M.refresh, { buffer = buf, desc = 'roam: read the vault again' })
   -- the agenda's numbers mean the same views here: pressing `3` on the tree
-  -- swaps the window over to the board, `1` to the cross-project list, and
-  -- `7` is this view again -- one keyboard for every view, whichever one is
-  -- on screen
+  -- swaps the window over to the board, `1` to the cross-project list, while
+  -- `7` and `8` are this view's two scopes -- the project's notes and the
+  -- whole vault -- so one keyboard reaches every view whichever one is on
+  -- screen
   for digit = 1, 6 do
     local key = tostring(digit)
     vim.keymap.set('n', key, function()
@@ -694,7 +699,8 @@ function M.open(file)
       require('helpers.org.agenda').digit(key)
     end, { buffer = buf, desc = 'roam: switch to view ' .. digit })
   end
-  vim.keymap.set('n', '7', M.refresh, { buffer = buf, desc = 'roam: read the vault again' })
+  vim.keymap.set('n', '7', M.project, { buffer = buf, desc = 'roam: the cwd project knowledge base' })
+  vim.keymap.set('n', '8', M.vault, { buffer = buf, desc = 'roam: the whole knowledge base' })
   vim.api.nvim_create_autocmd('BufWipeout', {
     buffer = buf,
     callback = close_preview,
@@ -704,13 +710,7 @@ function M.open(file)
     buffer = buf,
     callback = function()
       if vim.api.nvim_get_current_buf() == buf then
-        local row = row_at_cursor()
-        M.invalidate()
-        local ctx = state.ctx
-        ctx.idx = M.index()
-        ctx.sections, ctx.keep, ctx.links, ctx.notes = build(ctx.idx, ctx.scope)
-        ctx.children = ctx.idx and structural_children(ctx.idx) or {}
-        render(row and row.key or nil)
+        M.refresh()
       end
     end,
     desc = 'roam: follow the vault while the view is open',
@@ -718,13 +718,28 @@ function M.open(file)
   render(nil)
 end
 
---- `7` in the agenda: the cwd project's knowledge base as a tree. Without a
---- project, the whole vault -- the view never narrows to another project's
---- notes, so a cwd that names nothing gets everything rather than an empty
---- screen.
+--- `7`: the cwd project's knowledge base as a tree. Without a project, the
+--- whole vault -- the view never narrows to another project's notes, so a cwd
+--- that names nothing gets everything rather than an empty screen. Already on
+--- the project's tree, the key reads it again instead of rebuilding it, so the
+--- expanded notes stay open.
 function M.project()
   local project = require('helpers.org.project').current()
+  local scope = project and project.file and M.scope_file(project.file) or nil
+  if state.ctx and state.ctx.scope == scope then
+    return M.refresh()
+  end
   M.open(project and project.file)
+end
+
+--- `8`: the whole knowledge base as a tree -- every note below the roam
+--- directory, not just the cwd project's. Already on it, the key reads it
+--- again.
+function M.vault()
+  if state.ctx and state.ctx.scope == nil then
+    return M.refresh()
+  end
+  M.open(nil)
 end
 
 return M
