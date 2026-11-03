@@ -14,9 +14,10 @@
 -- gone, and the language stays readable at the left. When the snippet names the
 -- file it came from on the line under it -- `→ [[file:~/x.lua::62][x.lua:62]]`,
 -- the way a hand-back writes it -- that name joins the language on the opening
--- rule (`──── lua → x.lua:62 ─────…`), in a link's own face, and the rule is
--- the link: a click on it opens the file at the line, the same door every
--- other link click goes through. The line that named it is hidden where
+-- rule (`──── lua → x.lua:62 ─────…`), in a link's own face, and the frame is
+-- the link: a click on the rule, and `<CR>` anywhere on the snippet -- the
+-- rule, the code, the closing rule -- open the file at the line, the same door
+-- every other link click goes through. The line that named it is hidden where
 -- concealing is on -- it is the rule's own text now, and it stays in the file
 -- for a search, a copy, git and the page.
 --
@@ -151,8 +152,9 @@ end
 ---@field label string? what the rule names at its head -- a language, or the
 --- block's kind; nil on a closing rule
 ---@field file string? the file the snippet came from, as its short name
----@field target string? the link that file is, which a click opens
+---@field target string? the link that file is, which a click or `<CR>` opens
 ---@field file_row integer? 0-based row that file is named on
+---@field close_row integer? 0-based row of the rule that closes the frame
 
 --- The rows of every snippet of `buf`, and the rule of each opening and
 --- closing line.
@@ -179,6 +181,7 @@ local function scan(lines)
         ranges[#ranges + 1] = { first, row }
         rules[#rules + 1] = { row = row, col = #(line:match '^(%s*)') }
         if open then
+          open.close_row = row
           local ref = file_ref(lines[i + 1])
           if ref then
             open.file, open.target, open.file_row = ref.name, ref.target, i
@@ -198,6 +201,7 @@ local function scan(lines)
         if closes(line, fence_mark, fence_ticks) then
           rules[#rules + 1] = { row = row, col = fence_col }
           if open then
+            open.close_row = row
             local ref = file_ref(lines[i + 1])
             if ref then
               open.file, open.target, open.file_row = ref.name, ref.target, i
@@ -255,6 +259,7 @@ local function scan_markdown(lines)
       if closes(line, mark, ticks) then
         rules[#rules + 1] = { row = row, col = col }
         if open then
+          open.close_row = row
           local ref = file_ref(lines[i + 1])
           if ref then
             open.file, open.target, open.file_row = ref.name, ref.target, i
@@ -278,28 +283,55 @@ end
 --- the rule over a snippet opens the file the snippet names.
 local clicks = {}
 
---- What a click on the rule at `row` opens, or nil when there is none there.
+--- The link each referenced snippet opens, by buffer and 0-based row: the
+--- whole frame, from its opening rule to its closing one.
+local frames = {}
+
+--- What the row opens, or nil when nothing there names a file.
 ---@param bufnr integer
 ---@param row integer 0-based row
+---@param frame? boolean the whole snippet rather than the rule alone
 ---@return string|nil
-local function click_target(bufnr, row)
-  local rows = clicks[bufnr]
+local function target_at(bufnr, row, frame)
+  local rows = (frame and frames or clicks)[bufnr]
   return rows and rows[row]
 end
 
---- Open the file the snippet under the cursor names, the way following its
---- link does (`org.links.open`, the door every other click goes through).
---- Called after a `<LeftMouse>` click lands the cursor on a rule.
-function M.clicked()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local row = vim.api.nvim_win_get_cursor(0)[1] - 1
-  local target = click_target(bufnr, row)
-  if not target then
-    return
-  end
+--- Open the file a snippet names, the way following its link does
+--- (`org.links.open`, the door every other click goes through).
+---@param bufnr integer
+---@param target string
+local function open(bufnr, target)
   require('org.lazy').on_load('org.links', 'blocks_click', function(links)
     links.open(target, { bufnr = bufnr })
   end)
+end
+
+--- The cursor is on a rule that names a file: open it. Called after a
+--- `<LeftMouse>` click lands the cursor on the rule.
+---@return boolean opened
+function M.clicked()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local target = target_at(bufnr, vim.api.nvim_win_get_cursor(0)[1] - 1)
+  if not target then
+    return false
+  end
+  open(bufnr, target)
+  return true
+end
+
+--- `<CR>` anywhere on a referenced snippet -- its rule, its code, its closing
+--- rule -- opens the file it names, the way the rule's own link would. Returns
+--- false anywhere else, so the key keeps whatever meaning the line has.
+---@return boolean opened
+function M.open_at_cursor()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local target = target_at(bufnr, vim.api.nvim_win_get_cursor(0)[1] - 1, true)
+  if not target then
+    return false
+  end
+  open(bufnr, target)
+  return true
 end
 
 --- Clicking a snippet's rule is a click on its link: the native click places
@@ -342,7 +374,7 @@ local function paint(buf)
       vim.api.nvim_buf_set_extmark(buf, NS, row, 0, { line_hl_group = BAND })
     end
   end
-  local rows = {}
+  local rows, spans = {}, {}
   for _, rule in ipairs(rules) do
     local virt_text = {}
     if rule.file then
@@ -362,6 +394,11 @@ local function paint(buf)
     })
     if rule.target then
       rows[rule.row] = rule.target
+      -- the frame the rule opens is the whole block: a `<CR>` on the code or
+      -- on the closing rule is on the same snippet
+      for row = rule.row, rule.close_row or rule.row do
+        spans[row] = rule.target
+      end
     end
     if rule.file_row then
       -- the line naming the file is the rule's own now: it is hidden where
@@ -378,10 +415,8 @@ local function paint(buf)
     end
   end
   clicks[buf] = next(rows) and rows or nil
-  if not vim.b[buf].org_blocks_click then
-    vim.b[buf].org_blocks_click = true
-    map_click(buf)
-  end
+  frames[buf] = next(spans) and spans or nil
+  map_click(buf)
 end
 
 --- Repaint `buf` once per event loop turn: typing fires `TextChangedI` per
@@ -441,6 +476,7 @@ function M.setup()
       painted[args.buf] = nil
       pending[args.buf] = nil
       clicks[args.buf] = nil
+      frames[args.buf] = nil
     end,
   })
 end

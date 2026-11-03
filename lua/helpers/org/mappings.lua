@@ -94,6 +94,12 @@ function M.setup()
       vim.keymap.set('n', '<CR>', function()
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         local line = get_line(lnum)
+        -- A snippet whose rule names the file it came from is a link of its
+        -- own (helpers/org/blocks): <CR> anywhere on it -- the rule, the code,
+        -- the closing rule -- opens that file at the line.
+        if require('helpers.org.blocks').open_at_cursor() then
+          return
+        end
         -- A link under the cursor wins, wherever it sits (headline, list
         -- item, plain line): follow it like the default open_at_point.
         local links = require 'org.links'
